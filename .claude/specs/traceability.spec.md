@@ -216,7 +216,7 @@ Every record has `v` (schema version, `1`), `ts` (ISO-8601 UTC, from the hook/sc
 - a commit on the branch has no activity `commit` record with the same `Agent` and subject
 - a commit is missing `Agent/Plan/Node`, or has a `TDD` value outside the set
 - `activity.jsonl` or `loop.jsonl` is empty while commits exist
-- a REVIEW round has no reviewer + security verdict pair, or a PASS verdict's `checked` misses one of the node's rules
+- a REVIEW round has no reviewer + security verdict pair, or a PASS reviewer verdict's `rules_covered` misses one of the node's rules
 - a FAIL verdict has no `findings/A<n>.md`, a `steer(D<n>)` event has no `findings/D<n>.md`, or a `Fixes-Finding` id resolves to nothing
 - a node rule has no test marker, no `red` commit before its `green` commit, or no QA step
 - a gate event is missing, or its `ok` is false

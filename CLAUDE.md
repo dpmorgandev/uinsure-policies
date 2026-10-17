@@ -60,7 +60,7 @@ dotnet test --solution Uinsure.Policies.slnx                          # unit, in
 dotnet run --project src/Uinsure.Policies.Api --urls http://localhost:5080    # HITL, from the worktree
 postman collection run tests/postman/Uinsure.Policies.postman_collection.json \
   -e tests/postman/local.postman_environment.json                     # Postman CLI, no login needed
-node --test .claude/hooks/__tests__                                   # guard wiring self-test
+node --test ".claude/hooks/__tests__/*.test.mjs"                    # harness self-test
 ```
 
 pre-push runs a Release build, the full test suite, `dotnet ef migrations script --idempotent` and the
