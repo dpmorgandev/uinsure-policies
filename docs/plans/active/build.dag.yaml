@@ -53,7 +53,7 @@ nodes:
       - {id: t13, role: david, step: session, layer: null, rules: [], title: "Guard hooks: guard-agent.mjs and guard-bash.mjs (G1-G3, G8, G9, G14), SubagentStart and SubagentStop with the verdict schema check", status: done}
       - {id: t14, role: david, step: session, layer: null, rules: [], title: "settings.json deny and ask rules (G5-G7) and the repo-root .ignore excluding .claude/specs/", status: done}
       - {id: t15, role: david, step: session, layer: null, rules: [], title: "Git hooks in .githooks (pre-commit, commit-msg, pre-push; sh, LF); core.hooksPath installed; .gitattributes; .gitignore for the local denylist", status: done}
-      - {id: t16, role: david, step: session, layer: null, rules: [], title: "Wiring self-test guards.test.mjs (G13) passes, including line caps", status: pending}
+      - {id: t16, role: david, step: session, layer: null, rules: [], title: "Wiring self-test guards.test.mjs (G13) passes, including line caps", status: done}
       - {id: t17, role: david, step: session, layer: null, rules: [], title: "docs/readme-checklist.md extracted from every 'the README states…' in the spec Contracts", status: pending}
       - {id: t18, role: david, step: session, layer: null, rules: [], title: "Context smoke tests S1-S9 run and recorded", status: pending}
       - {id: t19, role: david, step: session, layer: null, rules: [], title: "F0a README: every probe result, and 'hooks not yet live: witnessed by git and trailers only'", status: pending}

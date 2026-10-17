@@ -31,6 +31,10 @@ The `Status:` line of each `.claude/specs/*.spec.md`, and only that line:
 - `git log --oneline -5`
 - `git worktree list`. Print every path relative to the root; never print an absolute path.
 
+## 5b. Harness
+- `git config --get core.hooksPath` must print `.githooks`. If it's unset, report it: a git hook that isn't installed is inert.
+- Run the harness self-test, `node --test ".claude/hooks/__tests__/*.test.mjs"`, and report only its pass/fail counts and the names of any failing tests.
+
 ## 6. Pull requests
 `gh pr list`. If there's no remote or `gh` fails, print "no remote" rather than an error.
 

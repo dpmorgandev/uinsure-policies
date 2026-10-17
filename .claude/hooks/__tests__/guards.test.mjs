@@ -2,7 +2,7 @@
 // verdict and findings checks). Run: node --test ".claude/hooks/__tests__/*.test.mjs"
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -265,6 +265,123 @@ test('verdict: a valid PASS has no problems; PASS with a P1, FAIL with no findin
   assert.ok(verdictProblems(verdict({ head_sha: 'c'.repeat(40) }), ctx).some((p) => p.includes('head_sha')));
   assert.ok(verdictProblems(verdict({ rules_covered: [] }), ctx).some((p) => p.includes('SELL-2')));
   assert.ok(verdictProblems({ ...verdict(), extra: 1 }, ctx).some((p) => p.includes('unexpected field')));
+});
+
+// ---------- G13: declared = wired (reads the real repo; the Contract is the single source) ----------
+
+const ROOT = resolve(import.meta.dirname, '..', '..', '..');
+const read = (rel) => readFileSync(join(ROOT, rel), 'utf8').replace(/\r\n/g, '\n');
+const settings = () => JSON.parse(read('.claude/settings.json'));
+const guardrails = () => read('.claude/specs/guardrails.spec.md');
+
+function bodyLines(rel) {
+  const text = read(rel);
+  const m = /^---\n[\s\S]*?\n---\n([\s\S]*)$/.exec(text);
+  return (m ? m[1] : text).trimEnd().split('\n').length;
+}
+
+function frontmatter(rel) {
+  return (/^---\n([\s\S]*?)\n---/.exec(read(rel)) ?? [])[1] ?? '';
+}
+
+function descriptionLines(fm) {
+  const folded = /^description: >-?\n((?:  .*\n?)+)/m.exec(fm);
+  if (folded) return folded[1].trim().split('\n').length;
+  return /^description: .+$/m.test(fm) ? 1 : 0;
+}
+
+test('G13 (i): every hook script is wired in settings.json, and every wired command exists', () => {
+  const commands = Object.values(settings().hooks).flat().flatMap((m) => m.hooks.map((h) => h.command));
+  const wired = commands.map((c) => (/\.claude\/hooks\/([\w-]+\.mjs)/.exec(c) ?? [])[1]).filter(Boolean);
+  for (const c of commands) {
+    const script = (/\$CLAUDE_PROJECT_DIR\/([^"]+)"/.exec(c) ?? [])[1];
+    assert.ok(script && existsSync(join(ROOT, script)), `wired command has no script: ${c}`);
+  }
+  for (const f of readdirSync(join(ROOT, '.claude', 'hooks')).filter((f) => f.endsWith('.mjs'))) {
+    assert.ok(wired.includes(f), `${f} exists but isn't wired in settings.json`);
+  }
+  for (const f of ['guard-agent.mjs', 'guard-bash.mjs', 'gate-subagent.mjs', 'lib/roles.mjs', 'lib/paths.mjs', 'lib/stub-rule.mjs']) {
+    assert.ok(existsSync(join(ROOT, '.claude', 'hooks', f)), `manifest file missing: ${f}`);
+  }
+});
+
+test('G13 (ii): every manifest ID has at least one fixture', () => {
+  const ids = [...guardrails().matchAll(/^\| (G\d+) \|/gm)].map((m) => m[1]);
+  assert.ok(ids.length >= 14, 'manifest table not found');
+  const titles = readdirSync(join(ROOT, '.claude', 'hooks', '__tests__')).filter((f) => f.endsWith('.test.mjs'))
+    .flatMap((f) => [...read(`.claude/hooks/__tests__/${f}`).matchAll(/^test\('([^']+)'/gm)].map((m) => m[1]));
+  for (const id of ids) assert.ok(titles.some((t) => new RegExp(`(^|[^0-9A-Za-z])${id}([^0-9]|$)`).test(t)), `${id} has no fixture`);
+});
+
+test('G13 (iii): core.hooksPath is .githooks, and every git hook is executable and LF', () => {
+  assert.equal(sh(ROOT, 'config', '--get', 'core.hooksPath'), '.githooks');
+  for (const hook of ['pre-commit', 'commit-msg', 'pre-push']) {
+    assert.match(sh(ROOT, 'ls-files', '-s', `.githooks/${hook}`), /^100755 /, `${hook} isn't executable in the index`);
+    assert.match(sh(ROOT, 'ls-files', '--eol', `.githooks/${hook}`), /^i\/lf\s+w\/lf/, `${hook} isn't LF`);
+  }
+});
+
+test('G13 (iv): no plugins, marketplaces or MCP servers in project settings', () => {
+  for (const rel of ['.claude/settings.json', '.claude/settings.local.json', '.mcp.json']) {
+    if (!existsSync(join(ROOT, rel))) continue;
+    const s = JSON.parse(read(rel));
+    for (const key of ['enabledPlugins', 'extraKnownMarketplaces', 'mcpServers', 'enableAllProjectMcpServers']) {
+      assert.ok(!(key in s), `${rel} sets ${key}`);
+    }
+  }
+});
+
+test('G13 (v) + G6: settings deny and ask match the Contract exactly', () => {
+  const draft = /### settings\.json permissions block \(draft\)\n+```jsonc\n([\s\S]*?)\n```/.exec(guardrails());
+  assert.ok(draft, 'permissions draft not found in guardrails');
+  const contract = JSON.parse(draft[1].replace(/^\s*\/\/.*$/gm, '')).permissions;
+  const actual = settings().permissions;
+  assert.deepEqual([...actual.deny].sort(), [...contract.deny].sort());
+  assert.deepEqual([...actual.ask].sort(), [...contract.ask].sort());
+  for (const rule of ['Bash(git push *)', 'Bash(gh pr create *)', 'Bash(gh pr comment *)']) assert.ok(actual.ask.includes(rule), `G6: ${rule} missing`);
+});
+
+test('G12: reviewer, security and investigator have no Edit, Write or Bash', () => {
+  for (const agent of ['reviewer', 'security', 'investigator']) {
+    const tools = (/^tools: (.*)$/m.exec(frontmatter(`.claude/agents/${agent}.md`)) ?? [])[1] ?? '';
+    assert.deepEqual(tools.split(',').map((t) => t.trim()), ['Read', 'Grep', 'Glob'], agent);
+  }
+});
+
+test('G10: the privacy scan flags a local absolute path and passes clean text', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'privacy-'));
+  try {
+    writeFileSync(join(dir, 'leak.md'), `see ${['C:', 'Users', 'someone', 'notes.txt'].join('/')}\n`); // built at runtime so pre-commit's G10 doesn't flag this file
+    writeFileSync(join(dir, 'clean.md'), 'nothing private here\n');
+    const scan = (f) => spawnSync('bash', [join(ROOT, '.claude', 'hooks', 'privacy-scan.sh'), join(dir, f)], { cwd: ROOT, encoding: 'utf8' }).status;
+    assert.equal(scan('leak.md'), 1);
+    assert.equal(scan('clean.md'), 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('G13: line caps (agents 120, preloaded skills 200, architecture 150, main-session skills 250, descriptions 3, CLAUDE.md 80)', () => {
+  for (const f of readdirSync(join(ROOT, '.claude', 'agents')).filter((f) => f.endsWith('.md'))) {
+    const rel = `.claude/agents/${f}`;
+    assert.ok(bodyLines(rel) <= 120, `${rel}: ${bodyLines(rel)} body lines`);
+    assert.ok(descriptionLines(frontmatter(rel)) <= 3, `${rel}: description too long`);
+  }
+  for (const s of readdirSync(join(ROOT, '.claude', 'skills'))) {
+    const rel = `.claude/skills/${s}/SKILL.md`;
+    if (!existsSync(join(ROOT, rel))) continue;
+    const preloaded = /^user-invocable: false$/m.test(frontmatter(rel));
+    const cap = s === 'architecture' ? 150 : preloaded ? 200 : 250;
+    assert.ok(bodyLines(rel) <= cap, `${rel}: ${bodyLines(rel)} body lines (cap ${cap})`);
+    assert.ok(descriptionLines(frontmatter(rel)) <= 3, `${rel}: description too long`);
+  }
+  assert.ok(read('CLAUDE.md').trimEnd().split('\n').length <= 80, 'CLAUDE.md over 80 lines');
+});
+
+test('G13: the verdict-format schema is byte-identical to orchestration\'s', () => {
+  const block = (text) => (/```json\n([\s\S]*?)\n```/.exec(text.slice(text.indexOf('### Verdict JSON schema v1'))) ?? [])[1];
+  const skill = read('.claude/skills/verdict-format/SKILL.md');
+  assert.equal((/```json\n([\s\S]*?)\n```/.exec(skill) ?? [])[1], block(read('.claude/specs/orchestration.spec.md')));
 });
 
 test('findings: testable=false needs untestable_reason; a complete entry passes', () => {

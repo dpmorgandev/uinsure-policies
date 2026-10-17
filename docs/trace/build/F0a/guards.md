@@ -119,5 +119,33 @@ moves to F0b.
 4. `xargs` turns a child's exit 1 into 123, which would have misreported a privacy hit as a scan failure.
    pre-commit now decides on whether there's output.
 
+## t16: wiring self-test (G13) — 2026-10-17
+
+`.claude/hooks/__tests__/guards.test.mjs` gains the G13 checks, which read the real repo. The manifest IDs
+and the permissions draft are parsed from guardrails itself, so the Contract is the single source:
+- **(i)** every `.claude/hooks/*.mjs` is wired in `settings.json`, every wired command's script exists,
+  and the manifest's files are present.
+- **(ii)** every manifest ID G1–G14 has at least one fixture. G6, G10, G12 and G13 were added here.
+- **(iii)** `core.hooksPath` is `.githooks`, and each git hook is `100755` and LF in both the index and
+  the working tree.
+- **(iv)** no `enabledPlugins`, `extraKnownMarketplaces`, `mcpServers` or `enableAllProjectMcpServers` in
+  `settings.json`, `settings.local.json` or `.mcp.json`.
+- **(v) + G6:** `permissions.deny` and `permissions.ask` equal the Contract's draft exactly.
+- **G12:** reviewer, security and investigator have exactly `Read, Grep, Glob`.
+- **G10:** the privacy scan flags a local absolute path and passes clean text.
+- **Line caps:** agent bodies ≤120, preloaded skills ≤200 (architecture ≤150), main-session skills ≤250,
+  descriptions ≤3 lines, `CLAUDE.md` ≤80.
+- The verdict-format schema block is byte-identical to orchestration's.
+
+**Result:** `node --test ".claude/hooks/__tests__/*.test.mjs"` gives **45/45**.
+
+**F0a probe (G13):** with an unwired `.claude/hooks/probe-unwired.mjs` present, the run failed with
+`G13 (i) … probe-unwired.mjs exists but isn't wired in settings.json` (44/45). After it was removed, the
+run was 45/45 again.
+
+`/orient` gains a harness step: it reports `core.hooksPath` and the self-test counts. pre-push already
+runs the self-test (t15). `.claude/settings.local.json` holds only two `allow` rules, for `git add` and
+`git commit`. They're inert in bypass mode, and G13(iv) finds no plugins or MCP in it.
+
 **Settled by David (t13):** G7 is gated on the `main-locked` marker like G8 (no settings deny for pushes
 to `main`), and the stub grammar is testing C7's.
