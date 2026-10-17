@@ -319,14 +319,15 @@ function main() {
     process.stdout.write(check.label + '\n');
   } else if (cmd === 'pr-body') {
     process.stdout.write(prBody(t, check));
+  } else if (t.node.owner === 'david') {
+    // An owner: david node (F0a) has a written README with its probe results; rendering would overwrite it.
+    process.stdout.write(`not rendered: ${a}/${b} is David's node, and its README is written, not generated · ${check.label}\n`);
   } else {
     const ts = nowIso();
     mkdirSync(t.dir, { recursive: true });
     writeFileSync(join(t.dir, 'README.md'), readme(t, check, ts));
-    if (t.node.owner !== 'david') {
-      writeFileSync(join(t.dir, 'walkthrough.md'), (check.ok ? '' : check.label + '\n\n') + walkthrough(t, ts));
-      writeFileSync(join(root, 'docs', 'trace', 'requirements-matrix.md'), matrix(t, ts));
-    }
+    writeFileSync(join(t.dir, 'walkthrough.md'), (check.ok ? '' : check.label + '\n\n') + walkthrough(t, ts));
+    writeFileSync(join(root, 'docs', 'trace', 'requirements-matrix.md'), matrix(t, ts));
     process.stdout.write(`rendered docs/trace/${a}/${b}/ · ${check.label}\n`);
   }
   process.exit(check.ok ? 0 : 1);

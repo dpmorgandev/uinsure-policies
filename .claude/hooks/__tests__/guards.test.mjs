@@ -180,13 +180,15 @@ test('G5: each pattern, bare and wrapped, is denied for everyone', () => {
   assert.equal(normalise('/usr/bin/git push'), 'git push');
 });
 
-test('G7: push to main is denied once main is locked, allowed before (F0a)', () => withRepo('feature/build/F1', (root) => {
+test('G7: push to main is denied once the remote main is locked; the marker commit itself may be pushed once', () => withRepo('feature/build/F1', (root) => {
   const push = (cmd) => check({ command: cmd, subagent: false, role: '', root });
   assert.equal(push('git push origin HEAD:main'), null);
   mkdirSync(join(root, '.githooks'), { recursive: true });
   writeFileSync(join(root, '.githooks', 'main-locked'), '');
   sh(root, 'add', '.githooks/main-locked');
   sh(root, 'commit', '-q', '-m', 'lock');
+  assert.equal(push('git push origin HEAD:main'), null, 'the marker commit is pushed once, while origin/main is unlocked');
+  sh(root, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
   assert.match(push('git push origin HEAD:main') ?? '', /^G7/);
   assert.match(push('git push origin :refs/heads/main') ?? '', /^G7/);
   assert.equal(push('git push -u origin feature/build/F1'), null);

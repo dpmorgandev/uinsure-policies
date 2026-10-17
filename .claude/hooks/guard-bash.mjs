@@ -27,9 +27,10 @@ function hasMarker(root, ref) {
   }
 }
 
-// The lock is a property of main: the marker on main or origin/main counts, not just on HEAD.
-function mainLocked(root) {
-  return ['HEAD', 'refs/heads/main', 'refs/remotes/origin/main'].some((ref) => hasMarker(root, ref));
+// G7: pushes are blocked once the remote's main carries the marker, so the marker commit itself can be
+// pushed once. G8 (commits on main) reads the marker from HEAD.
+function remoteMainLocked(root) {
+  return hasMarker(root, 'refs/remotes/origin/main');
 }
 
 // G14: latest reviewer and security verdicts must both be PASS with head_sha = HEAD. Null = allow.
@@ -81,7 +82,7 @@ export function check({ command, subagent, role, root }) {
     if (/(^|\s)(--force\S*|-[a-zA-Z]*f[a-zA-Z]*)(\s|$)/.test(args) || /(^|\s)\+\S/.test(args)) return 'G5: force-push is denied for everyone';
     if (/--no-verify/.test(args + pre)) return 'G11: --no-verify is denied for everyone';
     // G7: gated on the main-locked marker, like G8, so F0a's own pushes to main stay possible.
-    if (root && mainLocked(root)) {
+    if (root && remoteMainLocked(root)) {
       const refs = args.split(/\s+/).filter((a) => a && !a.startsWith('-'));
       if (refs.some((r) => /^(?:[^:]*:)?(?:refs\/heads\/)?main$/.test(r)) || (refs.length <= 1 && currentBranch(root) === 'main')) {
         return 'G7: nothing is pushed to main';
@@ -100,7 +101,7 @@ export function check({ command, subagent, role, root }) {
 
   const commits = gitInvocations(text, 'commit');
   // G8: from F0b (marker in HEAD), no commits on main.
-  if (commits.length && root && currentBranch(root) === 'main' && mainLocked(root)) return 'G8: main is locked; commit on a feature branch';
+  if (commits.length && root && currentBranch(root) === 'main' && hasMarker(root, 'HEAD')) return 'G8: main is locked; commit on a feature branch';
 
   if (subagent) {
     if (gitInvocations(text, 'add').some(({ args }) => /(^|\s)(-A|--all|\.)(\s|$)/.test(args))) return 'G9: git add -A / git add . is denied for agents; add explicit paths';

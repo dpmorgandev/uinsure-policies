@@ -6,17 +6,17 @@ set -u
 root="$(git rev-parse --show-toplevel)" || exit 1
 cd "$root" || exit 1
 
-# G7: marker-gated like G8 (David, F0a t13). main is locked if the marker is on main itself (remote main,
-# local main or origin/main) or in the pushed commit; the pushed commit alone isn't enough, or a branch
-# without the marker could overwrite main. stdin: <local ref> <local sha> <remote ref> <remote sha>
+# G7: marker-gated like G8 (David, F0a t13). main is locked once the REMOTE's main carries the marker
+# (the pushed-to ref's current SHA, or origin/main). So F0a's marker commit can make its own first push,
+# and after that nothing reaches main, including a branch without the marker.
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
 has_marker() {
   # Resolve to a SHA first: Git for Windows' shell rewrites `refs/…:path` arguments as path lists.
   sha="$(git rev-parse --verify -q "$1^{commit}" 2>/dev/null)" || return 1
   git cat-file -e "$sha:.githooks/main-locked" 2>/dev/null
 }
 while read -r local_ref local_sha remote_ref remote_sha; do
-  if [ "$remote_ref" = "refs/heads/main" ] && { has_marker "$remote_sha" || has_marker refs/heads/main \
-      || has_marker refs/remotes/origin/main || has_marker "$local_sha"; }; then
+  if [ "$remote_ref" = "refs/heads/main" ] && { has_marker "$remote_sha" || has_marker refs/remotes/origin/main; }; then
     echo "pre-push: G7: nothing is pushed to main (main is locked)" >&2
     exit 1
   fi
