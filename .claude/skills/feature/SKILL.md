@@ -53,7 +53,8 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 
 **SETUP** (before t1, once)
 1. Dispatch `git` with `op: setup`, then `EnterWorktree({path: ".claude/worktrees/<plan>-<node>"})`.
-2. Gate: the branch name and worktree path match; `git rev-parse --show-toplevel` = the worktree.
+2. Gate: the branch name and worktree path match; `git rev-parse --show-toplevel` = the worktree;
+   `git rev-parse --abbrev-ref @{u}` fails (the branch tracks nothing, so never `main`).
 3. Commit the plan status `pending → in_progress`, `attempt: 1`, `branch` and `worktree`.
    Record `setup` and `state(in_progress)`.
 

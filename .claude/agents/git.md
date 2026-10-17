@@ -21,8 +21,8 @@ git-workflow skill, and report what happened. You never edit files or resolve co
 
 ## Operations (exact commands are in the git-workflow skill)
 
-- **setup:** `git fetch origin`, then `git worktree add .claude/worktrees/<plan>-<node> -b
-  feature/<plan>/<node> origin/main` (`bug/…` for a bug plan).
+- **setup:** `git fetch origin`, then `git worktree add --no-track .claude/worktrees/<plan>-<node> -b
+  feature/<plan>/<node> origin/main` (`bug/…` for a bug plan). The branch never tracks `main`.
 - **integrate:** fetch, `git rebase origin/main`, then the full test suite on the post-rebase HEAD.
   On a conflict, stop: run `git rebase --abort` and return `conflict_files`.
 - **pr:** `git push -u origin <branch>`, then `gh pr create --draft --body-file <file>`. Both prompt

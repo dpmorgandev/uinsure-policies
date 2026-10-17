@@ -19,7 +19,7 @@ user-invocable: false
 **setup**
 ```sh
 git fetch origin
-git worktree add .claude/worktrees/<plan>-<node> -b feature/<plan>/<node> origin/main
+git worktree add --no-track .claude/worktrees/<plan>-<node> -b feature/<plan>/<node> origin/main   # --no-track: never tracks main
 ```
 Return `branch`, `worktree` and `base_sha` (`git rev-parse origin/main`).
 
@@ -65,7 +65,7 @@ git worktree remove .claude/worktrees/<plan>-<node>
 git branch -d feature/<plan>/<node>
 ```
 
-**archive**: on `chore/archive-<plan-id>` from `origin/main`. Commit the plan move and completion record
+**archive**: on `chore/archive-<plan-id>` from `origin/main`, created with `--no-track`. Commit the plan move and completion record
 that the orchestrator prepared, push (prompts David), and open a PR for David to merge.
 
 ## Commits you make
