@@ -1,0 +1,29 @@
+# Privacy denylist (context.spec C6). Committed and public: generic patterns only.
+# Private terms go in .githooks/privacy-denylist.local.txt (gitignored, optional).
+# Format: '#' comment, blank ignored, '!' allow pattern, anything else a deny pattern.
+# POSIX ERE, matched case-insensitively, written so grep -E and JS RegExp agree.
+# This file is excluded from the scan because it matches itself.
+
+# Absolute user paths (a real segment must follow the root, so <user> placeholders pass)
+[a-z]:[/\\]+(users|development)[/\\]+[a-z0-9._-]+
+(^|[^a-z0-9.])/c/(users|development)/[a-z0-9._-]+
+(^|[^a-z0-9.])/mnt/[a-z]/(users|development)/[a-z0-9._-]+
+(^|[^a-z0-9.])/home/[a-z0-9._-]+
+(^|[^a-z0-9.])/users/[a-z0-9._-]+/
+
+# Email addresses
+[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}
+!noreply@anthropic\.com
+!@example\.(com|org)
+!git@github\.com
+
+# Keys and tokens
+sk-ant-[a-z0-9_-]{10,}
+anthropic_[a-z_]*key *[:=] *[^ ]+
+gh[pousr]_[a-z0-9]{20,}
+github_pat_[a-z0-9_]{20,}
+(^|[^a-z0-9])akia[0-9a-z]{16}([^a-z0-9]|$)
+-----begin [a-z ]*private key-----
+accountkey=[a-z0-9+/=]{20,}
+[?&]sig=[a-z0-9%+/=]{20,}
+(^|[^a-z0-9])(key|secret|token|password)["']? *[:=] *["']?[a-z0-9_./+=-]{16,}

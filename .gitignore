@@ -1,0 +1,16 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+*.db
+*.db-shm
+*.db-wal
+
+# Claude Code
+.claude/worktrees/
+.claude/settings.local.json
+
+# Private terms for the privacy scan (context.spec C6)
+.githooks/privacy-denylist.local.txt
