@@ -43,7 +43,7 @@ nodes:
       - {id: t3, role: david, step: session, layer: null, rules: [], title: "Spike: a subagent dispatched after EnterWorktree inherits cwd and writes land there; hook cwd is the worktree on Windows; which settings.json governs inside a worktree", status: done}
       - {id: t4, role: david, step: session, layer: null, rules: [], title: "Spike: agent_type in PreToolUse and SubagentStop for a probe project agent (and workflow agent()); SubagentStop exit 2 re-prompts; CLAUDE.md is loaded in the subagent; Grep honours .ignore", status: done}
       - {id: t5, role: david, step: session, layer: null, rules: [], title: "Spike: ask rules on git push, gh pr create and gh pr comment prompt in bypass mode", status: done}
-      - {id: t6, role: david, step: session, layer: null, rules: [], title: "Tools: Postman CLI and Bicep CLI installed with versions recorded; Postman CLI runs a local collection without login", status: pending}
+      - {id: t6, role: david, step: session, layer: null, rules: [], title: "Tools: Postman CLI and Bicep CLI installed with versions recorded; Postman CLI runs a local collection without login", status: done}
       - {id: t7, role: david, step: session, layer: null, rules: [], title: "requirements.md brought in line with the spec Contracts (the F0a acceptance list)", status: pending}
       - {id: t8, role: david, step: session, layer: null, rules: [], title: "CLAUDE.md per the agents-skills contract: at most 80 lines, contract only, no spec imports", status: pending}
       - {id: t9, role: david, step: session, layer: null, rules: [], title: "The six agents in .claude/agents/ per the roster and frontmatter template, bodies at most 120 lines", status: pending}
