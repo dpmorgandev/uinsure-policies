@@ -48,7 +48,7 @@ nodes:
       - {id: t8, role: david, step: session, layer: null, rules: [], title: "CLAUDE.md per the agents-skills contract: at most 80 lines, contract only, no spec imports", status: done}
       - {id: t9, role: david, step: session, layer: null, rules: [], title: "The six agents in .claude/agents/ per the roster and frontmatter template, bodies at most 120 lines", status: done}
       - {id: t10, role: david, step: session, layer: null, rules: [], title: "Preloaded skills: architecture, dotnet10-webapi, tdd-outside-in, requirements-trace, code-quality, verdict-format, owasp-api-security, root-cause, git-workflow", status: done}
-      - {id: t11, role: david, step: session, layer: null, rules: [], title: "/feature orchestrator skill: the node state machine over the DAG file's tasks, gates with receipts, retry ladder, both pauses", status: pending}
+      - {id: t11, role: david, step: session, layer: null, rules: [], title: "/feature orchestrator skill: the node state machine over the DAG file's tasks, gates with receipts, retry ladder, both pauses", status: done}
       - {id: t12, role: david, step: session, layer: null, rules: [], title: "Traceability: activity and render hooks, record schemas, render script, completeness check (reports OK git-only for F0a)", status: pending}
       - {id: t13, role: david, step: session, layer: null, rules: [], title: "Guard hooks: guard-agent.mjs and guard-bash.mjs (G1-G3, G8, G9, G14), SubagentStart and SubagentStop with the verdict schema check", status: pending}
       - {id: t14, role: david, step: session, layer: null, rules: [], title: "settings.json deny and ask rules (G5-G7) and the repo-root .ignore excluding .claude/specs/", status: pending}
