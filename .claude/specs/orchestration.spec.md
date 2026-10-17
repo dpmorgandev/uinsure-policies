@@ -180,6 +180,7 @@ Every step ends in its gate. The orchestrator runs each gate itself via Bash and
 | # | State | Agent | Action | Writes | Gate (orchestrator, outside the producer's turn) |
 |---|---|---|---|---|---|
 | 1 | SETUP | git | `git fetch origin`; `git worktree add .claude/worktrees/<p>-<n> -b <branch> origin/main`. Orchestrator then calls `EnterWorktree({path})` and commits plan status `pending → in_progress`, `attempt: 1` | worktree, branch, `plan(<p>/<n>): ready → in-progress` commit | branch name and worktree path match; `git rev-parse --show-toplevel` = worktree; plan commit present |
+| 1b | SCAFFOLD (optional) | builder | Only a node that adds projects: the `.slnx`, root build files and `src/*/*.csproj`, no `.cs` | `build(<node>): scaffold` commit, `TDD: scaffold` | each new `src/` project builds; diff ⊆ root build files + `src/*/*.csproj`; no `.cs` in the diff; the `.slnx` lists the node's projects |
 | 2 | RED | tester | Full acceptance suite for every node rule (each success and failure row), unit tests per rule, Postman requests; `src/` signatures whose bodies are only `throw new NotImplementedException()` | `test(<rule>): red: …` commits, `TDD: red` | build passes; rule-filtered tests **fail**; diff ⊆ `tests/**` + throw-only `src/` signatures (hook); every node rule has a `[Trait("Rule",…)]` test |
 | 3 | STUB | builder | Stub controller: real routes and contracts, canned responses | `feat(<node>): stub controller` commit, `TDD: stub` | build passes; app starts; routes answer (smoke); acceptance suite still red; diff ⊆ `src/Uinsure.Policies.Api/**` |
 | 4 | **PAUSE 1** | — (David) | Orchestrator prints the HITL block (below). David calls the stub in Postman and reads the tests. Replies `go` or `change: …` | `pause1` event | David's `go`. `change:` → a **steer** `D<n>` through step 8 with `source: david` (no attempt++) |
@@ -250,7 +251,7 @@ Hook-side semantic checks: `PASS` ⇒ no P0/P1 findings, `rules_missing` empty, 
 
 ### Commits
 - Subjects: `test(<rule>): red: …` · `feat(<rule>): green: …` · `feat(<node>): stub controller` · `fix(<rule>): …` · `refactor(<rule>): …` · `plan(<p>/<n>): <from> → <to>` · `chore(trace): <node> trail`.
-- Trailers `Agent`, `Plan`, `Node`, `Rule`, `TDD: red|stub|green|refactor`, optional `Fixes-Finding`. A hook checks `Agent/Plan/Node` against `agent_type` and the branch. Explicit `git add <paths>` only; never commit-on-stop.
+- Trailers `Agent`, `Plan`, `Node`, `Rule`, `TDD: scaffold|red|stub|green|refactor`, optional `Fixes-Finding`. A hook checks `Agent/Plan/Node` against `agent_type` and the branch. Explicit `git add <paths>` only; never commit-on-stop.
 
 ### Branching
 - **`main` is the integration branch.** There is no `develop` branch and no integration agent. Feature and bug branches are cut from `origin/main`, rebased onto `origin/main` at step 10, and merged by David with a merge commit, so TDD commits and their SHAs survive on `main` and `git log --first-parent main` shows one line per feature. David's own checkout is never touched (fetch only updates remote-tracking refs). The README states this.

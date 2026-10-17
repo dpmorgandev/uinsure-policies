@@ -157,7 +157,7 @@ Every record has `v` (schema version, `1`), `ts` (ISO-8601 UTC, from the hook/sc
 // agent = hook agent_type when agent_id is present ("unknown" if agent_type is empty), or "main" when agent_id is absent (F0a spike rulings). attempt = the last loop.jsonl event's attempt.
 // Bash/PowerShell: "file":null, "command":"<first 200 chars, repo-relative paths>".
 // Read: "file" = the path read. Grep: "file" = the search path (or null), "command" = the pattern (first 200 chars).
-// A successful `git commit` also records "commit":{"sha":"<40 hex>","subject":"<subject>","tdd":"red|stub|green|refactor|null"}.
+// A successful `git commit` also records "commit":{"sha":"<40 hex>","subject":"<subject>","tdd":"scaffold|red|stub|green|refactor|null"}.
 
 // loop.jsonl (written by the orchestrator via the render script's `event` subcommand, never by hand)
 {"v":1,"ts":"…","plan":"build","node":"F1","attempt":1,"event":"gate.red",
@@ -187,7 +187,7 @@ Every record has `v` (schema version, `1`), `ts` (ISO-8601 UTC, from the hook/sc
 | `Plan` | `build`, `feat-NNN`, `bug-NNN` | committing agent | **same hook**: must equal the branch's `<plan>` |
 | `Node` | `F0a`…`F7`, `N1`… | committing agent | **same hook**: must equal the branch's `<node>` |
 | `Rule` | a rule id; repeatable | committing agent | not by the hook; the TDD gates and the render script cross-check it against the rule markers in the diff |
-| `TDD` | `red`, `stub`, `green`, `refactor` | tester (`red`), builder (rest) | not by the hook; the gates check it (`red`: rule filter fails, diff is `tests/**` plus throwing `src/` signatures only; `green`: rule filter passes, diff is `src/**` only) |
+| `TDD` | `scaffold`, `red`, `stub`, `green`, `refactor` | tester (`red`), builder (rest) | not by the hook; the gates check it (`red`: rule filter fails, diff is `tests/**` plus throwing `src/` signatures only; `green`: rule filter passes, diff is `src/**` only) |
 | `Fixes-Finding` | `R1`, `S2`, `D1`…; repeatable | tester/builder | the render script: the id must exist in a verdict or findings file |
 
 `plan(...)` and `chore(trace)` commits carry `Agent/Plan/Node` only. The hook denies a commit with a missing or mismatched `Agent/Plan/Node`, and gives the reason. It doesn't rewrite the command.

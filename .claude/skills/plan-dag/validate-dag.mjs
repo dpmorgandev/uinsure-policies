@@ -142,7 +142,7 @@ const ENUM = {
   owner: ["loop", "david"],
   nodeStatus: ["pending", "in_progress", "paused_acceptance", "investigating", "hitl", "escalated", "done", "cut"],
   role: ["tester", "builder", "review", "git", "orchestrator", "david"],
-  step: ["session", "red", "stub", "pause1", "green", "refactor", "gates", "review", "qa", "integrate", "trace", "pr", "pause2", "merge", "write"],
+  step: ["session", "scaffold", "red", "stub", "pause1", "green", "refactor", "gates", "review", "qa", "integrate", "trace", "pr", "pause2", "merge", "write"],
   layer: ["acceptance", "domain", "services", "persistence", "api", null],
   taskStatus: ["pending", "in_progress", "done", "skipped"],
 };
@@ -259,7 +259,9 @@ function checkTasks(nd, where, nodeRules, err) {
     if (nd.owner === "loop" && t.step === "session") err(`${tw}: step session belongs to owner david nodes`);
     if (["pause1", "pause2", "merge"].includes(t.step) && t.role !== "david") err(`${tw}: ${t.step} is David's`);
     if (["red", "qa"].includes(t.step) && t.role !== "tester") err(`${tw}: ${t.step} is the tester's`);
-    if (["stub", "green", "refactor", "write"].includes(t.step) && t.role !== "builder") err(`${tw}: ${t.step} is the builder's`);
+    if (["scaffold", "stub", "green", "refactor", "write"].includes(t.step) && t.role !== "builder") err(`${tw}: ${t.step} is the builder's`);
+    if (t.step === "scaffold" && (i !== 0 || !["feature", "bug"].includes(nd.kind) || t.layer !== null || t.rules.length))
+      err(`${tw}: scaffold is only a feature or bug node's first task, with layer null and no rules`);
     if (["integrate", "pr"].includes(t.step) && t.role !== "git") err(`${tw}: ${t.step} is the git agent's`);
     if (["gates", "trace"].includes(t.step) && t.role !== "orchestrator") err(`${tw}: ${t.step} is the orchestrator's`);
     if (t.step === "review" && t.role !== "review") err(`${tw}: review is role review (reviewer ∥ security)`);
@@ -273,9 +275,9 @@ function checkTasks(nd, where, nodeRules, err) {
     if (i === -1) { err(`${where}: loop node is missing step '${s}' (or it is out of order)`); return; }
     at = i;
   }
-  const first = nd.tasks[0];
+  const first = nd.tasks[nd.tasks[0]?.step === "scaffold" ? 1 : 0];
   if (spine[0] === "red" && (first.step !== "red" || first.layer !== "acceptance"))
-    err(`${where}: t1 must be the tester's red acceptance suite`);
+    err(`${where}: the first task (after an optional scaffold) must be the tester's red acceptance suite`);
   if (spine[0] === "red") {
     const t1 = new Set(first.rules ?? []);
     for (const r of nodeRules) {

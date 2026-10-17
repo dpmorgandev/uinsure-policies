@@ -24,7 +24,7 @@ Read rule rows there by ID. Every line must be something David can explain and d
 
 - **Commits:** use the configured git identity; never change `user.*` or `core.hooksPath`. Stage with
   explicit `git add <paths>`, never `-A` or `.`. Loop commits carry the trailers `Agent`, `Plan`, `Node`,
-  `Rule` and `TDD: red|stub|green|refactor`, plus `Fixes-Finding` when fixing one.
+  `Rule` and `TDD: scaffold|red|stub|green|refactor`, plus `Fixes-Finding` when fixing one.
 - **No push to `main`.** Every push, PR and PR comment is approved by David. **David merges**, in the
   GitHub UI. Nobody merges by CLI, force-pushes, uses `--no-verify` or changes repo settings.
 - **`main`:** direct commits are allowed only until F0b starts. After that, every change goes through a

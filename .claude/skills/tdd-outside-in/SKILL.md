@@ -11,6 +11,7 @@ user-invocable: false
 
 | # | Step | Who | Content | `TDD:` |
 |---|---|---|---|---|
+| 0 | Scaffold (only a node that adds projects) | builder | The `.slnx`, the root build files and the `src/*/*.csproj` files; no `.cs`. Each `src/` project builds empty, so red can compile. | `scaffold` |
 | 1 | Red: acceptance | tester | The **full** acceptance suite in Api.Tests: every success and failure row for the node's rules, each traited; the Postman requests; the throwing `src/` stubs needed to compile; the node's IDs removed from `tests/rule-coverage.pending.txt`. It builds, and the acceptance tests fail. | `red` |
 | 2 | Stub controller | builder | Actions returning hard-coded happy-path responses (status, `Location`, body shape). Happy-path rows go green; rule-violation rows stay red. | `stub` |
 | — | Pause 1 | David | Calls the stub in Postman and reads the acceptance tests. | — |
