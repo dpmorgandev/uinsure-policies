@@ -316,7 +316,7 @@ Closed during analysis (2026-10-17):
 
 Still open:
 
-1. **F0a spikes** (the first F0a task): subagents inherit the `EnterWorktree` cwd; the exact `agent_type` value for project agents, and hook `cwd`, after `EnterWorktree` on Windows; which `settings.json` governs inside a worktree; whether SubagentStop exit 2 re-prompts the agent. If the worktree spike fails, orchestration falls back as its spec describes.
-2. **Contracts:** every spec's Contract is still a draft, and the architecture Contract must be rewritten for the four projects.
-3. **App Insights wiring:** the app-side OpenTelemetry setup must be owned by a plan node.
+1. **F0a spikes** (the first F0a task): subagents inherit the `EnterWorktree` cwd; the exact `agent_type` value for project agents, and hook `cwd`, after `EnterWorktree` on Windows; which `settings.json` governs inside a worktree; whether SubagentStop exit 2 re-prompts the agent; whether a dispatched subagent has `CLAUDE.md` loaded. If the worktree spike fails, orchestration falls back as its spec describes.
+2. ~~Contracts.~~ **Resolved (2026-10-17):** every spec's Contract is final, including the architecture Contract for the four projects (`6abcf9c`).
+3. ~~App Insights wiring.~~ **Resolved:** F0b owns the app-side OpenTelemetry setup; F5 only supplies the connection string (`planning.spec.md`).
 4. ~~OWASP for the harness.~~ **Resolved (David, 2026-10-17):** mapped to the OWASP LLM Top 10 2026 plus the OWASP Top 10 for Agentic Applications for 2026, both verified from OWASP's own PDFs (`guardrails.spec.md`).

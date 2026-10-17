@@ -280,6 +280,7 @@ nodes:
       - "Spike: agent_type arrives in PreToolUse and SubagentStop hook input for each of the six agents"
       - "Spike: which settings.json (main checkout or worktree copy) governs the session and subagents inside a worktree"
       - "Spike: ask rules on git push / gh pr create / gh pr comment still prompt in bypass mode"
+      - "Spike: a dispatched subagent has CLAUDE.md loaded"
       - "A failed spike is fixed in F0a or recorded as a design change; never passed silently"
       - "Harness lock live: a provoked subagent write to .claude/agents/** is denied, including inside a worktree"
       - "Postman CLI and Bicep CLI installed; postman --version and bicep --version recorded"

@@ -225,6 +225,15 @@ The stale `decide` and `tdd` skills are not rebuilt (R7; decisions live in specs
 
 **Line caps** (checked by the guardrails wiring self-test): agent body ≤ 120 lines; preloaded skill body ≤ 200 lines; `architecture` ≤ 150; main-session skill body ≤ 250; `description` ≤ 3 lines.
 
+### CLAUDE.md (repo root)
+
+Every agent sees it: Claude Code loads it into the main session and into each dispatched subagent. So it follows the skill rule: **contract only**, no rationale, no rejected options, and no link to, quote of or `@import` of any spec.
+
+- **Content, in this order:** what the project is, with a pointer to `docs/requirements.md`; the session ritual (`/orient` first, `/save-context` at node boundaries); the plan and loop skills (`/plan-dag`, `/feature`, `/plan-feature`, `/plan-bug`, `/plan-investigation`); the hard rules (commit identity and trailers, no push to `main`, David merges, nothing private in a public repo, agents never read `.claude/specs/`, the harness lock); the repository layout; the build and test commands.
+- **Cap:** ≤ 80 lines, checked by the guardrails wiring self-test.
+- **Authorship:** written by the main session in F0a; locked by the harness lock (G4) from the end of F0a.
+- **Spike in F0a:** a dispatched subagent has `CLAUDE.md` loaded (open question 5f).
+
 ### Verdict JSON (reviewer, security)
 
 The schema is **orchestration.spec's Verdict JSON schema v1, unchanged**; this spec does not fork it. Fields: `schema_version`, `agent` (`reviewer|security`), `plan_id`, `node_id`, `attempt`, `head_sha`, `diff_fingerprint`, `verdict` (`PASS|FAIL`), `checked[] {id, result: met|not-met|n/a, note}`, `findings[] {id R#|S#, rule_id, severity blocker|major|minor, title, evidence[] {file, line, excerpt}, expected, actual, testable, suggested_test | untestable_reason}`.
@@ -276,7 +285,7 @@ Rules: every `source_ids` entry is covered by at least one cause; `testable=fals
 2. ~~Worktree path~~ **Resolved:** `.claude/worktrees/<plan>-<node>` (orchestration C1).
 3. ~~Remove `Skill` from reviewer/security~~ **Resolved:** removed from all six.
 4. Per-rule tester ↔ builder cycles vs batching per node. The acceptance suite is written in full in the red step (decided); the unit-cycle granularity is planning/orchestration's. **(open, not owned here)**
-5. Spike in F0a: (a) workflow `agent()` inherits an `EnterWorktree`'d cwd (moot unless workflows are used); (b) `agent_type` = `name` exactly; (c) SubagentStop exit 2 re-prompts the agent with stderr; (d) diff-scope check on Windows paths; (e) the Grep tool honours `.ignore`. **(open)**
+5. Spike in F0a: (a) workflow `agent()` inherits an `EnterWorktree`'d cwd (moot unless workflows are used); (b) `agent_type` = `name` exactly; (c) SubagentStop exit 2 re-prompts the agent with stderr; (d) diff-scope check on Windows paths; (e) the Grep tool honours `.ignore`; (f) a dispatched subagent has `CLAUDE.md` loaded. **(open)**
 6. ~~Who records `start_sha`~~ **Resolved:** a SubagentStart hook (guardrails O2-A).
 7. ~~`fable`~~ **Resolved (moot):** no role uses it.
 8. ~~Security sees the reviewer's verdict~~ **Resolved:** neither sees the other's; both run in parallel.
