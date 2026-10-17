@@ -1,0 +1,41 @@
+#!/bin/sh
+# pre-push (guardrails.spec G7, G11, G13; testing.spec C8): no ref update to main once main is locked;
+# then Release build, full test suite, the idempotent migration script, and the harness self-test.
+# Until F0b creates the solution, the .NET steps are skipped with a notice; the self-test always runs.
+set -u
+root="$(git rev-parse --show-toplevel)" || exit 1
+cd "$root" || exit 1
+
+# G7: marker-gated like G8 (David, F0a t13). main is locked if the marker is on main itself (remote main,
+# local main or origin/main) or in the pushed commit; the pushed commit alone isn't enough, or a branch
+# without the marker could overwrite main. stdin: <local ref> <local sha> <remote ref> <remote sha>
+has_marker() {
+  # Resolve to a SHA first: Git for Windows' shell rewrites `refs/…:path` arguments as path lists.
+  sha="$(git rev-parse --verify -q "$1^{commit}" 2>/dev/null)" || return 1
+  git cat-file -e "$sha:.githooks/main-locked" 2>/dev/null
+}
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ] && { has_marker "$remote_sha" || has_marker refs/heads/main \
+      || has_marker refs/remotes/origin/main || has_marker "$local_sha"; }; then
+    echo "pre-push: G7: nothing is pushed to main (main is locked)" >&2
+    exit 1
+  fi
+done
+
+if [ -f Uinsure.Policies.slnx ]; then
+  dotnet build Uinsure.Policies.slnx -c Release -warnaserror -nologo -v quiet || { echo "pre-push: build failed" >&2; exit 1; }
+  dotnet test --solution Uinsure.Policies.slnx -c Release --no-build || { echo "pre-push: tests failed" >&2; exit 1; }
+  out="${TMPDIR:-${TEMP:-/tmp}}/uinsure-migrate.sql"
+  dotnet tool restore >/dev/null && dotnet ef migrations script --idempotent \
+    --project src/Uinsure.Policies.Persistence --startup-project src/Uinsure.Policies.Api -o "$out" \
+    || { echo "pre-push: idempotent migration script failed" >&2; exit 1; }
+else
+  echo "pre-push: no Uinsure.Policies.slnx yet (before F0b): build, tests and migrations skipped"
+fi
+
+# G13: the harness self-test.
+node --test ".claude/hooks/__tests__/*.test.mjs" >/dev/null 2>&1 || {
+  echo "pre-push: harness self-test failed (node --test \".claude/hooks/__tests__/*.test.mjs\")" >&2
+  exit 1
+}
+exit 0

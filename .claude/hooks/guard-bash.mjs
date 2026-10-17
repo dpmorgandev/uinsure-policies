@@ -18,13 +18,18 @@ function gitInvocations(text, sub) {
   return [...text.matchAll(new RegExp(`\\bgit\\b((?:\\s+-[cC]\\s+\\S+|\\s+-\\S+)*)\\s+${sub}\\b([^;&|\\n]*)`, 'g'))].map((m) => ({ pre: m[1], args: m[2] }));
 }
 
-function mainLocked(root) {
+function hasMarker(root, ref) {
   try {
-    execFileSync('git', ['cat-file', '-e', 'HEAD:.githooks/main-locked'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['cat-file', '-e', `${ref}:.githooks/main-locked`], { cwd: root, stdio: 'ignore' });
     return true;
   } catch {
     return false;
   }
+}
+
+// The lock is a property of main: the marker on main or origin/main counts, not just on HEAD.
+function mainLocked(root) {
+  return ['HEAD', 'refs/heads/main', 'refs/remotes/origin/main'].some((ref) => hasMarker(root, ref));
 }
 
 // G14: latest reviewer and security verdicts must both be PASS with head_sha = HEAD. Null = allow.

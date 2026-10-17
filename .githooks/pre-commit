@@ -1,0 +1,45 @@
+#!/bin/sh
+# pre-commit (guardrails.spec G8, G10, G11; testing.spec C8): main lock, privacy scan of the staged
+# content, then a warnings-as-errors build. Until F0b creates the solution, the build is skipped with a
+# notice, so F0a's harness commits can still be made.
+set -u
+root="$(git rev-parse --show-toplevel)" || exit 1
+cd "$root" || exit 1
+
+# G8: from the main-locked marker (F0a's last commit), no commits on main.
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+if [ "$branch" = "main" ] && git cat-file -e HEAD:.githooks/main-locked 2>/dev/null; then
+  echo "pre-commit: G8: main is locked; commit on a feature branch" >&2
+  exit 1
+fi
+
+# G10: scan the staged version of every added, copied or modified file against both denylists.
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp" "$tmp.err"' EXIT
+git diff --cached --name-only --diff-filter=ACM | while IFS= read -r path; do
+  mkdir -p "$tmp/$(dirname "$path")"
+  git show ":$path" > "$tmp/$path"
+done
+if [ -n "$(ls -A "$tmp")" ]; then
+  hits="$(find "$tmp" -type f -exec bash "$root/.claude/hooks/privacy-scan.sh" {} + 2>"$tmp.err")"
+  status=$?
+  if [ -n "$hits" ]; then
+    echo "pre-commit: G10: private content in the staged files:" >&2
+    printf '%s\n' "$hits" | sed "s#^$tmp/##" >&2
+    exit 1
+  elif [ "$status" -ne 0 ]; then
+    echo "pre-commit: G10: privacy scan failed to run: $(cat "$tmp.err")" >&2
+    exit 1
+  fi
+fi
+
+# G11 / testing C8: every commit compiles, warnings as errors.
+if [ -f Uinsure.Policies.slnx ]; then
+  dotnet build Uinsure.Policies.slnx -warnaserror -nologo -v quiet || {
+    echo "pre-commit: build failed" >&2
+    exit 1
+  }
+else
+  echo "pre-commit: no Uinsure.Policies.slnx yet (before F0b): build skipped"
+fi
+exit 0

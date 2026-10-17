@@ -1,0 +1,26 @@
+#!/bin/sh
+# commit-msg (guardrails.spec G9; traceability.spec trailers): on feature/* and bug/* branches every
+# commit carries Agent, Plan and Node trailers, and Plan/Node match the branch.
+set -u
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+case "$branch" in
+  feature/*/*|bug/*/*) ;;
+  *) exit 0 ;;
+esac
+plan="$(printf '%s' "$branch" | cut -d/ -f2)"
+node="$(printf '%s' "$branch" | cut -d/ -f3)"
+
+trailer() {
+  git interpret-trailers --parse "$1" | sed -n "s/^$2: *//p" | head -1 | tr -d '\r'
+}
+agent="$(trailer "$1" Agent)"
+msg_plan="$(trailer "$1" Plan)"
+msg_node="$(trailer "$1" Node)"
+
+case "$agent" in
+  tester|builder|git|main) ;;
+  *) echo "commit-msg: G9: missing or unknown Agent trailer ('$agent')" >&2; exit 1 ;;
+esac
+[ "$msg_plan" = "$plan" ] || { echo "commit-msg: G9: Plan trailer must be '$plan' (got '$msg_plan')" >&2; exit 1; }
+[ "$msg_node" = "$node" ] || { echo "commit-msg: G9: Node trailer must be '$node' (got '$msg_node')" >&2; exit 1; }
+exit 0

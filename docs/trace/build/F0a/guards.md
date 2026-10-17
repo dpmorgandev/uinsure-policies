@@ -71,5 +71,53 @@ G13 self-test (t16).
 **Finding:** a heredoc that merely *names* a denied command (this section's first draft) was itself
 denied by `guard-bash.mjs`. Trail text with such strings is written with the Edit tool, not through Bash.
 
+## t15: git hooks — 2026-10-17
+
+`.githooks/` holds POSIX `sh` scripts, executable in the index (`100755`), with LF in both the index and
+the working tree via `.gitattributes` `.githooks/* text eol=lf`. `core.hooksPath=.githooks` was installed
+in t13. `.gitignore` already held `.githooks/privacy-denylist.local.txt`.
+- `pre-commit`:
+  - G8: no commits on `main` once the marker is in HEAD.
+  - G10: the **staged** version of each added or modified file is scanned with `privacy-scan.sh`
+    (both denylists).
+  - Then `dotnet build Uinsure.Policies.slnx -warnaserror`.
+- `commit-msg`: G9. On `feature/*` and `bug/*` branches, `Agent` must be one of
+  tester/builder/git/main, and `Plan`/`Node` must match the branch.
+- `pre-push`:
+  - G7: no ref update to `refs/heads/main` once the marker is on `main` (remote, local or origin), or
+    in the pushed commit.
+  - Then a Release build, the full test suite, `dotnet ef migrations script --idempotent`, and the
+    harness self-test.
+- **Before F0b** there's no `Uinsure.Policies.slnx`, so the .NET steps are skipped with a printed notice.
+  The privacy scan, G7/G8/G9 and the self-test always run. This is a bootstrap reading of testing C8;
+  F0b's first commit adds the solution.
+
+**Receipts:** a scratch clone with a bare remote passed 11/11 scenarios:
+- `main` pushed before the lock (self-test ran)
+- a staged local absolute path rejected (G10), and a clean file committed
+- commit-msg on a node branch: no trailers rejected, wrong `Node` rejected, matching trailers accepted
+- a feature branch pushed
+- the marker commit itself allowed
+- a commit on locked `main` rejected (G8)
+- a push to locked `main` rejected (G7), and `HEAD:refs/heads/main` from a branch **without** the marker
+  rejected (G7)
+
+The F0a probe for G11's build legs (compile error, red test, broken migration) needs the solution, so it
+moves to F0b.
+
+**Findings (all fixed before commit)**
+1. **The scanner ran outside the repo.** The first pre-commit ran `privacy-scan.sh` from inside the
+   staged-file temp directory, which isn't a git repo, so every scan errored out. Even the G10 "reject"
+   failed for the wrong reason.
+2. **G7 only looked at the pushed commit.** A branch without the marker could overwrite `main` after the
+   lock. The lock is now read from `main` itself. `guard-bash.mjs`'s `mainLocked` had the same flaw (it
+   read HEAD only) and now also checks `main` and `origin/main`.
+3. **Git for Windows' shell rewrites `refs/…:path` arguments.** `git cat-file -e
+   refs/heads/main:.githooks/main-locked` reached git as `refs\heads\main;.githooks\main-locked` and
+   silently failed. Hook scripts resolve refs to SHAs before using `rev:path`. Node hooks call `git.exe`
+   directly and aren't affected.
+4. `xargs` turns a child's exit 1 into 123, which would have misreported a privacy hit as a scan failure.
+   pre-commit now decides on whether there's output.
+
 **Settled by David (t13):** G7 is gated on the `main-locked` marker like G8 (no settings deny for pushes
 to `main`), and the stub grammar is testing C7's.
