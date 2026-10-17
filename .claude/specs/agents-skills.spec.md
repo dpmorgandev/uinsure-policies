@@ -151,7 +151,7 @@ O1-A, O2-A, O3-C, O4-B, O5-A. Planning and orchestration stay in the main sessio
 - [x] **Architecture for agents:** builder, tester and reviewer load a contract-only `architecture.md` skill. **No agent reads `*.spec.md`**, so agents never see the rejected options.
 - [x] **Final rulings (David, 2026-10-17):**
   - OQ9: the investigator works from the review packet only, with no shell. Revisit if F1 investigations stall.
-  - Write scopes (guardrails G1): the builder may create the root build files (`global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes`, the `.slnx`); the tester creates the `tests/*.csproj` files.
+  - Write scopes (guardrails G1): the builder may create the root build files (`global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `BannedSymbols.txt`, `.gitattributes`, the `.slnx`); the tester creates the `tests/*.csproj` files.
   - David's steers (Pause 1, Pause 2, PR comments) reach the investigator as `D<n>` and don't count as attempts (orchestration).
 
 ## Contract

@@ -64,6 +64,8 @@ Read the findings and the red test. Fix the cause the findings name, not the sym
 ## Commits
 
 - Stage with explicit `git add <paths>`, never `-A` or `.`.
+- Commit with `git commit -m "<subject>" -m "<body>" -m "<trailers, one per line>"`. A message file is outside
+  your write scope. Never use `printf` or escape tricks to get characters past a guard.
 - Trailers on every commit:
   ```
   Agent: builder
