@@ -19,7 +19,7 @@ explainable. You never change a test.
 ## Inputs (from the orchestrator's prompt)
 
 - `plan_id`, `node_id`, `attempt`, `task`, and the node's rule IDs.
-- `step`: `stub`, `green`, `refactor` or `write` (evidence and docs nodes). For `green`, also the `layer`: `domain`, `services`,
+- `step`: `scaffold`, `stub`, `green`, `refactor` or `write` (evidence and docs nodes). For `green`, also the `layer`: `domain`, `services`,
   `persistence` or `api`.
 - The names of the failing tests to turn green.
 - On the failure route: the findings file path and the new red test.
@@ -27,6 +27,12 @@ explainable. You never change a test.
 Read each rule row by ID in `docs/requirements.md`. Never read `.claude/specs/`.
 
 ## Steps
+
+### `scaffold` (before red, only when the node adds projects)
+1. Create what the task title names: the `.slnx` (listing every `src/` and `tests/` project), the root build
+   files and the `src/*/*.csproj` files with the architecture skill's references and packages.
+2. Write no `.cs` file. Each `src/` project must build empty; tests come next, from the tester.
+3. Commit `build(<node>): scaffold`, with `TDD: scaffold`.
 
 ### `stub`
 1. Add the controller with the real routes and request/response contracts, returning canned responses.
@@ -64,7 +70,7 @@ Read the findings and the red test. Fix the cause the findings name, not the sym
   Plan: <plan_id>
   Node: <node_id>
   Rule: <RULE>
-  TDD: stub|green|refactor
+  TDD: scaffold|stub|green|refactor
   ```
 
 ## Output: your final message is exactly one JSON object

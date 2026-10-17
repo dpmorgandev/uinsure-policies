@@ -53,15 +53,26 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 
 **SETUP** (before t1, once)
 1. Dispatch `git` with `op: setup`, then `EnterWorktree({path: ".claude/worktrees/<plan>-<node>"})`.
-2. Gate: the branch name and worktree path match; `git rev-parse --show-toplevel` = the worktree.
+2. Gate: the branch name and worktree path match; `git rev-parse --show-toplevel` = the worktree;
+   `git rev-parse --abbrev-ref @{u}` fails (the branch tracks nothing, so never `main`).
 3. Commit the plan status `pending → in_progress`, `attempt: 1`, `branch` and `worktree`.
    Record `setup` and `state(in_progress)`.
 
-**`tester / red`, layer `acceptance` (t1)**
+**`builder / scaffold`** (optional, before red: only a node that adds a project)
+- Dispatch. Then `gate.scaffold`:
+  - Each new `src/` project builds: `dotnet build <csproj> -warnaserror` exits 0.
+  - The diff ⊆ the root build files plus `src/*/*.csproj`, and `git diff --name-only <task_start>..HEAD -- '*.cs'`
+    is empty: no behaviour before red.
+  - The `.slnx` lists every `src/` and `tests/` project the node creates.
+
+**`tester / red`, layer `acceptance` (the first task after an optional scaffold)**
 - Dispatch the tester. Then run `gate.red`:
   - `dotnet build Uinsure.Policies.slnx -warnaserror` exits 0.
   - Each node rule's `dotnet test --solution Uinsure.Policies.slnx -- --filter-trait "Rule=<ID>"` exits
-    non-zero (`expect: fail`).
+    non-zero (`expect: fail`), and its output reports at least one failed test. Exit code 8 (no tests ran)
+    is ignored by the test projects, so a filter that matches nothing exits 0, which fails the gate.
+  - A node with no rules: the full `dotnet test --solution Uinsure.Policies.slnx` exits non-zero with at
+    least one failed test, and you record which tests fail.
   - `git diff --name-only <task_start>..HEAD` ⊆ `tests/**` plus `src/**`. The `src/` lines are
     throw-only stubs; the hook enforces this, and you re-check that no `src/` line was removed.
   - Every node rule has a `[Trait("Rule","<ID>")]` in Api.Tests (grep).

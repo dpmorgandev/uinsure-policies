@@ -143,6 +143,7 @@ A note against Retrieve-first: GET-1 returns terms, payments, refunds and claims
   - `docs/plans/active/<plan-id>.dag.yaml` is the only state: plan status, approval, nodes and tasks. The orchestrator loops over it. `<plan-id>.plan.md` keeps the reasoning prose only and holds no DAG. That's still one source of truth, so A4's objection (two places holding status) doesn't apply.
   - Tasks are explicit per node, never a named list. Feature nodes follow the per-layer sequence (testing C6 plus the orchestration state machine), and each task names the rule ids it covers. This closes agents-skills open question 4 in favour of batching per layer, not per rule.
   - F0a gets its explicit session task list, harvested from every spec's F0a and F0 items. F0b gains the "verify in F0" checks.
+- [x] **Amendment (David, 2026-10-17, F0b t1 blocked): a builder `scaffold` step before red.** F0b's red couldn't build: the tester may not write the `.slnx` or the root build files, a `.csproj` isn't a throw-only stub, and the plan created the projects in the stub step, after red. A feature or bug node that adds projects now starts with an optional builder **scaffold** task (`TDD: scaffold`): the `.slnx`, the root build files and the `src/*/*.csproj` files, with no `.cs`. Red then follows. The test projects ignore Microsoft.Testing.Platform exit code 8 (no tests ran), so a rule filter that matches nothing exits 0, and red's "exits non-zero" means a test failed.
 
 ## Contract
 
@@ -277,7 +278,7 @@ nodes:
 Task fields:
 - `id`: `t1`, `t2`… sequential, in run order.
 - `role`: `tester | builder | review` (reviewer ∥ security, dispatched together) `| git | orchestrator | david`.
-- `step`: `session | red | stub | pause1 | green | refactor | gates | review | qa | integrate | trace | pr | pause2 | merge | write`. Each step belongs to one role: red and qa → tester; stub, green, refactor and write → builder; integrate and pr → git; gates and trace → orchestrator; pause1, pause2 and merge → david; session → david on `owner: david` nodes only.
+- `step`: `session | scaffold | red | stub | pause1 | green | refactor | gates | review | qa | integrate | trace | pr | pause2 | merge | write`. Each step belongs to one role: red and qa → tester; scaffold, stub, green, refactor and write → builder (scaffold only as a feature or bug node's first task); integrate and pr → git; gates and trace → orchestrator; pause1, pause2 and merge → david; session → david on `owner: david` nodes only.
 - `layer`: `acceptance | domain | services | persistence | api | null`.
 - `rules`: the subset of the node's rules this task proves or implements; `[]` for plumbing.
 - `status`: `pending | in_progress | done | skipped`. Only the orchestrator writes it (the main session on David's nodes), as a `plan(<plan>/<node>): <task> <from> → <to>` commit.
@@ -288,7 +289,7 @@ Every node lists its tasks explicitly; these are the shapes the `plan-*` skills 
 
 | Sequence | For | Tasks, in order |
 |---|---|---|
-| **feature** | `owner: loop`, kind `feature`/`bug` | tester **red** acceptance (every node rule; Postman folder; throwing stubs; ids out of `rule-coverage.pending.txt`) · builder **stub** api → david **pause1** · per layer that has work, in order domain → services: tester **red** unit tests, then builder **green** · builder **green** persistence · builder **green** api (the whole acceptance suite goes green last) · builder **refactor** · orchestrator **gates** · **review** (reviewer ∥ security) · tester **qa** · git **integrate** · orchestrator **trace** · git **pr** (push, draft PR, verdict and rebase comments) · david **pause2** (Postman receipt, then sign-off) · david **merge** |
+| **feature** | `owner: loop`, kind `feature`/`bug` | optional builder **scaffold** (only a node that adds projects: `.slnx`, root build files, `src/*/*.csproj`, no `.cs`) · tester **red** acceptance (every node rule; Postman folder; throwing stubs; ids out of `rule-coverage.pending.txt`) · builder **stub** api → david **pause1** · per layer that has work, in order domain → services: tester **red** unit tests, then builder **green** · builder **green** persistence · builder **green** api (the whole acceptance suite goes green last) · builder **refactor** · orchestrator **gates** · **review** (reviewer ∥ security) · tester **qa** · git **integrate** · orchestrator **trace** · git **pr** (push, draft PR, verdict and rebase comments) · david **pause2** (Postman receipt, then sign-off) · david **merge** |
 | **docs** | `owner: loop`, kind `docs`/`evidence` | builder **write** · orchestrator **gates** · **review** · tester **qa** · git **integrate** · orchestrator **trace** · git **pr** · david **pause2** · david **merge** (no Pause 1) |
 | **session** | `owner: david` | `role: david, step: session` tasks only, built in the main session with no subagent loop |
 
@@ -379,21 +380,22 @@ nodes:
       - "The commit-on-main deny hook is active from F0b start"
       - "The loop ran end to end: both pauses, walkthrough.md, signed QA script, PR merged, trace complete"
     tasks:
-      - {id: t1, role: tester, step: red, layer: acceptance, rules: [], title: "Four test projects; architecture tests with a deliberate breach shown failing; health integration test on SQLite + FakeTimeProvider; UkCalendar BST/GMT tests; 500 problem-body and startup-without-App-Insights tests; RuleCoverageTests with every id pending; Postman health requests; throwing stubs", status: pending}
-      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Four src projects, slnx, Directory.Build.props and Directory.Packages.props with verified versions; health routes answering with canned responses", status: pending}
-      - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the health stub in Postman, read the tests; go or change", status: pending}
-      - {id: t4, role: builder, step: green, layer: services, rules: [], title: "UkCalendar.Today(TimeProvider) in Europe/London; BannedApiAnalyzers with BannedSymbols.txt", status: pending}
-      - {id: t5, role: builder, step: green, layer: persistence, rules: [], title: "PoliciesDbContext with the SQL Server / SQLite switch, initial migration, EnsureCreated for SQLite; idempotent script generates", status: pending}
-      - {id: t6, role: builder, step: green, layer: api, rules: [], title: "Real health checks (live, ready with DB), RFC 9457 error mapping, OpenTelemetry only with the connection string, OpenAPI 3.1 + Scalar in Development", status: pending}
-      - {id: t7, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
-      - {id: t8, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
-      - {id: t9, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
-      - {id: t10, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F0b.md", status: pending}
-      - {id: t11, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
-      - {id: t12, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
-      - {id: t13, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
-      - {id: t14, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md and the QA script", status: pending}
-      - {id: t15, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
+      - {id: t1, role: builder, step: scaffold, layer: null, rules: [], title: "Uinsure.Policies.slnx listing the four src and four test projects; global.json; Directory.Build.props (test projects ignore exit code 8); Directory.Packages.props with verified versions; the four src csproj files with the architecture references; no .cs", status: pending}
+      - {id: t2, role: tester, step: red, layer: acceptance, rules: [], title: "Four test projects; architecture tests with a deliberate breach shown failing; health integration test on SQLite + FakeTimeProvider; UkCalendar BST/GMT tests; 500 problem-body and startup-without-App-Insights tests; RuleCoverageTests with every id pending; Postman health requests; throwing stubs", status: pending}
+      - {id: t3, role: builder, step: stub, layer: api, rules: [], title: "Health routes in src/Uinsure.Policies.Api answering with canned responses (callable; the health tests may stay red until persistence)", status: pending}
+      - {id: t4, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the health stub in Postman, read the tests; go or change", status: pending}
+      - {id: t5, role: builder, step: green, layer: services, rules: [], title: "UkCalendar.Today(TimeProvider) in Europe/London; BannedApiAnalyzers with BannedSymbols.txt; delete the deliberate layering breach in Domain", status: pending}
+      - {id: t6, role: builder, step: green, layer: persistence, rules: [], title: "PoliciesDbContext with the SQL Server / SQLite switch, initial migration, EnsureCreated for SQLite; idempotent script generates", status: pending}
+      - {id: t7, role: builder, step: green, layer: api, rules: [], title: "Real health checks (live, ready with DB), RFC 9457 error mapping, OpenTelemetry only with the connection string, OpenAPI 3.1 + Scalar in Development", status: pending}
+      - {id: t8, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
+      - {id: t9, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
+      - {id: t10, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+      - {id: t11, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F0b.md", status: pending}
+      - {id: t12, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
+      - {id: t13, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
+      - {id: t14, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
+      - {id: t15, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md and the QA script", status: pending}
+      - {id: t16, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
   - id: F1
     title: Sell (+ bare GET)
     kind: feature

@@ -1,4 +1,5 @@
 // Fixtures for the trace hook and render script (traceability.spec Contract). Run: node --test .claude/hooks/__tests__
+import './clean-git-env.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';

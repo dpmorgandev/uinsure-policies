@@ -1,5 +1,6 @@
 // Fixtures for the guard hooks (guardrails.spec manifest G1–G5, G7–G9, G11, G14; identity; spec reads;
 // verdict and findings checks). Run: node --test ".claude/hooks/__tests__/*.test.mjs"
+import './clean-git-env.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync, readdirSync } from 'node:fs';
@@ -213,6 +214,15 @@ test('G11: --no-verify, commit -n and hook-path overrides are denied for everyon
   assert.equal(check({ command: 'git commit -m "no new tests"', subagent: false, role: '', root: null }), null);
 });
 
+test('G11: reading core.hooksPath is allowed; every write form is still denied', () => {
+  for (const cmd of ['git config --get core.hooksPath', 'git config core.hooksPath', 'git config --get-all core.hooksPath', 'git config get core.hooksPath', 'git -C repo config --get core.hooksPath']) {
+    assert.equal(check({ command: cmd, subagent: false, role: '', root: null }), null, cmd);
+  }
+  for (const cmd of ['git config core.hooksPath .x', 'git config --unset core.hooksPath', 'git config --replace-all core.hooksPath x', 'git config set core.hooksPath x', 'git config --add core.hooksPath x', 'sh -c "git config core.hooksPath x"']) {
+    assert.match(check({ command: cmd, subagent: false, role: '', root: null }) ?? '', /^G11/, cmd);
+  }
+});
+
 // ---------- G4 Bash / G9 (agents) ----------
 
 test('G4 Bash: an agent may not run git config', () => {
@@ -248,6 +258,25 @@ test('G14: PR only when the latest reviewer and security verdicts are PASS for H
   assert.equal(pr(), null);
   verdictFile(root, 'A2', 'reviewer', 'PASS', 'f'.repeat(40), '2026-10-18T10:00:00Z');
   assert.match(pr() ?? '', /not HEAD/);
+}));
+
+test('G14: a harness/<slug> branch opens a PR from the main session only, touching only the harness', () => withRepo('main', (root) => {
+  sh(root, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+  sh(root, 'checkout', '-q', '-b', 'harness/scaffold-step');
+  const pr = (subagent = false) => check({ command: 'gh pr create --body-file b.md', subagent, role: subagent ? 'git' : '', root });
+  assert.match(pr() ?? '', /no changes/);
+  mkdirSync(join(root, '.claude', 'skills'), { recursive: true });
+  writeFileSync(join(root, '.claude', 'skills', 'x.md'), 'x\n');
+  writeFileSync(join(root, 'CLAUDE.md'), 'x\n');
+  sh(root, 'add', '.claude/skills/x.md', 'CLAUDE.md');
+  sh(root, 'commit', '-q', '-m', 'harness');
+  assert.equal(pr(), null);
+  assert.match(pr(true) ?? '', /main session/);
+  writeFileSync(join(root, 'src', 'Existing.cs'), 'namespace Y;\n');
+  sh(root, 'commit', '-q', '-am', 'src');
+  assert.match(pr() ?? '', /only \.claude\/.*src\/Existing\.cs/);
+  sh(root, 'checkout', '-q', '-b', 'harness/Bad_Name');
+  assert.match(pr() ?? '', /node branch with verdicts, or a harness/);
 }));
 
 // ---------- verdict and findings checks ----------

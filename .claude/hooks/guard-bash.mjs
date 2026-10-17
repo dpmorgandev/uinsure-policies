@@ -18,6 +18,16 @@ function gitInvocations(text, sub) {
   return [...text.matchAll(new RegExp(`\\bgit\\b((?:\\s+-[cC]\\s+\\S+|\\s+-\\S+)*)\\s+${sub}\\b([^;&|\\n]*)`, 'g'))].map((m) => ({ pre: m[1], args: m[2] }));
 }
 
+// A config call that only reads core.hooksPath: --get / --get-all / --get-regexp, the `get` subcommand,
+// or the bare key with no value and no write flag.
+function isConfigRead(args) {
+  const words = args.trim().split(/\s+/);
+  if (words.some((w) => /^--(unset|unset-all|replace-all|add|edit|rename-section|remove-section)$/.test(w) || /^(set|unset|edit|rename-section|remove-section)$/.test(w))) return false;
+  if (words.some((w) => /^--get(-all|-regexp)?$/.test(w)) || words[0] === 'get') return true;
+  const key = words.findIndex((w) => /^core\.hooksPath$/i.test(w));
+  return key !== -1 && key === words.length - 1;
+}
+
 function hasMarker(root, ref) {
   try {
     execFileSync('git', ['cat-file', '-e', `${ref}:.githooks/main-locked`], { cwd: root, stdio: 'ignore' });
@@ -33,10 +43,27 @@ function remoteMainLocked(root) {
   return hasMarker(root, 'refs/remotes/origin/main');
 }
 
+// G14 harness route: a harness/<slug> branch from the main session whose diff touches only the harness.
+const HARNESS_PATH = /^(\.claude\/|\.githooks\/|CLAUDE\.md$)/;
+function harnessPrGate(root, subagent) {
+  if (subagent) return 'G14: a harness PR is the main session\'s, not an agent\'s';
+  let files;
+  try {
+    files = git(['diff', '--name-only', 'origin/main...HEAD'], root).split('\n').filter(Boolean);
+  } catch {
+    return 'G14: cannot diff the harness branch against origin/main; denied';
+  }
+  if (!files.length) return 'G14: the harness branch has no changes against origin/main';
+  const outside = files.filter((f) => !HARNESS_PATH.test(f) || f.startsWith('.claude/worktrees/'));
+  return outside.length ? `G14: a harness PR may touch only .claude/, .githooks/ and CLAUDE.md (found ${outside.slice(0, 3).join(', ')})` : null;
+}
+
 // G14: latest reviewer and security verdicts must both be PASS with head_sha = HEAD. Null = allow.
-export function prGate(root) {
-  const where = planNodeFromBranch(currentBranch(root));
-  if (!where) return 'G14: gh pr create is only allowed from a node branch with verdicts';
+export function prGate(root, subagent = false) {
+  const branch = currentBranch(root);
+  if (/^harness\/[a-z0-9][a-z0-9-]*$/.test(branch)) return harnessPrGate(root, subagent);
+  const where = planNodeFromBranch(branch);
+  if (!where) return 'G14: gh pr create is only allowed from a node branch with verdicts, or a harness/<slug> branch';
   const dir = join(traceDir(root, where.plan, where.node), 'verdicts');
   if (!existsSync(dir)) return 'G14: no verdicts for this node; no PR without reviewer and security PASS for HEAD';
   const head = git(['rev-parse', 'HEAD'], root);
@@ -94,7 +121,7 @@ export function check({ command, subagent, role, root }) {
   if (/--no-verify\b/.test(text)) return 'G11: --no-verify is denied for everyone';
   if (gitInvocations(text, 'commit').some(({ args }) => /(^|\s)-[a-zA-Z]*n[a-zA-Z]*(\s|$)/.test(args.replace(/(-m|-F)\s+("[^"]*"|'[^']*'|\S+)/g, '')))) return 'G11: git commit -n (no-verify) is denied';
   if (/\bgit\s+(?:-\S+\s+)*-c\s+core\.hooksPath/i.test(text)) return 'G11: git -c core.hooksPath is denied';
-  if (/\bgit\b[^;&|\n]*\bconfig\b[^;&|\n]*core\.hooksPath/i.test(text)) return 'G11: changing core.hooksPath is denied';
+  if (gitInvocations(text, 'config').some(({ args }) => /core\.hooksPath/i.test(args) && !isConfigRead(args))) return 'G11: changing core.hooksPath is denied';
 
   // G4 (Bash leg): a subagent may not change git config at all.
   if (subagent && gitInvocations(text, 'config').length) return 'G4: git config is denied for agents';
@@ -118,7 +145,7 @@ export function check({ command, subagent, role, root }) {
   }
 
   // G14: the PR gate, for everyone, before G6's ask prompt.
-  if (/\bgh\s+pr\s+create\b/.test(text)) return root ? prGate(root) : 'G14: cannot resolve the repository; denied';
+  if (/\bgh\s+pr\s+create\b/.test(text)) return root ? prGate(root, subagent) : 'G14: cannot resolve the repository; denied';
   return null;
 }
 

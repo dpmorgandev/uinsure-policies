@@ -186,6 +186,7 @@ Nothing in `tests/` references `.claude/`. Test package versions are pinned once
 ### C6. Outside-in TDD sequence (per feature node)
 | # | Step | Who | Content | Commit `TDD:` |
 |---|---|---|---|---|
+| 0 | Scaffold (only a node that adds projects) | builder | The `.slnx`, root build files and `src/*/*.csproj`; no `.cs`. Each `src/` project builds empty, so red compiles. | `scaffold` |
 | 1 | Red: acceptance | tester | The **full** acceptance suite in Api.Tests: every success and failure row for the node's rules, each traited; the Postman requests; the throwing `src/` stubs needed to compile (C7); node IDs removed from `rule-coverage.pending.txt`. Builds; acceptance tests fail. | `red` |
 | 2 | Stub controller | builder | Controller action(s) returning hard-coded happy-path responses (status, `Location`, body shape). Happy-path rows go green; rule-violation rows stay red. | `stub` |
 | — | **Pause 1** | David | Calls the stub in Postman; reads the acceptance tests. Loop waits. | — |

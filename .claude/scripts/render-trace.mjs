@@ -10,7 +10,7 @@ import {
 } from '../hooks/lib/trace.mjs';
 
 const BASE = 'origin/main';
-const TDD = ['red', 'stub', 'green', 'refactor'];
+const TDD = ['scaffold', 'red', 'stub', 'green', 'refactor'];
 const EVENT = /^(setup|state\(\w+\)|gate\.[a-z0-9.-]+|pause1|verdict\((reviewer|security),(PASS|FAIL),[^)]+\)|findings\([^)]+\)|attempt\+\+|steer\(D\d+,(pause1|pause2|pr-comment)\)|investigation\.opened\(inv-\d{3}\)|escalated|trace\.rendered\((ok|incomplete)\)|pr\(\d+\)|pr\.comment(\.fixed)?(\([^)]*\))?|signoff\([0-9a-f]{7,40}\)|merged\([0-9a-f]{7,40}\)|archived)$/;
 const GATE_KEYS = ['cmd', 'exit', 'expect', 'ok', 'head'];
 
