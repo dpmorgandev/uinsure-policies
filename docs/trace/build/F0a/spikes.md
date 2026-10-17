@@ -48,12 +48,42 @@ Receipt: [t3-hook-log.jsonl](t3-hook-log.jsonl) (paths redacted to `<root>`).
 
 **Not run:** workflow `agent()`, because running a workflow needs David's explicit opt-in and the specs say it's moot unless workflows are used.
 
-**t4 part 2 (needs a fresh session started in the main checkout):**
-- dispatch `probe` and `probe-full` for the project-agent `agent_type` value, and `probe-wt` to see whether worktree-only agents load
-- check which `PROBE-MARKER` a subagent sees, from the main checkout and after `EnterWorktree`
+Part 2 (below) ran in a fresh session started in the main checkout.
 
 **Design consequences (for David)**
 - Orchestration's "the harness in force is the branch's copy" (R1 note) is **wrong** for settings: main's copy governs, and the worktree copies are inert. The harness lock's protection of worktree copies is therefore belt-and-braces, not the main defence. A hook change made on a feature branch has no effect until it is merged and the main checkout updated.
 - The SubagentStop verdict gate (guardrails) works as designed: exit 2 re-prompts. Its stderr has to say "restate your complete verdict JSON", because only the final message survives.
 - `.ignore` is a convenience, not a guard. The PreToolUse deny on `.claude/specs/` paths carries the "agents never read specs" law, and it has to match explicit `path` arguments and Glob patterns.
 - Guards must detect a subagent by `agent_id`, not by `agent_type`. They should look up the role from `agent_type` when it is present, and fail closed (deny) when a subagent call has no role.
+
+## t4 (part 2): project agents and project CLAUDE.md, fresh session — 2026-10-17
+
+**Setup**
+- A fresh Claude Code session started in the main checkout, with the part 1 probe files still on disk (uncommitted) so they were loaded at startup.
+- The probe-stop "once" marker was absent at start, so the stop probe was armed.
+- Every probe got the same prompt: quote any `PROBE-MARKER` line from its context without reading a file, say whether the user-level instructions are present, then run `pwd`, `git rev-parse --show-toplevel` and `git rev-parse --abbrev-ref HEAD`.
+- Round 1: `probe` and `probe-full` dispatched from the main checkout. Round 2: `EnterWorktree({path: .claude/worktrees/spike-t3})`, then `probe` and `probe-wt`.
+
+Receipt: [t4b-hook-log.jsonl](t4b-hook-log.jsonl) (paths redacted to `<root>`).
+
+| Question | Result | Evidence |
+|---|---|---|
+| What is `agent_type` for a project agent? | **The agent's `name:` exactly**: `probe` and `probe-full`, on SubagentStart, PreToolUse and SubagentStop. It's the same in the main checkout and inside a worktree. | log 20:56:13–22, 20:56:35–42 |
+| Are project agents loaded at session start usable? | **Yes.** Both appeared in the agent list and dispatched. A missing `tools:` line (`probe-full`) makes no difference to registration. | dispatch results |
+| Do agents defined only in a worktree's `.claude/agents/` load after `EnterWorktree`? | **No.** `probe-wt` failed with "Agent type not found", and the list it offered was the main checkout's roster. The roster comes from the launch directory at session start. | dispatch error 20:56:37 (PreToolUse, no SubagentStart) |
+| Does a subagent have the project `CLAUDE.md` loaded? | **Yes, if it existed at session start.** Both main-checkout probes quoted `# PROBE-MARKER-MAIN` from their context without reading the file. | the probes' reports |
+| After `EnterWorktree`, which `CLAUDE.md` does a subagent see? | **The main checkout's, not the worktree's.** The worktree `probe` ran in the worktree (`pwd` and toplevel were spike-t3, branch `spike/t3`) but quoted `PROBE-MARKER-MAIN`. The worktree's `CLAUDE.md` holds `# PROBE-MARKER-WT`, and no probe saw it. | the probe's report; `head -1 CLAUDE.md` in the worktree |
+| Do subagents see the user-level `~/.claude/CLAUDE.md`? | **Yes**, all three, alongside the project file. | the probes' reports |
+| SubagentStop exit 2 again | It re-prompted once more (`probe`, 20:56:20 blocked, 20:56:22 passed). This time the agent restated its whole report before `REPROMPTED`, but part 1 shows it can't be relied on to. | log; the report |
+| Is `agent_type` on every subagent event? | **No (third time).** An empty-`agent_type` SubagentStop came with every dispatch round (20:56:18, 20:56:22, 20:56:24, 20:56:40). Each had an `agent_id` that matches no dispatched probe. | log |
+
+**Unplanned finding**
+- Inside the worktree, the isolation check refused a Bash pipeline into `node -e` again, as in t3. Plain separate commands (and the Read tool) worked. Hook scripts and agents that pipe into `node` inside a worktree need literal script paths.
+
+**Not run:** workflow `agent()`, as in part 1.
+
+**Design consequences (for David), part 2**
+- `agent_type` = the agent file's `name:`, so the guard's role table keys on the six roster names. Combined with part 1, a subagent is detected by `agent_id`, the role comes from `agent_type`, and an empty role fails closed.
+- The harness (agents, `CLAUDE.md`, settings and hook scripts) is fixed at session start from the **main checkout**. Worktree copies of all four are inert. A change to any harness file only takes effect after it is merged to main **and a new session starts**. This extends the part 1 R1 correction from settings to agents and `CLAUDE.md`.
+- The `/feature` orchestrator must run from a session launched in the main checkout. Launching a session directly inside a worktree is a different case and wasn't tested.
+- Subagents get the project `CLAUDE.md` and the user-level one. The project `CLAUDE.md` is therefore a channel to every agent and must stay contract-only (t8). The user-level file leaking into subagents is outside the repo's control and gets recorded in the README.

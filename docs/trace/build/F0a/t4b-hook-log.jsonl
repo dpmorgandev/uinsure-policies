@@ -1,0 +1,24 @@
+{"ts":"2026-10-17T20:56:13.642Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"Agent","cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:13.766Z","label":"main","event":"SubagentStart","agent_type":"probe","subagent":true,"tool_name":null,"cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:15.675Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"Agent","cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:15.796Z","label":"main","event":"SubagentStart","agent_type":"probe-full","subagent":true,"tool_name":null,"cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:17.190Z","label":"main","event":"PreToolUse","agent_type":"probe","subagent":true,"tool_name":"Bash","cwd":"<root>","project_dir":"<root>","target":"pwd; git rev-parse --show-toplevel; git rev-parse --abbrev-ref HEAD"}
+{"ts":"2026-10-17T20:56:18.788Z","label":"main","event":"PreToolUse","agent_type":"probe-full","subagent":true,"tool_name":"Bash","cwd":"<root>","project_dir":"<root>","target":"pwd; git rev-parse --show-toplevel; git rev-parse --abbrev-ref HEAD"}
+{"ts":"2026-10-17T20:56:18.788Z","label":"main","event":"SubagentStop","agent_type":"","subagent":true,"tool_name":null,"cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:20.468Z","label":"main","event":"SubagentStop","agent_type":"probe","subagent":true,"tool_name":null,"cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:21.296Z","label":"main","event":"SubagentStop","agent_type":"probe-full","subagent":true,"tool_name":null,"cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:22.694Z","label":"main","event":"SubagentStop","agent_type":"","subagent":true,"tool_name":null,"cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:22.726Z","label":"main","event":"SubagentStop","agent_type":"probe","subagent":true,"tool_name":null,"cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:24.699Z","label":"main","event":"SubagentStop","agent_type":"","subagent":true,"tool_name":null,"cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:26.758Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"Bash","cwd":"<root>","project_dir":"<root>","target":"tail -n +13 \"<tmp>/uinsure-probe/hook-log.jsonl\" | node -e 'let s=\"\";process.std"}
+{"ts":"2026-10-17T20:56:29.662Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"ToolSearch","cwd":"<root>","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:31.033Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"EnterWorktree","cwd":"<root>","project_dir":"<root>","target":".claude/worktrees/spike-t3"}
+{"ts":"2026-10-17T20:56:35.047Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"Agent","cwd":"<root>/.claude/worktrees/spike-t3","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:35.158Z","label":"main","event":"SubagentStart","agent_type":"probe","subagent":true,"tool_name":null,"cwd":"<root>/.claude/worktrees/spike-t3","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:37.048Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"Agent","cwd":"<root>/.claude/worktrees/spike-t3","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:39.156Z","label":"main","event":"PreToolUse","agent_type":"probe","subagent":true,"tool_name":"Bash","cwd":"<root>/.claude/worktrees/spike-t3","project_dir":"<root>","target":"pwd; git rev-parse --show-toplevel; git rev-parse --abbrev-ref HEAD"}
+{"ts":"2026-10-17T20:56:40.804Z","label":"main","event":"SubagentStop","agent_type":"","subagent":true,"tool_name":null,"cwd":"<root>/.claude/worktrees/spike-t3","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:42.044Z","label":"main","event":"SubagentStop","agent_type":"probe","subagent":true,"tool_name":null,"cwd":"<root>/.claude/worktrees/spike-t3","project_dir":"<root>","target":""}
+{"ts":"2026-10-17T20:56:47.036Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"Bash","cwd":"<root>/.claude/worktrees/spike-t3","project_dir":"<root>","target":"head -1 CLAUDE.md; ls .claude/agents/; tail -n +26 \"<tmp>/uinsure-probe/hook-log"}
+{"ts":"2026-10-17T20:56:49.909Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"Bash","cwd":"<root>/.claude/worktrees/spike-t3","project_dir":"<root>","target":"head -1 CLAUDE.md; ls .claude/agents/"}
+{"ts":"2026-10-17T20:56:50.457Z","label":"main","event":"PreToolUse","agent_type":null,"subagent":false,"tool_name":"Read","cwd":"<root>/.claude/worktrees/spike-t3","project_dir":"<root>","target":"<tmp>/uinsure-probe/hook-log.jsonl"}
