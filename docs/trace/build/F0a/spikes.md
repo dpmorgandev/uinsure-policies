@@ -87,3 +87,26 @@ Receipt: [t4b-hook-log.jsonl](t4b-hook-log.jsonl) (paths redacted to `<root>`).
 - The harness (agents, `CLAUDE.md`, settings and hook scripts) is fixed at session start from the **main checkout**. Worktree copies of all four are inert. A change to any harness file only takes effect after it is merged to main **and a new session starts**. This extends the part 1 R1 correction from settings to agents and `CLAUDE.md`.
 - The `/feature` orchestrator must run from a session launched in the main checkout. Launching a session directly inside a worktree is a different case and wasn't tested.
 - Subagents get the project `CLAUDE.md` and the user-level one. The project `CLAUDE.md` is therefore a channel to every agent and must stay contract-only (t8). The user-level file leaking into subagents is outside the repo's control and gets recorded in the README.
+
+## t5: ask rules in bypass mode — 2026-10-17
+
+**Setup**
+- The session ran in `bypassPermissions` (as recorded in the transcript).
+- The G6 rules were added temporarily to the main checkout's `.claude/settings.json`: `"ask": ["Bash(git push *)", "Bash(gh pr create *)", "Bash(gh pr comment *)"]`, with no restart.
+- Every probe command was harmless even if run: `git push --dry-run origin HEAD:refs/heads/t5-probe`, `gh pr create --dry-run --head main --base main …`, and `gh pr comment 999999 …`.
+- **An approval is indistinguishable from no prompt** (the command just runs), so the receipts are denials: David chose No, and the tool result came back "The user doesn't want to proceed with this tool use".
+
+| Question | Result | Evidence |
+|---|---|---|
+| Does `ask` on `gh pr comment *` prompt in bypass? | **Yes.** Prompted; David denied; the command didn't run. | tool rejection |
+| Does `ask` on `git push *` prompt in bypass? | **Yes.** Prompted; denied. | tool rejection |
+| Does `ask` on `gh pr create *` prompt in bypass? | **Yes.** Prompted; denied. | tool rejection |
+| Does it prompt for a subagent's call, and name the agent? | **Yes.** A `general-purpose` subagent's `git push --dry-run` prompted as "Bash command · from the general-purpose agent"; denied. | David's report of the prompt; the subagent's result |
+| Do `permissions` edits apply without a restart? | **Yes**, as with hooks in t3. The rules were live within the same session. | the prompts |
+
+**Unplanned finding**
+- A first, informal pass (David approving prompts) left no usable receipt: two dry-run pushes and the gh calls all ran, and it wasn't possible afterwards to tell which had prompted. The transcript doesn't record permission decisions. **The receipt for an ask rule has to be a denial.** The F0a smoke tests and the G6 live check should be specified as "David denies; the tool result shows the rejection".
+
+**Design consequences (for David)**
+- G6 holds as designed: `ask` rules prompt in bypass, for the main session and for subagents, and the prompt names the subagent, so David can see which agent wants to push.
+- The temporary rules were removed. t14 adds the full G5–G7 deny and ask set.
