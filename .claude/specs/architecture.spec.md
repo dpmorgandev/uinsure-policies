@@ -320,7 +320,7 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
 | `ViolationKind.Conflict` | 409 | ProblemDetails + `ruleId` |
 | `ViolationKind.BusinessRule` | 422 | ProblemDetails + `ruleId` (first in `RuleIds.Order`) + `violations: [{ruleId, detail}]` |
 | `PersistenceConflictException(DuplicateReference)` | 409 | as SELL-1 (unique-index race backstop) |
-| `PersistenceConflictException(Concurrency)` | 409 | `type: /problems/concurrency-conflict`, no `ruleId`, detail asks the client to retry |
+| `PersistenceConflictException(Concurrency)` | 409 | `type: /problems/concurrency`, no `ruleId`, detail asks the client to retry |
 | any other exception | 500 | generic `detail` + `traceId`; full exception to logs only; no stack trace outside Development |
 
 - RFC 9457 body: `type` = `/problems/{rule-id lower-case, "/" → "-"}` (so `RENEW-1/2` → `/problems/renew-1-2`), `title`, `status`, `detail`, `instance`, `ruleId`, `traceId`, plus `RuleViolation.Extensions`. The exact payloads are owned by `api-contract`.
@@ -409,7 +409,7 @@ The builder adds no other package. A new package needs David's approval recorded
 Not to be added: FluentValidation, MediatR, AutoMapper, Swashbuckle, Serilog, FluentAssertions, a Result/ErrorOr library, caching, domain events or outbox, Asp.Versioning, auth packages.
 
 ### C9 Agent-facing extract
-The contract-only `architecture` skill carries exactly the following, with no rationale, research, options or rejected-option reasoning:
+*(F0a: to fit the 150-line cap, the C3 signatures sit in the skill's `signatures.md`, and api-contract's Contract in `api.md`; SKILL.md tells agents to read them.)* The contract-only `architecture` skill carries exactly the following, with no rationale, research, options or rejected-option reasoning:
 1. C1 folder tree and C2 reference table, including the C2 closing rules.
 2. C3 signatures, evaluation order and domain rules.
 3. C4 status table, problem-body rules and strict-input rules.

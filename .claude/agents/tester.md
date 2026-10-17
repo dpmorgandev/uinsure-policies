@@ -18,28 +18,33 @@ You never make a test pass by changing production code.
 ## Inputs (from the orchestrator's prompt)
 
 - `plan_id`, `node_id`, `attempt`, `task`, and the node's rule IDs.
-- `step`: `red`, `finding-red` or `qa`.
+- `step`: `red`, `finding-red` or `qa`. For `red`, also the `layer`: `acceptance`, `domain` or `services`.
 - On the failure route: the path to `findings/A<n>.md` or `findings/D<n>.md`.
 
 Read each rule row by ID in `docs/requirements.md`. Never read `.claude/specs/`.
 
 ## Steps
 
-### `red`: the node's full acceptance suite
-1. For every node rule, write the integration tests for **every success and failure row**, in
-   `tests/Uinsure.Policies.Api.Tests`, over HTTP with `WebApplicationFactory`, SQLite in-memory and
-   `FakeTimeProvider`. Every Sell test is a POST → GET round trip.
-2. Write unit tests per rule and boundary in `tests/Uinsure.Policies.Domain.Tests`, passing a
-   `DateOnly today`. Use Services.Tests only for Services logic.
-3. Every rule test carries `[Trait("Rule", "<ID>")]`, with the ID exactly as in requirements and one
-   per attribute.
-4. Add the node's Postman requests to `tests/postman/`, in the node folder, named
+### `red`, layer `acceptance`: the node's full acceptance suite
+1. For every node rule, write the integration tests for **every success and failure row** (matrix and
+   success-path rows in `api.md`), in `tests/Uinsure.Policies.Api.Tests`, over HTTP with
+   `WebApplicationFactory`, SQLite in-memory and `FakeTimeProvider`. Every Sell test is a POST → GET round trip.
+2. Add the node's Postman requests (real-time rows only) to `tests/postman/`, in the node folder, named
    `<RULE> · <condition> → <status>`, each with a `pm.test` whose name starts with the rule ID.
-5. If the tests need `src/` members to compile, add **signatures only**, with bodies that are exactly
+3. Remove the node's rule IDs from `tests/rule-coverage.pending.txt`.
+
+### `red`, layer `domain` or `services`: unit tests before that layer's green
+Write red unit tests for each rule boundary in `tests/Uinsure.Policies.Domain.Tests` (passing a
+`DateOnly today`, no `FakeTimeProvider`), or in `.Services.Tests` only where Services has logic.
+
+### Every `red`
+1. Every rule test carries `[Trait("Rule", "<ID>")]`, with the ID exactly as in requirements and one
+   per attribute. Each side of a boundary is its own test.
+2. If the tests need `src/` members to compile, add **signatures only**, with bodies that are exactly
    `throw new NotImplementedException();`. Add nothing else to `src/` and remove nothing.
-6. Run `dotnet build`. It must compile. Run the rule-filtered tests; they must **fail**, and for the
+3. Run `dotnet build`. It must compile. Run the rule-filtered tests; they must **fail**, and for the
    right reason (not a compile error or a setup fault).
-7. Commit per rule: `test(<RULE>): red: <behaviour>`.
+4. Commit per rule: `test(<RULE>): red: <behaviour>`.
 
 ### `finding-red`: failure route
 1. Read the findings file. For each **testable** finding, write one red test that reproduces it.

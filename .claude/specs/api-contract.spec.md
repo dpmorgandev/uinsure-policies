@@ -178,7 +178,7 @@ Researched: 2026-10-17 · Input: `docs/requirements.md` (rule IDs are quoted fro
 
 ## Contract
 
-Binding. Agents build and test against this section only. Rule IDs are those in `docs/requirements.md` §2. CANCEL-7, COULD-2a/2b/2c, SELL-7 and the RENEW-3b 422 are new from the Rulings and must be added there (see Open questions).
+Binding. Agents build and test against this section only, delivered as the `architecture` skill's `api.md` (agents never read this spec). Rule IDs are those in `docs/requirements.md` §2. CANCEL-7, COULD-2a/2b/2c, SELL-7 and the RENEW-3b 422 are new from the Rulings and must be added there (see Open questions).
 
 ### Conventions
 
