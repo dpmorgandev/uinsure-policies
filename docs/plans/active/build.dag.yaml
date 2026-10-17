@@ -66,10 +66,10 @@ nodes:
     rules: []
     cuttable: false
     budget: null
-    status: pending
-    attempt: 0
-    branch: null
-    worktree: null
+    status: in_progress
+    attempt: 1
+    branch: feature/build/F0b
+    worktree: .claude/worktrees/build-F0b
     pr: null
     qa: docs/qa/build-F0b.md
     trace: docs/trace/build/F0b/
