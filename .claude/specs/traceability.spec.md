@@ -171,12 +171,12 @@ Every record has `v` (schema version, `1`), `ts` (ISO-8601 UTC, from the hook/sc
 
 // verdicts/<A<n>|D<n>>-<agent>.json (SubagentStop; written only when the verdict passes the schema + semantic checks)
 {"v":1,"ts":"…","plan":"build","node":"F1","attempt":1,"agent":"reviewer","agent_id":"…",
- "verdict":{ /* orchestration's verdict JSON schema v1, verbatim; evidence[].file repo-relative */ }}
+ "verdict":{ /* orchestration's verdict JSON schema v1, verbatim; findings[].file repo-relative */ }}
 
 // findings/A<n>.md (FAIL) or findings/D<n>.md (David steer) (SubagentStop for agent_type investigator): frontmatter + the message body verbatim
 // ---
 // v: 1 · plan · node · attempt · round: A<n>|D<n> · agent: investigator · agent_id · source: reviewer|security|gate|david|pr-comment
-// finding_ids: [R1, S2] · fingerprints: ["SELL-5|src/…/Policy.cs|<title-hash>"]
+// finding_ids: [R1, S2] · fingerprints: the investigator findings' `fingerprint` values, e.g. ["SELL-5|src/…/Policy.cs|<hash>"]
 // ---
 ```
 

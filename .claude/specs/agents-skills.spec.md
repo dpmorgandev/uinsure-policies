@@ -214,7 +214,7 @@ Agent-preloaded skills set `user-invocable: false` and never `disable-model-invo
 | `requirements-trace` | preloaded | tester, reviewer | Rule ID ↔ test trait convention; every node rule has a success and failure row; red commit precedes green per rule (from the packet's trailer log); no assertion weakened after its red commit; no stub left; status codes match the architecture map |
 | `code-quality` | preloaded | reviewer, builder | SOLID at this size: SRP, DI only at real seams (repository, `TimeProvider`), no interface with one implementation otherwise; **rule of three** before extracting duplication; slop list: dead code, comments restating code, speculative generality, unused usings/packages, invented requirements, catch-all handlers, magic dates/money, naming off the domain language |
 | `verdict-format` | preloaded | reviewer, security | The verdict JSON schema v1 and its PASS/FAIL semantics, byte-identical to orchestration.spec's block (the wiring self-test diffs the two) |
-| `owasp-api-security` | preloaded | security | The R6 table as a checklist (In/Out per item, `n/a` wording for Out), the grep per check, the .NET extras (raw SQL, `decimal`, vulnerable packages, secrets in the diff), severity rubric (blocker/major/minor) |
+| `owasp-api-security` | preloaded | security | The R6 table as a checklist (In/Out per item, `n/a` wording for Out), the grep per check, the .NET extras (raw SQL, `decimal`, vulnerable packages, secrets in the diff), severity rubric (P0/P1/P2, per orchestration's verdict schema) |
 | `root-cause` | preloaded | investigator | Work only from the packet, verdict and receipts; locate the layer, name one cause per finding with file:line, distinguish symptom from cause, fix direction without code, decide testable vs untestable (reason required), the findings JSON |
 | `git-workflow` | preloaded | git | Branch/worktree naming, each op's exact commands, rebase + full suite recipe, PR body = the orchestrator's body file (trace summary + David's paragraph), comment posting, `read-comments` filters **in the command** (`gh pr view --json comments --jq` on `author.login == "dpmorgandev"`) so other authors' text never enters context, reply-with-SHA format, refusal list |
 | `feature` | main session | orchestrator (David invokes) | The loop: per orchestration.spec Contract |
@@ -236,34 +236,18 @@ Every agent sees it: Claude Code loads it into the main session and into each di
 
 ### Verdict JSON (reviewer, security)
 
-The schema is **orchestration.spec's Verdict JSON schema v1, unchanged**; this spec does not fork it. Fields: `schema_version`, `agent` (`reviewer|security`), `plan_id`, `node_id`, `attempt`, `head_sha`, `diff_fingerprint`, `verdict` (`PASS|FAIL`), `checked[] {id, result: met|not-met|n/a, note}`, `findings[] {id R#|S#, rule_id, severity blocker|major|minor, title, evidence[] {file, line, excerpt}, expected, actual, testable, suggested_test | untestable_reason}`.
-
-Changes from this spec's earlier draft, to match: `NEEDS_WORK` → `FAIL`; `rules_covered/missing` → `checked[]`; `evidence[] {command, exit_code}` dropped (reviewer/security run nothing; command evidence is the orchestrator's gate receipts); P0–P2 → blocker/major/minor; `owasp_id` folded into `rule_id`; `route_to` dropped (every FAIL goes to the investigator).
+**orchestration.spec's Verdict JSON schema v1 is canonical, verbatim** (David, 2026-10-17). This spec doesn't fork it or restate its fields. The `verdict-format` skill carries the block byte-for-byte, and the wiring self-test diffs the two. Key points for the agent bodies:
+- `verdict` is `PASS|FAIL`.
+- Coverage is `rules_covered[]` and `rules_missing[]`.
+- Findings are `R<n>` (reviewer) or `S<n>` (security), with `rule_id`, severity `P0|P1|P2`, `file`/`line`, `what`, `why` and `route_to`.
+- Evidence is the orchestrator's gate receipts (`gate_refs`), because reviewer and security run no commands.
+- The `owasp-api-security` severity rubric uses `P0|P1|P2`.
 
 ### Findings JSON (investigator)
 
-orchestration.spec's Contract adopts this as the Investigator findings schema v1 (same SubagentStop validation); the two must stay identical.
+**orchestration.spec's Investigator findings schema v1 is canonical, verbatim**, and the SubagentStop hook validates it. Its findings are `I<n>`, each with `rule_id`, `layer`, `files[]`, `root_cause`, `fingerprint`, `testable`, and either `suggested_test` or `untestable_reason`. It also carries `source`, `source_ref` and `previous_attempts[]`. The retry ladder's early escalation reads `fingerprint`. `testable=false` requires an `untestable_reason`. Every `root_cause` cites file:line.
 
-```json
-{
-  "schema_version": 1, "agent": "investigator",
-  "plan_id": "build", "node_id": "F3", "attempt": 2, "head_sha": "<40 hex>",
-  "source": "reviewer | security | gate | david",
-  "source_ids": ["R1", "S2"],
-  "causes": [{
-    "id": "C1", "source_ids": ["R1"], "rule_id": "CANCEL-7",
-    "layer": "domain | services | persistence | api | tests | harness",
-    "evidence": [{ "file": "src/…/Policy.cs", "line": 88, "excerpt": "…" }],
-    "cause": "…", "fix_direction": "…",
-    "testable": true, "suggested_test": "Given/When/Then + target test class",
-    "untestable_reason": null
-  }]
-}
-```
-
-Rules: every `source_ids` entry is covered by at least one cause; `testable=false` ⇒ `untestable_reason` required. Source ids for non-verdict inputs: `G#` (gate failure), `D#` (a David steer: Pause 1, Pause 2 or a PR comment; rendered to `findings/D<n>.md`, no attempt increment).
-
-**Reconciled (2026-10-17):** the final orchestration Contract routes verdict → investigator → `findings/A<n>.md` → tester → builder, and adopts the findings schema.
+*Superseded (David, 2026-10-17):* an earlier field list here (`checked[]`, `blocker|major|minor`, `evidence[]`, `causes[]`) claimed to match orchestration but never did. orchestration's blocks win.
 
 ### Mechanical boundaries (scripts owned by guardrails.spec)
 
