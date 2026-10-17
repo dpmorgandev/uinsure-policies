@@ -6,7 +6,7 @@ This is the **single input** for the work. The sequence is:
 
 0. **Context first.** Build `context.spec.md` and the `/orient`, `/save-context` and `/load-context-chain` skills **before** the rest of the analysis. The analysis itself will span sessions over two days, so it needs them from the start.
 1. **Analysis** reads this file and produces the specs in `.claude/specs/`, plus the `/plan-dag` skill.
-2. **`/plan-dag`** produces the build plan, `docs/plans/active/build.plan.md`.
+2. **`/plan-dag`** produces the build plan: `docs/plans/active/build.dag.yaml` (the DAG the orchestrator loops through) and `build.plan.md` (the reasoning).
 3. **Feature F0a** builds the harness (David, in-session, no loop). **F0b** is the walking skeleton and the first loop run.
 4. **Features F1 and onwards** build the API, one feature at a time, with a sign-off from David (human in the loop) after each.
 
@@ -177,7 +177,7 @@ Every plan that changes code is a **DAG** in one shared format. The orchestrator
 - **`/plan-feature`:** a change to the live system. It produces a small DAG (usually one feature node with tasks) that goes through the same loop, HITL and PR. If the change introduces a new rule, a **new rule ID is added to this file first**, so every change still traces back to a requirement.
 - **`/plan-bug`:** an escaped defect, meaning one found *after* merge. Its **first node is always a failing test that reproduces the bug.** It links to the broken rule ID and to the plan and node that introduced the faulty code (found through the activity trail). A defect David finds during HITL *before* merge isn't a plan-bug: it goes back into that feature's loop.
 - **`/plan-investigation`:** never changes code and never produces a DAG. Its output is findings, evidence, and **recommended plans** (feature or bug, each with a one-line reason). David chooses which to open, which keeps "decide what to do" apart from "do it". It is also the **attempt-3 escalation** in the retry ladder (see *Feature loop*, step 4).
-- **Plan format:** one file per plan, `docs/plans/active/<plan-id>.plan.md`. It holds the reasoning (why, approach, rejected alternatives) and a fenced YAML block with the DAG, which the orchestrator reads. One node per feature, with ordered tasks. Node status lives in the YAML and changes only through feature-branch commits; attempts are counted per node. Plan IDs: `build`, `feat-NNN`, `bug-NNN`, `inv-NNN`, with no slugs.
+- **Plan format:** two files per plan in `docs/plans/active/`. `<plan-id>.dag.yaml` is the only state: plan status and approval, nodes, and each node's explicit ordered tasks (per layer, each naming its rule ids), which the orchestrator loops through. `<plan-id>.plan.md` holds the reasoning (why, approach, rejected alternatives). One node per feature. Node and task status live in the YAML and change only through feature-branch commits; attempts are counted per node. Plan IDs: `build`, `feat-NNN`, `bug-NNN`, `inv-NNN`, with no slugs.
 - **Archive:** after David merges, the git agent moves the plan to `docs/plans/archive/` on a `chore/archive-<id>` branch, with a completion record built from git facts. A lesson is required at attempt 3 or more, on escalation, or when a node is cut, and is appended to `docs/lessons.md`.
 - **Prior work:** before a new plan is written, `docs/plans/` is searched. This replaces agentflow's separate `check-existing-work`, `capture-lesson` and `consult-lessons` skills, which aren't worth separate skills at this volume.
 - **When the skills get built:** `/plan-dag` is built for the build. `/plan-feature`, `/plan-bug` and `/plan-investigation` are **specified now but built only when first needed**: the first escaped defect, change request or stuck loop.
@@ -215,7 +215,7 @@ CLAUDE.md          agent entry point
 .githooks/         pre-commit, pre-push
 docs/              project records, kept separate from the harness:
                    requirements.md (this file), lessons.md,
-                   plans/active/ + plans/archive/ (<plan-id>.plan.md), context/ (session snapshot chain),
+                   plans/active/ + plans/archive/ (<plan-id>.plan.md + .dag.yaml), context/ (session snapshot chain),
                    trace/<plan-id>/<node-id>/ (trails), qa/ (signed-off QA scripts)
                    (no decisions.md: decisions live in the specs)
 src/               Uinsure.Policies.Api, .Services, .Persistence, .Domain

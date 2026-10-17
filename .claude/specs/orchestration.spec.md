@@ -160,7 +160,7 @@ Our own pre-PR rebase already makes the branch linear on top of `origin/main`. A
 Binding for `/feature`. The skill (`.claude/skills/feature/SKILL.md`) restates this section as executable steps; agents never read this spec.
 
 ### Invocation and identifiers
-- `/feature <plan-id> <node-id>`, e.g. `/feature build F1`. It runs in the **main session** (the orchestrator, not an agent). The node must be `ready` in `docs/plans/active/<plan-id>.plan.md` (all `depends_on` merged), else it refuses.
+- `/feature <plan-id> <node-id>`, e.g. `/feature build F1`. It runs in the **main session** (the orchestrator, not an agent). The node must be `ready` in `docs/plans/active/<plan-id>.dag.yaml` (all `depends_on` merged), else it refuses. The orchestrator walks the node's explicit `tasks` in order (planning.spec read algorithm), and each state below maps to one or more of those tasks.
 - Branch `feature/<plan-id>/<node-id>` (or `bug/<plan-id>/<node-id>` for a `bug-NNN` plan). Worktree `.claude/worktrees/<plan-id>-<node-id>`. Trail dir `docs/trace/<plan-id>/<node-id>/` (layout owned by traceability).
 - F0a is built by David in-session and does **not** run this loop; F0b is the first `/feature` run.
 

@@ -284,7 +284,7 @@ Rules: every `source_ids` entry is covered by at least one cause; `testable=fals
 1. ~~Push vs PR~~ **Resolved** (orchestration E): the git agent runs `git push -u` and `gh pr create --draft` behind `ask` rules.
 2. ~~Worktree path~~ **Resolved:** `.claude/worktrees/<plan>-<node>` (orchestration C1).
 3. ~~Remove `Skill` from reviewer/security~~ **Resolved:** removed from all six.
-4. Per-rule tester ↔ builder cycles vs batching per node. The acceptance suite is written in full in the red step (decided); the unit-cycle granularity is planning/orchestration's. **(open, not owned here)**
+4. ~~Per-rule tester ↔ builder cycles vs batching per node.~~ **Resolved (David, 2026-10-17, planning.spec amendment):** batched per layer. Each node's explicit tasks run a tester red then a builder green per layer, and each task names the rule ids it covers.
 5. Spike in F0a: (a) workflow `agent()` inherits an `EnterWorktree`'d cwd (moot unless workflows are used); (b) `agent_type` = `name` exactly; (c) SubagentStop exit 2 re-prompts the agent with stderr; (d) diff-scope check on Windows paths; (e) the Grep tool honours `.ignore`; (f) a dispatched subagent has `CLAUDE.md` loaded. **(open)**
 6. ~~Who records `start_sha`~~ **Resolved:** a SubagentStart hook (guardrails O2-A).
 7. ~~`fable`~~ **Resolved (moot):** no role uses it.

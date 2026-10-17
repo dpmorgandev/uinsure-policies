@@ -11,7 +11,7 @@ Researched 2026-10-17 · source of truth: `docs/requirements.md` §4 row 0
 - Tools found on PATH: `git`, `gh`, `node`, `dotnet`.
 
 **Consumed paths (owned by other specs; /orient reads them and never defines their shape)**
-- `docs/plans/active/*.plan.md` (YAML DAG: node status). Owner: `planning.spec`.
+- `docs/plans/active/*.dag.yaml` (the DAG: plan, node and task status) and `*.plan.md` (prose). Owner: `planning.spec`.
 - `docs/trace/<plan-id>/<node-id>/`, the trail for the node in flight. Owner: `traceability.spec`.
 - `git worktree list`, the branch convention `feature/<plan>/<node>` (or `bug/<plan>/<node>`) and the worktree path `.claude/worktrees/<plan>-<node>`. Owner: `orchestration.spec`.
 - `gh pr list`. The remote may not exist yet (requirements §6 item 2), so a missing remote is reported, not treated as an error.
@@ -193,7 +193,7 @@ Callers: David by hand, and the orchestrator at each node boundary (step change,
 1. `CLAUDE.md`.
 2. `docs/requirements.md`: headings plus the §6 open items.
 3. The `Status:` line of each `.claude/specs/*.spec.md` (status line only).
-4. `docs/plans/active/*.plan.md`: node statuses.
+4. `docs/plans/active/*.dag.yaml`: plan status, node statuses and each in-flight node's next task.
 5. `git status -s`, branch, `git log --oneline -5`, `git worktree list` with every path relativised.
 6. `gh pr list`. No remote or a `gh` failure → print "no remote", not an error.
 7. `docs/trace/<plan>/<node>/` for the node in flight, if any.

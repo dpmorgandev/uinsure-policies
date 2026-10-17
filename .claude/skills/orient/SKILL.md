@@ -23,7 +23,7 @@ The `Status:` line of each `.claude/specs/*.spec.md`, and only that line:
 `grep -m1 -H '^Status:' .claude/specs/*.spec.md`
 
 ## 4. Plans
-`docs/plans/active/*.plan.md`: for each node, its id, title, status and attempt (from the `yaml dag` block). If there are none, say "no active plan".
+`docs/plans/active/*.dag.yaml`: the plan's `status`, and for each node its id, title, status and attempt. For an in-flight node, also its next task: the first task whose status isn't `done` or `skipped`. If there are none, say "no active plan".
 
 ## 5. Git
 - `git status -s`

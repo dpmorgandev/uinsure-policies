@@ -21,7 +21,7 @@ Run these and use their output verbatim:
 - `git rev-parse --short HEAD` → `head`
 - `git status --porcelain | wc -l` → uncommitted count
 - `git rev-parse --show-toplevel` and `git worktree list`. Report the worktree as a path relative to the main checkout (`.claude/worktrees/<plan>-<node>`), or `null`. Never write an absolute path.
-- The active plan in `docs/plans/active/*.plan.md`, if any: `plan`, the in-flight `node`, its `attempt` and status. If there is no plan: `plan: null`, `node: null`, `phase: analysis`.
+- The active plan in `docs/plans/active/*.dag.yaml`, if any: `plan`, the in-flight `node`, its `attempt` and status, and its next task. If there is no plan: `plan: null`, `node: null`, `phase: analysis`.
 - `tests`: `X/Y` from a test run in this session, otherwise `not-run`.
 
 ## 4. Checkpoint
