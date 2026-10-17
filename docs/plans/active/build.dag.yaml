@@ -16,7 +16,7 @@ nodes:
     rules: []
     cuttable: false
     budget: null
-    status: pending
+    status: in_progress
     attempt: 0
     branch: null
     worktree: null
