@@ -1,5 +1,5 @@
 # architecture.spec.md
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 Researched: 2026-10-17 · Input: `docs/requirements.md` (single source of truth)
 
 ## Dependencies
@@ -14,7 +14,7 @@ Researched: 2026-10-17 · Input: `docs/requirements.md` (single source of truth)
 | `testing` | The domain's test surface (pure methods taking `today`), the `TimeProvider` seam and where `FakeTimeProvider` plugs in, the SQLite in-memory strategy for `WebApplicationFactory`, the architecture-test library and rules below |
 | `infrastructure` | The app is **host-agnostic**: no App Service or container-specific code. It reads `Database:Provider` + `ConnectionStrings:Policies` from config/env, exposes `/health/live` + `/health/ready`, and runs on App Service **or** Container Apps (`dotnet publish /t:PublishContainer` needs no Dockerfile). Azure SQL is reached through managed identity (`Authentication=Active Directory Default`), so no secret. Infrastructure picks the host |
 | `deployment` | Migrations are SQL Server only. They are applied with an idempotent `dotnet ef migrations script --idempotent` or a bundle, never at app start-up |
-| `agents-skills` | The builder's scope: `src/` only, following the Contract below. It never adds packages outside the approved list without a `/decide` entry |
+| `agents-skills` | The builder's scope: `src/` only, following the Contract below. It never adds packages outside the approved list (C8) unless David approves an amendment to this spec |
 
 ## Research
 
@@ -126,13 +126,13 @@ Plus, for all options, **BannedApiAnalyzers** for call-level rules (`DateTime.No
 - **D7 → A (`decimal` + `Money.Round` + banned-API enforcement).** CANCEL-6's "one place" becomes a receipt, not a promise.
 - **D8 → A (NetArchTest.eNhancedEdition) + BannedApiAnalyzers.** Simplest readable rules. Switch to ArchUnitNET only if maintenance becomes a concern.
 - **D9 → A (built-in OpenAPI 3.1 + Scalar in Development).** The current Microsoft path.
-- **Logging →** built-in `ILogger` with message templates (structured), console locally, and the Azure Monitor OpenTelemetry exporter in environments (infrastructure owns the wiring). **Never log policyholder names or dates of birth.** Log reference, rule ID and outcome only. Serilog rejected as unnecessary.
+- **Logging →** built-in `ILogger` with message templates (structured), console locally, and the Azure Monitor OpenTelemetry exporter in environments (the app-side wiring is owned by a plan node; see Contract C6). **Never log policyholder names or dates of birth.** Log reference, rule ID and outcome only. Serilog rejected as unnecessary.
 - **Health →** `AddHealthChecks().AddDbContextCheck<PoliciesDbContext>()` (`Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore` **(?)** version not checked). `/health/live` (no DB) and `/health/ready` (DB).
 - **Config/secrets →** `appsettings.json` with `Database:Provider` and a SQLite connection string for Development. In environments, a connection string from app settings/env using managed identity, so there's no password anywhere. Options classes bound with `ValidateOnStart()`. No user-secrets needed.
 - **Concurrency →** an app-managed `Guid Version` concurrency token on `Policy` (works on SQLite, unlike `rowversion`), so two concurrent cancels can't issue two refunds. `DbUpdateConcurrencyException` → 409. About 5 lines.
 - **SELL-1 collation →** normalise the reference in the domain (trim + upper-invariant), so uniqueness is identical on SQLite and Azure SQL.
 
-### Considered and rejected (to record in `docs/decisions.md`)
+### Considered and rejected (talking points; recorded here, not in a separate decisions file)
 - **Domain events / event-driven:** rejected for the build, kept as a **talking point**. `PolicyCancelled` / `PolicyRenewed` are the natural seams where real refund and payment collection (out of scope) would hang, done properly through an **outbox** (`SaveChanges` + event in one transaction) to Azure Service Bus. An in-process dispatcher without a consumer would be machinery nothing uses (§4 over-building guard). It's the job spec's nice-to-have, so name it, don't build it.
 - **Caching:** rejected. Reads are single-row by unique key, and cache invalidation on cancel/renew would add bugs without measurable benefit.
 - **CQRS / MediatR:** rejected. MediatR 13+ is commercial and needs a licence key. CQRS buys nothing at five endpoints. The quote (COULD-1) already shows a natural read path reusing the write-side calculator.
@@ -140,7 +140,7 @@ Plus, for all options, **BannedApiAnalyzers** for call-level rules (`DateTime.No
 - **AutoMapper:** rejected. Same commercial licence vendor, and hand-written `ToResponse()` mappings are explicit.
 - **Auth:** out of scope by requirement. State it in the README and the security spec (OWASP API2:2023), and keep `UseAuthorization()` placement ready.
 
-## Decision — DECIDED 2026-10-17 (Contract to be rewritten for 4 projects)
+## Decision — DECIDED 2026-10-17 (applied in Contract)
 
 - [x] **D1 Project structure: DECIDED (David, 2026-10-17). Four projects:** `Uinsure.Policies.Api` (controllers, contracts, error mapping, composition root), `Uinsure.Policies.Services` (application services, `UkCalendar`), `Uinsure.Policies.Persistence` (`PoliciesDbContext`, configurations, migrations), and `Uinsure.Policies.Domain` (aggregate and rules, BCL only). This overrides recommendation A.
   - **Dependency direction: inverted.** Services owns one narrow `IPolicyRepository` (`GetByReference`, `Add`, `SaveChanges`), and Persistence implements it with EF. So Api → Services → Domain, Api → Persistence → Domain, and Persistence → Services for the interface. Services has no EF reference, and Api is the composition root (DI wiring only). This reverses the earlier "Repository over EF: rejected" for this one interface. There's still no Unit of Work abstraction and no generic repository.
@@ -159,60 +159,274 @@ Plus, for all options, **BannedApiAnalyzers** for call-level rules (`DateTime.No
 - [x] **Accepted (see SELL-1 ruling above).** Reference normalisation (upper-case): accept / reject (if rejected, pick a case-sensitive collation on Azure SQL instead)
 - [x] **Domain events: rejected, kept as a talking point (block).** Caching, CQRS/MediatR and AutoMapper are rejected too. Logging is as recommended.
 - [x] **Derived from D1 (to apply when the Contract is written):** the folder tree becomes four `src` projects. The layer rules are rewritten as project-reference rules: Domain → BCL only; Services → Domain; Persistence → Services + Domain + EF; Api → all three (composition root only).
+- [x] **Final rulings (David, 2026-10-17):**
+  - OQ1: no `Refund` is created for £0: neither for a COULD-2 claim nor for an unpaid RENEW-3b term. The calculation is still returned per term, with `RuleApplied` `COULD-2` or `UNPAID-TERM`.
+  - OQ3: central package management via `Directory.Packages.props`: yes (C1, C8).
+  - New rule SELL-7 (amount > 0, else 422) is enforced in `Policy.Sell`.
+  - Accepted as proposed: `RuleViolation` has an optional `Extensions` member, and `PersistenceConflictException` is defined in Services.
 
-## Contract — PENDING (DRAFT outline)
+## Contract
 
-### Folder tree
+Binding. Where this section and any earlier section disagree, this section wins. The "Agent-facing extract" at the end lists what is copied into the `architecture` skill.
+
+### C1 Folder tree
 ```text
+Uinsure.Policies.slnx  global.json  Directory.Build.props  Directory.Packages.props  BannedSymbols.txt
 src/
-  Uinsure.Policies.Domain/            # no package refs beyond the BCL
-    Policies/  Policy.cs (aggregate root) Term.cs Policyholder.cs Property.cs
-               Payment.cs Refund.cs Claim.cs Cancellation.cs
-               PolicyType.cs PaymentMethod.cs PolicyReference.cs
-    Rules/     RefundCalculator.cs  RuleIds.cs (const strings "SELL-2" ...)
+  Uinsure.Policies.Domain/              # BCL only: no PackageReference, no ProjectReference
+    Policies/  Policy.cs (aggregate root)  Term.cs  Policyholder.cs  Property.cs  Payment.cs
+               Refund.cs  Claim.cs  Cancellation.cs  PolicyReference.cs
+               PolicyType.cs  PaymentMethod.cs  PolicyStatus.cs
+    Rules/     RefundCalculator.cs  RefundCalculation.cs  RuleIds.cs
     Common/    Result.cs  RuleViolation.cs  ViolationKind.cs  Money.cs
+  Uinsure.Policies.Services/
+    PolicyService.cs                    # orchestrates only: load → today → domain → save
+    Commands/  SellPolicy.cs  PolicyDetails.cs (read model returned to Api)
+    IPolicyRepository.cs  PersistenceConflictException.cs
+    UkCalendar.cs  ReferenceGenerator.cs (payment and refund references)
+  Uinsure.Policies.Persistence/
+    PoliciesDbContext.cs  PoliciesDbContextFactory.cs (design-time, SQL Server)
+    Configurations/*.cs  Migrations/ (SQL Server only)
+    PolicyRepository.cs (internal sealed)  DatabaseOptions.cs  PersistenceServiceCollectionExtensions.cs
   Uinsure.Policies.Api/
-    Controllers/   PoliciesController.cs (sell, get, cancel, quote, renew, claims)
-    Contracts/     request/response DTOs (DataAnnotations) + mapping extensions
-    Application/   PolicyService.cs  UkCalendar.cs  ReferenceGenerator.cs
-    Persistence/   PoliciesDbContext.cs  Configurations/*.cs  Migrations/ (SQL Server)
-    Errors/        ResultExtensions.cs (Result → ProblemDetails)  UnexpectedExceptionHandler.cs
-    Program.cs
+    Program.cs                          # composition root: the only Api type that touches Persistence
+    Controllers/  PoliciesController.cs (sell, get, cancel, quote, claims, renew)
+    Contracts/    request/response DTOs (DataAnnotations)  PolicyMappings.cs
+    Errors/       ProblemCatalog.cs (RuleId → status, type, title)  ResultExtensions.cs
+                  UnexpectedExceptionHandler.cs (IExceptionHandler)
+    Filters/      RejectUnknownQueryParametersFilter.cs
+    appsettings.json  appsettings.Development.json  Properties/launchSettings.json (port 5080)
+  web/                                  # reserved, empty; not in this plan
 tests/
-  Uinsure.Policies.Domain.Tests/  Uinsure.Policies.Api.Tests/ (integration)
-  Uinsure.Policies.Architecture.Tests/  postman/
+  Uinsure.Policies.Domain.Tests/        # unit, pure: pass DateOnly today
+  Uinsure.Policies.Services.Tests/      # only if a service needs a unit test; FakeTimeProvider
+  Uinsure.Policies.Api.Tests/           # integration: WebApplicationFactory + SQLite in-memory + FakeTimeProvider
+  Uinsure.Policies.Architecture.Tests/
+  postman/                              # v2.1 collection + environment
 ```
 
-### Key types (signatures only)
-- `Policy.Sell(PolicyReference, PolicyType, DateOnly start, decimal amount, bool autoRenew, IReadOnlyList<Policyholder>, Property, PaymentMethod, string paymentRef, DateOnly today) → Result<Policy>`. This covers SELL-2..6. SELL-1 is checked in the service, with the DB index as a backstop.
-- `policy.QuoteCancellation(DateOnly on, DateOnly today) → Result<RefundQuote>` (COULD-1), and `policy.Cancel(DateOnly? on, DateOnly today, Func<string> refundRef) → Result<Cancellation>`. Both use `RefundCalculator`.
-- `policy.Renew(decimal amount, PaymentMethod? method, string? paymentRef, DateOnly today) → Result<Term>` covers RENEW-1..6 and COULD-3. `policy.RecordClaim(...)` covers COULD-2.
-- `RefundCalculator.ForTerm(Term, DateOnly cancelOn, bool hasClaims) → decimal` is pure and calls `Money.Round` exactly once.
-- `Term.End = Start.AddYears(1).AddDays(-1)`. On a 29 Feb start, `AddYears` clamps to 28 Feb, so End = 27 Feb. **This must be confirmed against SELL-3's intent in a test.**
-- Policy-level `StartDate`/`EndDate`/`Amount` are **derived** from terms (first start, last end, current term amount). They're not stored.
-- `RuleViolation(string RuleId, ViolationKind Kind, string Message)`, where `Kind ∈ {NotFound→404, Conflict→409, BusinessRule→422}`.
-- ProblemDetails body: `type`, `title`, `status`, `detail` (a plain-English sentence naming the rule), plus extensions `ruleId` and `traceId`.
+### C2 Project-reference graph
 
-### Layer rules (architecture tests, NetArchTest-style)
-1. `Domain` has no dependency on `Microsoft.EntityFrameworkCore*`, `Microsoft.AspNetCore*`, `Microsoft.Extensions.*`, or `Uinsure.Policies.Api*`.
-2. `Domain` has no dependency on `System.TimeProvider` (time comes in as `DateOnly`).
-3. Types in `Api.Controllers` have no dependency on `Api.Persistence` or `Microsoft.EntityFrameworkCore` (they go through `Application`).
-4. Types in `Api.Contracts` have no dependency on `Api.Persistence`. Domain types never appear in controller signatures, only Contracts.
-5. `Api.Application` has no dependency on `Api.Controllers` or `Microsoft.AspNetCore.Mvc`.
-6. Classes in `Api.Controllers` inherit `ControllerBase`, are named `*Controller`, and are sealed.
-7. Domain entity types have no public setters **(?)** (check the eNhancedEdition API, or do it via reflection).
-8. No `src` assembly references any test assembly or anything under `.claude/`.
-- Build-time (BannedApiAnalyzers): `DateTime.Now/UtcNow/Today` and `DateTimeOffset.Now/UtcNow` banned in `src` (use `TimeProvider`). `Math.Round`/`decimal.Round` banned except in `Money`.
+| Project | May reference | Must not reference |
+|---|---|---|
+| Domain | BCL | any Uinsure project, any package, `System.TimeProvider` |
+| Services | Domain | Persistence, Api, `Microsoft.EntityFrameworkCore*`, `Microsoft.AspNetCore*` |
+| Persistence | Services, Domain, EF Core packages, HealthChecks.EntityFrameworkCore | Api, `Microsoft.AspNetCore*` |
+| Api | Services, Persistence, Domain, approved Api packages | any test project |
+| *.Tests | the project under test (Architecture.Tests: all four) | — |
 
-### Approved packages (builder may not add others without `/decide`)
-`Microsoft.EntityFrameworkCore.Sqlite`, `.SqlServer`, `.Design` (10.0.x) · `Microsoft.AspNetCore.OpenApi` (10.0.x) · `Scalar.AspNetCore` · `Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore` · tests: `Microsoft.AspNetCore.Mvc.Testing`, `Microsoft.Extensions.TimeProvider.Testing`, `NetArchTest.eNhancedEdition`, xUnit · analyzers: `Microsoft.CodeAnalysis.BannedApiAnalyzers`.
+No `src/` or `tests/` project references anything under `.claude/`. No generic repository, no Unit of Work abstraction, no interface with one implementation except `IPolicyRepository`. `PolicyService` is concrete and injected as itself.
+
+### C3 Key types (signatures)
+```csharp
+// Domain/Common
+public enum ViolationKind { NotFound, Conflict, BusinessRule }        // → 404, 409, 422
+public sealed record RuleViolation(string RuleId, ViolationKind Kind, string Message,
+    IReadOnlyDictionary<string, object?>? Extensions = null);         // Extensions = rule-specific ProblemDetails members (api-contract)
+public sealed class Result<T>
+{
+    public bool IsSuccess { get; }                                     // Violations.Count == 0
+    public T Value { get; }                                            // throws InvalidOperationException on failure
+    public IReadOnlyList<RuleViolation> Violations { get; }            // ordered by RuleIds.Order
+    public static Result<T> Success(T value);
+    public static Result<T> Failure(params RuleViolation[] violations); // ≥ 1
+}
+public static class Money { public static decimal Round(decimal amount); } // 2dp, AwayFromZero; the only rounding call (CANCEL-6)
+
+// Domain/Rules
+public static class RuleIds { public const string Sell1 = "SELL-1"; /* … every ID in requirements.md */
+    public static IReadOnlyList<string> Order { get; } }               // requirements.md order; drives "first ruleId"
+public sealed record RefundCalculation(decimal Amount, string RuleApplied, int TermDays, int UsedDays, int UnusedDays);
+public static class RefundCalculator
+{   // pure; RuleApplied ∈ CANCEL-1a | CANCEL-1b | CANCEL-1c | COULD-2 | UNPAID-TERM (term.Payment == null; wins over COULD-2; Amount 0); Money.Round called exactly once
+    public static RefundCalculation ForTerm(Term term, DateOnly cancelOn, bool hasClaims);
+}
+
+// Domain/Policies
+public readonly record struct PolicyReference(string Value)
+{   public static PolicyReference Normalise(string raw); }             // Trim().ToUpperInvariant(); pattern checked at 400 level
+public enum PolicyStatus { Pending, Active, Expired, Cancelled }
+public sealed class Term
+{
+    public DateOnly Start { get; }  public DateOnly End { get; }  public decimal Amount { get; }
+    public Payment? Payment { get; }                                   // null = unpaid (RENEW-3b)
+    public int Days => End.DayNumber - Start.DayNumber + 1;            // 365 or 366
+    public bool Covers(DateOnly date) => Start <= date && date <= End;
+    public static DateOnly EndFor(DateOnly start) =>                   // SELL-3
+        start is { Month: 2, Day: 29 }
+            ? new DateOnly(start.Year + 1, 2, 28)                      // named test: 29 Feb 2028 → 28 Feb 2029
+            : start.AddYears(1).AddDays(-1);                           // 1 Mar 2027 → 29 Feb 2028
+}
+public sealed class Policy
+{
+    public PolicyReference Reference { get; }  public PolicyType Type { get; }
+    public bool AutoRenew { get; }  public bool HasClaims { get; }  public Guid Version { get; } // concurrency token
+    public IReadOnlyList<Policyholder> Policyholders { get; }  public Property Property { get; }
+    public IReadOnlyList<Term> Terms { get; }  public IReadOnlyList<Claim> Claims { get; }
+    public Cancellation? Cancellation { get; }
+    public Term LatestTerm => Terms[^1];
+    public Term CurrentTerm(DateOnly today);   // the term covering today, else LatestTerm
+    public PolicyStatus StatusOn(DateOnly today);
+    // Cancelled if Cancellation != null; Pending if today < Terms[0].Start; Expired if today > LatestTerm.End; else Active
+
+    public static Result<Policy> Sell(PolicyReference reference, PolicyType type, DateOnly start, decimal amount,
+        bool autoRenew, IReadOnlyList<Policyholder> holders, Property property, PaymentMethod method,
+        string paymentReference, DateOnly today);                      // SELL-2..7 (SELL-7: amount > 0)
+    public Result<IReadOnlyList<RefundCalculation>> QuoteCancellation(DateOnly? on, DateOnly today); // COULD-1
+    public Result<Cancellation> Cancel(DateOnly? on, DateOnly today, Func<string> refundReference);  // CANCEL-1..7, COULD-2
+    public Result<Term> Renew(decimal amount, PaymentMethod? method, DateOnly today, Func<string> paymentReference); // RENEW-1..6, COULD-3, RENEW-3b
+    public Result<Claim> RecordClaim(DateOnly claimDate, string? description, DateOnly today);         // COULD-2a..c
+}
+
+// Services
+public interface IPolicyRepository
+{
+    Task<Policy?> GetByReference(PolicyReference reference, CancellationToken ct);
+    void Add(Policy policy);
+    Task SaveChanges(CancellationToken ct);   // EF exceptions → PersistenceConflictException
+}
+public enum ConflictReason { Concurrency, DuplicateReference }
+public sealed class PersistenceConflictException(ConflictReason reason) : Exception;
+public static class UkCalendar { public static DateOnly Today(TimeProvider clock); } // GetUtcNow() → Europe/London
+public sealed record PolicyDetails(Policy Policy, Term CurrentTerm, PolicyStatus Status);
+public sealed class PolicyService(IPolicyRepository repository, TimeProvider clock)
+{   // each method computes today once via UkCalendar.Today(clock)
+    Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct);
+    Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct);
+    Task<Result<Cancellation>> Cancel(PolicyReference reference, DateOnly? on, CancellationToken ct);
+    Task<Result<IReadOnlyList<RefundCalculation>>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct);
+    Task<Result<Term>> Renew(PolicyReference reference, decimal amount, PaymentMethod? method, CancellationToken ct);
+    Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
+}
+```
+
+**Evaluation order (every command):** 400 shape (model binding) → 404 `GET-1` (service) → 409 conflict (SELL-1 in the service via `GetByReference`; CANCEL-4, RENEW-6, COULD-2c in the domain), each returned alone → all 422 rules collected, none returning early.
+
+**Domain rules:**
+- Window and cut-off rules measure from `LatestTerm`: RENEW-1/2 is `today ∈ [LatestTerm.End − 30, LatestTerm.End]`; CANCEL-7 is `on ≤ LatestTerm.End`.
+- RENEW-4: the new term starts on `LatestTerm.End + 1`, with `End = Term.EndFor(start)`.
+- RENEW-3a: `method ?? CurrentTerm(today).Payment.Method`. COULD-3 applies to an explicit or a defaulted Cheque. RENEW-3b: `AutoRenew == false` and `method != null` gives a 422, and the term is unpaid.
+- Cancel: `on ?? today`. Each refund goes to the method of the payment it reverses (CANCEL-2).
+- **No £0 Refund.** A `Refund` is created only for a term whose `RefundCalculation.Amount` > 0. A COULD-2 claim or an unpaid RENEW-3b term (`RuleApplied` `UNPAID-TERM`) creates none, but its `RefundCalculation` is still returned, so the response lists every term.
+- Any claim sets `HasClaims = true`.
+- Every successful mutation (`Cancel`, `Renew`, `RecordClaim`) sets `Version = Guid.NewGuid()`.
+
+### C4 HTTP edge rules
+
+| Source | Status | Body |
+|---|---|---|
+| Model binding / DataAnnotations / strict input | 400 | `ValidationProblemDetails` (`errors` map) + `traceId`, no `ruleId` |
+| `ViolationKind.NotFound` | 404 | ProblemDetails + `ruleId` |
+| `ViolationKind.Conflict` | 409 | ProblemDetails + `ruleId` |
+| `ViolationKind.BusinessRule` | 422 | ProblemDetails + `ruleId` (first in `RuleIds.Order`) + `violations: [{ruleId, detail}]` |
+| `PersistenceConflictException(DuplicateReference)` | 409 | as SELL-1 (unique-index race backstop) |
+| `PersistenceConflictException(Concurrency)` | 409 | `type: /problems/concurrency-conflict`, no `ruleId`, detail asks the client to retry |
+| any other exception | 500 | generic `detail` + `traceId`; full exception to logs only; no stack trace outside Development |
+
+- RFC 9457 body: `type` = `/problems/{rule-id lower-case, "/" → "-"}` (so `RENEW-1/2` → `/problems/renew-1-2`), `title`, `status`, `detail`, `instance`, `ruleId`, `traceId`, plus `RuleViolation.Extensions`. The exact payloads are owned by `api-contract`.
+- Status, type and title are mapped in one place (`ProblemCatalog`), and the result is turned into a response in one place (`ResultExtensions`).
+- Controllers are `[ApiController]`, `sealed`, `: ControllerBase`, `[Route("policies")]`. Public action signatures use only `Contracts` types and `ActionResult`, never Domain types.
+
+**Strict input (unknown fields and params → 400):**
+- `AddJsonOptions`: `UnmappedMemberHandling = Disallow`, `JsonStringEnumConverter(allowIntegerValues: false)`, camelCase, strict number handling. `DateOnly` serialises as `yyyy-MM-dd`.
+- `RejectUnknownQueryParametersFilter` is registered globally. Any query key not bound to an action parameter (compared case-insensitively) returns 400 with `errors[key]`.
+- Required DTO members are nullable and `[Required]` (e.g. `DateOnly? StartDate`), so a missing field can't bind as a silent default.
+- Reference (body and route): after trim and upper-casing it must match `^[A-Z0-9-]{3,20}$`, else 400. Postcode max 8. Claim `description` max 500.
+- The cancel body is optional: `[FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)]`.
+
+### C5 Persistence rules
+- One `PoliciesDbContext`. The provider comes from `Database:Provider` (`Sqlite` | `SqlServer`), and the connection comes from `ConnectionStrings:Policies`.
+- Entry point: `services.AddPersistence(configuration)`. It registers the context, `IPolicyRepository` and the `ready` health check.
+- The aggregate is loaded whole (owned types or explicit includes) with no lazy loading.
+- There is a unique index on `Reference`, money uses `HasPrecision(18,2)`, and enums are stored as strings.
+- `Version` is configured with `.IsConcurrencyToken()`. `DbUpdateConcurrencyException` and the unique-index `DbUpdateException` are translated to `PersistenceConflictException` inside `PolicyRepository.SaveChanges`.
+- Migrations are SQL Server only. They are scaffolded through `PoliciesDbContextFactory`, which always uses SQL Server.
+- The app never calls `Database.Migrate()`. When the provider is `Sqlite`, it calls `EnsureCreated()` at start-up; tests do the same in the factory.
+- Pre-push runs `dotnet ef migrations script --idempotent`, which must succeed.
+- Queries never `OrderBy`, `Sum` or compare money in SQL, because SQLite stores `decimal` as TEXT.
+
+### C6 Cross-cutting
+- **Time:** only `UkCalendar.Today(TimeProvider)` produces "today", in Europe/London (`TimeZoneInfo.FindSystemTimeZoneById("Europe/London")`). `TimeProvider.System` is registered in Program, and tests replace it with `FakeTimeProvider`.
+- **Logging:** use `ILogger` message templates only, with no string interpolation. Log the reference, rule IDs, outcome and traceId.
+  - **Never log** policyholder names or dates of birth, property address lines or postcodes, or request bodies.
+  - Output goes to the console locally. When `APPLICATIONINSIGHTS_CONNECTION_STRING` is set, `AddOpenTelemetry().UseAzureMonitor()` adds App Insights. This app-side wiring is a task in a named plan node (see Open questions).
+- **Health:** `/health/live` runs no checks. `/health/ready` runs the checks tagged `ready` (`AddDbContextCheck<PoliciesDbContext>`).
+- **Config:**
+  - `appsettings.json` holds the shape. `appsettings.Development.json` sets `Sqlite` and a SQLite file connection string, one DB per worktree.
+  - Environments set `Database__Provider=SqlServer` and `ConnectionStrings__Policies` with `Authentication=Active Directory Default` (managed identity).
+  - No secrets in the repo, no user-secrets and no Key Vault.
+  - `DatabaseOptions` is bound with `ValidateDataAnnotations().ValidateOnStart()`.
+- **Concurrency:** the app-managed `Guid Version` described above. A lost race returns 409, so two concurrent cancels can't issue two refunds.
+- **OpenAPI:** `AddOpenApi()` (3.1). `MapOpenApi()` and `MapScalarApiReference()` are mapped only in Development.
+- **Auth:** none, because it's out of scope. `UseAuthorization()` stays in the pipeline at its usual position.
+
+### C7 Architecture tests (`Uinsure.Policies.Architecture.Tests`, NetArchTest.eNhancedEdition + reflection)
+
+| # | Rule | Kind |
+|---|---|---|
+| A1 | Domain has no dependency on `Microsoft.*`, `System.TimeProvider`, `Uinsure.Policies.Services/Persistence/Api` | project |
+| A2 | Services has no dependency on `Microsoft.EntityFrameworkCore*`, `Microsoft.AspNetCore*`, `Uinsure.Policies.Persistence/Api` | project |
+| A3 | Persistence has no dependency on `Microsoft.AspNetCore*`, `Uinsure.Policies.Api` | project |
+| A4 | No `src` assembly references `xunit*`, `Microsoft.Extensions.TimeProvider.Testing`, `Microsoft.AspNetCore.Mvc.Testing` or any `*.Tests` assembly | project |
+| A5 | Types in `Uinsure.Policies.Api.*` namespaces (all except `Program`) have no dependency on `Uinsure.Policies.Persistence` or `Microsoft.EntityFrameworkCore*` | namespace |
+| A6 | `Api.Contracts` has no dependency on `Microsoft.AspNetCore*` (DTOs and mappings are plain C#) | namespace |
+| A7 | Types in `Api.Controllers` are sealed, inherit `ControllerBase` and are named `*Controller`. Their public method parameters and return types contain no `Uinsure.Policies.Domain` type (reflection) | namespace |
+| A8 | Domain entity types have no public setters (reflection) | namespace |
+| A9 | No type named `*UnitOfWork*`, and no generic type named `*Repository*`, in any `src` assembly | naming |
+| A10 | `PolicyRepository` is `internal sealed` | naming |
+| A11 | The `RS0030` suppression appears only in `Money.cs` (a source-text check over `src/`) | source |
+
+**BannedApiAnalyzers** (`BannedSymbols.txt`, applied to every `src` project via `Directory.Build.props`, `RS0030` as error):
+
+| Banned | Use instead |
+|---|---|
+| `DateTime.Now`, `DateTime.UtcNow`, `DateTime.Today`, `DateTimeOffset.Now`, `DateTimeOffset.UtcNow` | `TimeProvider` → `UkCalendar.Today` |
+| `TimeProvider.GetLocalNow()`, `TimeZoneInfo.Local` | `UkCalendar.Today` (server zone is UTC on Azure) |
+| every `Math.Round(decimal…)` and `decimal.Round(…)` overload | `Money.Round` (`Money.cs` alone suppresses `RS0030`) |
+
+(verify in F0) whether a doc-ID without parameters bans every overload. If it doesn't, list each overload.
+
+### C8 Approved packages
+The builder adds no other package. A new package needs David's approval recorded as an amendment to this spec.
+
+**Central package management:** every version below is pinned once in the root `Directory.Packages.props` (`ManagePackageVersionsCentrally` = `true`). Project files carry `PackageReference` without `Version`.
+
+| Package | Project | Version |
+|---|---|---|
+| `Microsoft.EntityFrameworkCore.SqlServer` | Persistence | 10.0.13 |
+| `Microsoft.EntityFrameworkCore.Sqlite` | Persistence, Api.Tests | 10.0.13 |
+| `Microsoft.EntityFrameworkCore.Design` | Persistence (PrivateAssets=all) | 10.0.13 |
+| `Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore` | Persistence | 10.0.x (verify in F0) |
+| `Microsoft.AspNetCore.OpenApi` | Api | 10.0.x (verify in F0) |
+| `Scalar.AspNetCore` | Api | 2.18.0 |
+| `Azure.Monitor.OpenTelemetry.AspNetCore` | Api | (verify in F0) |
+| `Microsoft.CodeAnalysis.BannedApiAnalyzers` | all `src` (PrivateAssets=all) | (verify in F0) |
+| `xunit.v3` | all tests | 4.0.2 |
+| `Microsoft.AspNetCore.Mvc.Testing` | Api.Tests | 10.0.x (verify in F0) |
+| `Microsoft.Extensions.TimeProvider.Testing` | Services.Tests, Api.Tests | 10.11.0 |
+| `NetArchTest.eNhancedEdition` | Architecture.Tests | 1.4.5 |
+
+Not to be added: FluentValidation, MediatR, AutoMapper, Swashbuckle, Serilog, FluentAssertions, a Result/ErrorOr library, caching, domain events or outbox, Asp.Versioning, auth packages.
+
+### C9 Agent-facing extract
+The contract-only `architecture` skill carries exactly the following, with no rationale, research, options or rejected-option reasoning:
+1. C1 folder tree and C2 reference table, including the C2 closing rules.
+2. C3 signatures, evaluation order and domain rules.
+3. C4 status table, problem-body rules and strict-input rules.
+4. C5 persistence rules and C6 cross-cutting rules, as bullets.
+5. C7 architecture-test table and banned-API table.
+6. C8 package table and the "Not to be added" list.
+7. One line: "Out of scope: auth, pricing, payment processing, React frontend (`src/web/` is reserved)."
 
 ## Open questions
 
-1. **SELL-3 on 29 Feb:** `AddYears(1)` gives 28 Feb, so End = 27 Feb (a 365-day term, missing the 28th). Is the intent instead "the day before the anniversary", with the anniversary of 29 Feb treated as 1 Mar, giving End = 28 Feb? This needs a ruling and a `/decide` entry. **This may refine requirements.md SELL-3.**
-2. **Business timezone:** confirm "today" = Europe/London. This adds an assumption to requirements.md.
-3. **Requirements §3 says unit tests use an "injected `TimeProvider`".** D3-A passes `DateOnly today` into the domain and keeps `TimeProvider`/`FakeTimeProvider` at the service and integration levels. If accepted, reword §3 to match.
-4. **Reference case-sensitivity (SELL-1):** normalise to upper-case, or reject a lower-case reference? This adds an interpretation to SELL-1.
-5. **400 vs 422 boundary** (for api-contract): are SELL-4 (1–3 holders) and the postcode max of 8 shape (400, DataAnnotations) or rules (422, domain)? Requirements say every *rule violation* is a ProblemDetails naming the rule, and 400 `ValidationProblemDetails` carries no `ruleId` unless customised.
-6. **Multiple violations at once** (for example, a backdated start *and* a 15-year-old holder): report the first, or all of them? This affects the `Result` shape.
-7. **Uncertain items to verify before F0:** whether FluentValidation.AspNetCore is deprecated (only matters if D5-B), the Swashbuckle .NET 10 status (only if D9-B), the HealthChecks.EntityFrameworkCore and BannedApiAnalyzers versions, and the NetArchTest public-setter rule API.
+1. Resolved (David, 2026-10-17): no `Refund` for that term, nor for any £0 refund (COULD-2). The term's calculation is still returned with `RuleApplied` `UNPAID-TERM` and amount 0.00; the README says so (C3 domain rules).
+2. Resolved in reconciliation (2026-10-17): F0b owns the App Insights wiring (planning Contract). **Which plan node owns the App Insights app wiring** (C6). Recommendation: F0b, so that cutting F5 doesn't drop it.
+3. Resolved (David, 2026-10-17): yes. `Directory.Packages.props` pins C8's versions in one file (C1, C8).
+4. Resolved in reconciliation (2026-10-17): requirements.md has been amended. **requirements.md was not yet amended** for these decisions:
+   - D3 §3 wording (`DateOnly today` in the domain, `TimeProvider` at the service level)
+   - Europe/London
+   - SELL-1 format and normalisation
+   - SELL-3 on 29 Feb
+   - the new rules CANCEL-7 and COULD-2a–c, and RENEW-3b's 422
+   - RFC 9457

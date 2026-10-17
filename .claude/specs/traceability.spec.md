@@ -1,5 +1,5 @@
 # traceability.spec.md
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 Researched: 2026-10-17 · Input: `docs/requirements.md` §4 row 6b, §6 item 6 · Environment checked: Claude Code 2.1.302, git 2.49.0
 
 Scope: three trails keyed `docs/trace/<plan-id>/<node-id>/`, which form one chain: rule ID → plan → node → tests + code → verdicts → QA sign-off → PR.
@@ -13,11 +13,11 @@ The scope also covers the cross-links (investigation → plans, bug → broken r
 
 | Spec | Assumption (not decided there yet) | If it breaks |
 |---|---|---|
-| `orchestration` | Skill-driven loop (its A2). The main session runs inside the worktree via `EnterWorktree`. Loop events go to `loop.jsonl`. Branch `feature/<plan>/<node>`. Merge commit, so SHAs survive. Verdict JSON schema v1 | Under squash merge the commit-level trail dies (it lives only in the PR). Under rebase-merge, SHAs in the trail go stale: key on trailers, not SHAs |
-| `agents-skills` | Every agent is a named file in `.claude/agents/`, so `agent_type` = `tester`/`builder`/`reviewer`/`security`/`git`. The orchestrator is the main session (no `agent_type`) | Unnamed agents arrive as `general-purpose`, and identity becomes ambiguous |
+| `orchestration` | Skill-driven loop (its A2). The main session runs inside the worktree via `EnterWorktree`. Loop events go to `loop.jsonl`. Branch `feature/<plan>/<node>`. Merge commit, so SHAs survive. Verdict JSON schema v1. The git agent posts verdicts as PR comments | Under squash merge the commit-level trail dies (it lives only in the PR). Under rebase-merge, SHAs in the trail go stale: key on trailers, not SHAs |
+| `agents-skills` | Every agent is a named file in `.claude/agents/`, so `agent_type` = `tester`/`builder`/`reviewer`/`security`/`investigator`/`git` (six agents). The orchestrator is the main session (no `agent_type`) | Unnamed agents arrive as `general-purpose`, and identity becomes ambiguous |
 | `testing` | xUnit tests carry a rule marker: `[Trait("Rule","SELL-2")]`, or a custom `[Rule("SELL-2")]` trait attribute. QA script steps are tagged with rule ids. Rule filter command exists | The rule → test link falls back to test-name conventions (weaker) |
 | `planning` | Plan YAML lists rule ids per node and task. Investigation output lists recommended plans. Bug plans carry `breaks:` and `introduced_by:` | Cross-links lose their anchors |
-| `guardrails` | Denies agent Edit/Write to `docs/trace/**` and `git add -A`. Implements the commit-trailer check | Trail files become editable by producers, so they would be self-report again |
+| `guardrails` | Denies agent Edit/Write to `docs/trace/**` (the investigator stays read-only; a hook files its findings) and `git add -A`. Implements the commit-trailer check | Trail files become editable by producers, so they would be self-report again |
 
 ## Research
 
@@ -116,75 +116,181 @@ An interviewer will open the repo on GitHub, not run scripts. So every trail nee
   - The completeness check fails loudly.
   - The PR body is generated from the trail.
 - [x] **Added (planning):** each node also renders `walkthrough.md`. It lists every commit in order (red, stub, domain, services, persistence, refactor), each with one line on what it did. David uses it at pause 2.
+- [x] **Final rulings (David, 2026-10-17):**
+  - OQ4: `activity.jsonl` also logs `Read`/`Grep` calls, for `reviewer`, `security` and `investigator` only.
+  - OQ8: only reviewer, security or gate FAILs count as attempts (`A<n>`). David's steers at Pause 1, Pause 2 and in PR comments don't increment the attempt; each gets the next id `D1`, `D2`… on the node, with `findings/D<n>.md` and `verdicts/D<n>-<agent>.json`, so nothing collides with `A<n>`.
+  - Accepted as proposed: the `TDD` trailer value `stub` for the stub-controller commit.
 
-## Contract — PENDING (DRAFT outline)
+## Contract
 
 ### Layout
 ```text
 docs/trace/
-  README.md                         how to read + re-verify (git commands), what is generated vs written
-  requirements-matrix.md            generated: every rule id → tests → commits → QA step → sign-off → PR
-  <plan-id>/<node-id>/
-    README.md                       generated node summary (the interviewer's entry point)
-    loop.jsonl                      orchestrator events + gate receipts (state is derived from the last event)
-    activity.jsonl                  PostToolUse hook: one line per Edit/Write/Bash by any agent
-    verdicts.jsonl                  SubagentStop hook: validated verdict JSON per reviewer/security run
-    bugs/A<n>.md                    rendered bug report per FAIL attempt
-docs/qa/<plan-id>-<node-id>.md      QA script, steps tagged [SELL-2], sign-off block (David)
+  README.md                       written once: how to read the trails, how to re-verify with git, generated vs written
+  requirements-matrix.md          generated: rule → tests → commits → QA row, for every rule id in requirements.md
+  <plan>/<node>/
+    activity.jsonl                generated (PostToolUse hook): one line per Edit/Write/Bash/PowerShell call, any agent; plus Read/Grep for reviewer, security and investigator only
+    loop.jsonl                    generated (orchestrator events + gate receipts); current state = last event
+    verdicts/<round>-<agent>.json generated (SubagentStop hook): one validated verdict per reviewer/security run; <round> = A<n> or D<n>
+    findings/A<n>.md              recorded (SubagentStop hook): the investigator's final message, verbatim, per FAIL (attempt n)
+    findings/D<n>.md              recorded (SubagentStop hook): the same, per David steer n (Pause 1, Pause 2 or a PR comment; no attempt++)
+    README.md                     generated node summary (the interviewer's entry point; source of the PR body)
+    walkthrough.md                generated: every commit in order (pause 2 and the interview)
+docs/qa/<plan>-<node>.md          QA script: tester writes it after PASS, steps tagged [RULE-ID]; David signs it
 ```
+- `<plan>`/`<node>` are the stable ids (`build/F1`, `bug-001/N1`) parsed from the branch `feature/<plan>/<node>` or `bug/<plan>/<node>`.
+- Hooks write under `git -C <cwd> rev-parse --show-toplevel`, so the trail lands in the worktree and never in the main checkout.
+- No agent may Edit/Write `docs/trace/**` (guardrails). The investigator stays read-only: it returns findings as its final message, and the hook files them.
+- `bugs/A<n>.md` from the earlier drafts is replaced by `findings/A<n>.md` (or `findings/D<n>.md` for a steer), which the tester and builder receive.
+- **Rounds.** `A<n>` is attempt n: only reviewer, security or gate FAILs increment it. `D<n>` numbers David's steers on the node (1, 2… in order, never reset); a steer leaves `attempt` unchanged. Verdicts from the review that follows a steer are `verdicts/D<n>-<agent>.json`; the first review of a node is `A1`.
 
-### Record shapes (DRAFT; every line has `v`, `ts` (real clock, ISO-8601 UTC, written by the hook/script), `plan`, `node`)
+### Record schemas
+Every record has `v` (schema version, `1`), `ts` (ISO-8601 UTC, from the hook/script clock, never from the agent), `plan`, `node`, `attempt`.
+
+**Paths are repo-relative with forward slashes** (`src/Uinsure.Policies.Domain/Policy.cs`). A hook that cannot make a path relative to the repo root writes `"<outside-repo>"`. No absolute path, user name, transcript path or prompt text is ever stored. Agents are identified by `agent` and `agent_id` only.
+
 ```jsonc
-// activity.jsonl (PostToolUse, matcher "Edit|Write|Bash|PowerShell")
-{"v":1,"ts":"…","plan":"build","node":"F1","agent":"builder","agent_id":"a1b2…","tool":"Edit",
- "file":"src/Policies.Domain/Sale.cs","command":null,"tool_use_id":"toolu_…","attempt":1}
-// agent = agent_type, or "main" when absent; plan/node parsed from branch; attempt read from the last loop.jsonl event
-// Bash: "file":null, "command":"<first 200 chars>"; a `git commit` line also records "head_after":"<sha>"
+// activity.jsonl (PostToolUse, matcher "Edit|Write|Bash|PowerShell|Read|Grep"; Read/Grep are recorded only when agent ∈ reviewer|security|investigator, else dropped)
+{"v":1,"ts":"2026-10-18T09:12:03Z","plan":"build","node":"F1","attempt":1,
+ "agent":"builder","agent_id":"a1b2c3","tool":"Edit","tool_use_id":"toolu_01…",
+ "file":"src/Uinsure.Policies.Domain/Policy.cs","command":null}
+// agent = hook agent_type, or "main" when absent. attempt = the last loop.jsonl event's attempt.
+// Bash/PowerShell: "file":null, "command":"<first 200 chars, repo-relative paths>".
+// Read: "file" = the path read. Grep: "file" = the search path (or null), "command" = the pattern (first 200 chars).
+// A successful `git commit` also records "commit":{"sha":"<40 hex>","subject":"<subject>","tdd":"red|stub|green|refactor|null"}.
 
-// loop.jsonl (orchestrator events; gate lines carry the command it ran and its exit code)
-{"v":1,"ts":"…","plan":"build","node":"F1","event":"gate.red","attempt":1,
- "cmd":"dotnet test … --filter Rule=SELL-2","exit":1,"expect":"fail","ok":true,"head":"<sha>"}
-// events: setup · state(<STATE>) · gate.red · gate.green · verdict.ref · bug.raised · attempt++ ·
-//         investigation.opened(inv-NNN) · escalated · gate.integrate · pr(url) · signoff(sha) · merged(sha) · archived
+// loop.jsonl (written by the orchestrator via the render script's `event` subcommand, never by hand)
+{"v":1,"ts":"…","plan":"build","node":"F1","attempt":1,"event":"gate.red",
+ "cmd":"dotnet test --filter-trait \"Rule=SELL-2\"","exit":1,"expect":"fail","ok":true,"head":"<40 hex>","source":"orchestrator"}
+// event ∈ setup · state(<STATE>) · gate.red · pause1 · gate.green · verdict(<agent>,<PASS|FAIL>,<file>) · findings(<file>) ·
+//         attempt++ (FAILs only) · steer(D<n>,<pause1|pause2|pr-comment>) · investigation.opened(inv-NNN) · escalated ·
+//         gate.integrate · trace.rendered(<ok|incomplete>) · pr(<number>) · pr.comment(<kind>,<comment id>) ·
+//         gate.postman(<pass|fail|skipped>) · signoff(<sha>) · merged(<sha>) · archived
+// gate events carry cmd/exit/expect/ok/head; others carry only the event fields they name.
+// source = "orchestrator" | "reconciled" (backfilled from git on resume; orchestration's resume rule).
 
-// verdicts.jsonl (SubagentStop): {"v":1,"ts":"…","agent":"reviewer","agent_id":"…",
-//   "transcript":"…/subagents/agent-<id>.jsonl","valid":true,"verdict":{…schema v1 from orchestration…}}
+// verdicts/<A<n>|D<n>>-<agent>.json (SubagentStop; written only when the verdict passes the schema + semantic checks)
+{"v":1,"ts":"…","plan":"build","node":"F1","attempt":1,"agent":"reviewer","agent_id":"…",
+ "verdict":{ /* orchestration's verdict JSON schema v1, verbatim; evidence[].file repo-relative */ }}
+
+// findings/A<n>.md (FAIL) or findings/D<n>.md (David steer) (SubagentStop for agent_type investigator): frontmatter + the message body verbatim
+// ---
+// v: 1 · plan · node · attempt · round: A<n>|D<n> · agent: investigator · agent_id · source: reviewer|security|gate|david|pr-comment
+// finding_ids: [R1, S2] · fingerprints: ["SELL-5|src/…/Policy.cs|<title-hash>"]
+// ---
 ```
 
-### Requirement trail: how each link is established
-| Link | Source | Mechanical? |
+### Commit trailers
+| Trailer | Values | Written by | Checked by |
+|---|---|---|---|
+| `Agent` | `tester`, `builder`, `git`, `main` | committing agent | **PreToolUse hook on `git commit`**: must equal `agent_type` (or `main`) |
+| `Plan` | `build`, `feat-NNN`, `bug-NNN` | committing agent | **same hook**: must equal the branch's `<plan>` |
+| `Node` | `F0a`…`F7`, `N1`… | committing agent | **same hook**: must equal the branch's `<node>` |
+| `Rule` | a rule id; repeatable | committing agent | not by the hook; the TDD gates and the render script cross-check it against the rule markers in the diff |
+| `TDD` | `red`, `stub`, `green`, `refactor` | tester (`red`), builder (rest) | not by the hook; the gates check it (`red`: rule filter fails, diff is `tests/**` plus throwing `src/` signatures only; `green`: rule filter passes, diff is `src/**` only) |
+| `Fixes-Finding` | `R1`, `S2`, `D1`…; repeatable | tester/builder | the render script: the id must exist in a verdict or findings file |
+
+`plan(...)` and `chore(trace)` commits carry `Agent/Plan/Node` only. The hook denies a commit with a missing or mismatched `Agent/Plan/Node`, and gives the reason. It doesn't rewrite the command.
+
+### Render script
+- **`.claude/scripts/render-trace.mjs`**: Node (ESM, Node built-ins only, no npm dependencies), matching the hooks. Run by the orchestrator via Bash.
+- **Subcommands:**
+  - `event <json>` appends one validated line to `loop.jsonl`.
+  - `render <plan> <node>` writes the node's `README.md` and `walkthrough.md` and regenerates `docs/trace/requirements-matrix.md`.
+  - `pr-body <plan> <node>` prints the PR body to stdout.
+  - `check <plan> <node>` runs only the completeness check.
+- **Inputs:**
+  - `activity.jsonl`, `loop.jsonl`, `verdicts/*.json` and `findings/*.md`
+  - `git log origin/main..HEAD` with trailers, and `git show --name-only` per commit
+  - rule markers in `tests/**` (`[Trait("Rule","ID")]`, grep), and the TRX from the `gate.integrate` full-suite run
+  - the plan YAML (node rules and title), the rule ids in `docs/requirements.md`, and the QA script's `[RULE-ID]` tags and sign-off block
+- **Outputs:** the generated files above, plus exit 0 = complete or exit 1 = `TRAIL INCOMPLETE`. A failed check renders anyway, with the reasons at the top of the README and the walkthrough.
+- **When:**
+  - After `gate.integrate`, the orchestrator renders. The git agent commits `docs/trace/<plan>/<node>/**` and `docs/trace/requirements-matrix.md` as `chore(trace): <node> trail`. That's the only commit allowed after the integrate receipt, because its diff is `docs/trace/**` only.
+  - A later code commit (a fix from a PR comment, for example) re-runs INTEGRATE, then renders and commits again.
+  - At ARCHIVE, a final render adds `signoff` and `merged`, on the git agent's `chore/archive-<id>` branch.
+- SHAs are resolved at render time, after the final rebase. Activity records are matched to commits by `(agent, subject)`, not by their pre-rebase SHA.
+
+### Completeness check (fails loudly)
+`check` fails, and every rendered file says `TRAIL INCOMPLETE: <reasons>` and never shows a clean summary, when any of these hold:
+- a commit on the branch has no activity `commit` record with the same `Agent` and subject
+- a commit is missing `Agent/Plan/Node`, or has a `TDD` value outside the set
+- `activity.jsonl` or `loop.jsonl` is empty while commits exist
+- a REVIEW round has no reviewer + security verdict pair, or a PASS verdict's `checked` misses one of the node's rules
+- a FAIL verdict has no `findings/A<n>.md`, a `steer(D<n>)` event has no `findings/D<n>.md`, or a `Fixes-Finding` id resolves to nothing
+- a node rule has no test marker, no `red` commit before its `green` commit, or no QA step
+- a gate event is missing, or its `ok` is false
+- an activity `file` is absolute (a privacy breach, not just a gap)
+- at ARCHIVE only: there is no `signoff` whose sha is the PR head, or no `merged` event
+
+**F0a exception:** F0a builds these hooks in-session, outside the loop, so it has no hook receipts. Its README states "hooks not yet live: witnessed by git and trailers only" and `check` reports `OK (git-only, F0a)`. F0b is the first fully witnessed node.
+
+### Generated vs written
+| Generated (hook or script; never a producer agent) | Recorded (hook stores an agent's output verbatim; it doesn't vouch for it) | Written (labelled) |
 |---|---|---|
-| rule → plan/node | plan YAML `rules:` per node/task | written (plan, approved by David) |
-| rule → tests | rule marker in test source (grep) | **yes** |
-| tests → result | TRX from `gate.integrate` full-suite run | **yes** |
-| rule → code | commits with `Rule:` trailer → `git show --name-only` (src only) | trailer declared, cross-checked by the TDD gates |
-| rule → QA step | `[RULE-ID]` tag on QA script steps | written, checked: every node rule has ≥ 1 QA step |
-| QA → sign-off | QA sign-off block: David, date, `signed_sha` | David (human receipt, by design) |
-| node → PR → merge | `loop.jsonl` `pr`/`merged` + `gh pr view --json mergeCommit` | **yes** |
+| `activity.jsonl`, `loop.jsonl` | `verdicts/*.json` (reviewer/security judgement) | `docs/trace/README.md` (David + main session, once in F0a) |
+| node `README.md`, `walkthrough.md` | `findings/*.md` (investigator reasoning) | commit subjects (the walkthrough's one-liners) |
+| `requirements-matrix.md` | | QA script (tester) and its ticks + sign-off (David) |
+| PR body (all but one paragraph) | | the PR's "From David" paragraph, and `docs/lessons.md` entries |
 
-### Cross-links
-- **Investigation → plans:** `inv-NNN.plan.md` frontmatter `recommended: [{kind: feature|bug|amend-node, id: feat-002|null, reason: "…"}]`. When David opens one, the new plan's frontmatter gets `recommended_by: inv-NNN`, and the `id` is filled in on the investigation. The render script checks the link both ways.
-- **Bug → rule + origin:** `bug-NNN.plan.md` frontmatter `breaks: SELL-2`, `introduced_by: {plan, node, commit}`. `introduced_by` is **derived** with `git blame` → commit → `Plan:`/`Node:` trailers, and the command is recorded in the plan so it can be re-run.
-- **Verdict → bug report → red test:** finding `R1` → `bugs/A1.md#R1` → a commit with `Fixes-Finding: R1` and `TDD: red`.
+Every generated file starts with: `Generated by .claude/scripts/render-trace.mjs from <inputs> at <ts>. Do not edit.`
 
-### Per-node README.md (generated; this is what the interviewer reads)
+### Node README template
 ```text
-# build/F1 (Sell) · status: merged · PR #3 · merge <sha>
-Generated by .claude/hooks/render-trace.mjs from loop/activity/verdicts JSONL + git; do not edit.
-## Rules → tests → commits      (table: rule | tests (pass/fail) | red sha | green sha | refactor sha | QA step)
-## Loop                          attempt 1: FAIL (reviewer R1 SELL-5 boundary) → A1.md · attempt 2: PASS/PASS
-## Who touched what              (table: commit | Agent trailer | files | hook-log agent | match ✓/✗)
-## Gates                         red ✓ · green ✓ · integrate ✓ (full suite 142/142, <sha>) · sign-off David <date> <sha>
-## Completeness                  OK  |  TRAIL INCOMPLETE: <reasons>   ← never omitted
+# <plan>/<node>: <node title> · status: <state> · PR #<n> · merge <sha|pending>
+Generated by .claude/scripts/render-trace.mjs from loop/activity JSONL, verdicts, findings, git, test source and TRX at <ts>. Do not edit.
+## Completeness       OK | TRAIL INCOMPLETE: <reasons>      ← always first, never omitted
+## Rules              | rule | tests (pass/total) | red | green | refactor | QA step |
+## Walkthrough        <n> commits → walkthrough.md
+## Loop               attempt 1: FAIL (reviewer R1 SELL-5 boundary → findings/A1.md) · attempt 2: PASS/PASS
+## Who touched what   | commit | Agent trailer | files | hook-log agent | match ✓/✗ |
+## Gates              red ✓ · pause 1 ✓ · green ✓ · integrate ✓ (full suite 142/142 at <sha>) · sign-off David <date> <sha|pending>
+## Re-verify          git log --format='%h %(trailers:key=Agent,valueonly,separator=%x2C) %(trailers:key=TDD,valueonly,separator=%x2C) %s' origin/main..<sha>
 ```
 
-### PR description (generated from the node README, plus one labelled human paragraph)
-Summary (node title + rules) · Rules → tests → commits table · Attempts and verdicts (with links to `bugs/A<n>.md`) · How to run (`dotnet run … --urls http://localhost:5080`, Postman env) · QA script link and sign-off status · Completeness line · "Reviewer notes (orchestrator-written)" paragraph.
+### walkthrough.md template
+One row per commit on the branch, oldest first. **TDD** comes from the trailer (`plan`/`trace` for those commits). **Layer** is derived from the paths changed, never declared: `tests`, `domain`, `services`, `persistence` or `api` (by `src/Uinsure.Policies.<Layer>/`), `harness`, `docs`, or `mixed`. The one-liner is the commit subject's text after the `<type>(<rule>): <phase>:` prefix, so it is the agent's words and is labelled that way.
+```text
+# <plan>/<node> walkthrough: <n> commits
+Generated by .claude/scripts/render-trace.mjs from git log at <ts>. Do not edit. The "what it did" column is the commit subject (agent-written).
+| # | sha | TDD | layer | rule | agent | what it did |
+|---|---|---|---|---|---|---|
+| 1 | a1b2c3d | red | tests | SELL-2 | tester | rejects a start date more than 60 days ahead |
+| 2 | … | stub | api | SELL-2 | builder | controller returns a hard-coded 201 |
+| 3 | … | green | domain | SELL-2 | builder | Policy.Sell enforces the 60-day window |
+```
+
+### requirements-matrix.md
+One row per rule id in `docs/requirements.md`, regenerated on every render, so it reaches `main` with each feature PR:
+```text
+| rule | plan/node | tests (pass/total) | red | green | refactor | QA step | sign-off | PR |
+| SELL-2 | build/F1 | 6/6 | a1b2c3d | d4e5f6a | 0b1c2d3 | docs/qa/build-F1.md#3 | David 2026-10-18 | #3 |
+| CANCEL-5 | build/F4 | not built yet | | | | | | |
+```
+A rule on a cut node shows `cut (<node>)`. A rule with no node fails the planning check rather than showing an empty row.
+
+### PR body template (`pr-body`; matches orchestration's PR contract)
+The title is `<node-id>: <node title>`. The PR is a draft. The body is generated from the node README:
+```text
+## <plan>/<node>: <node title>
+Rules: SELL-1, SELL-2, … · Tests: <unit pass/total> unit, <integration pass/total> integration, <arch pass/total> architecture
+Walkthrough: docs/trace/<plan>/<node>/walkthrough.md · Trail: docs/trace/<plan>/<node>/README.md
+| rule | tests | red | green | refactor |
+Attempts: <n> · <one line per attempt> · Verdicts and the rebase receipt are posted below as PR comments by the git agent.
+How to run: dotnet run --project src/Uinsure.Policies.Api --urls http://localhost:5080 · Postman env baseUrl=http://localhost:5080
+QA: docs/qa/<plan>-<node>.md · sign-off: pending
+Completeness: OK | TRAIL INCOMPLETE: <reasons>
+## From David
+<!-- one paragraph, written by David before `gh pr create`; the render leaves this marker and the PR isn't raised while it's empty -->
+```
+- The reviewer verdict, the security verdict (with OWASP ids) and the rebase-and-test receipt are **comments, not body**. The git agent posts each one and logs a `pr.comment` event. David's comments (only `dpmorgandev`) are steers: each becomes `findings/D<n>.md` with `source: pr-comment` and no attempt increment, and the git agent's reply names the fixing SHA.
 
 ## Open questions
-1. **requirements.md §6.6 can be closed:** hook input does identify the subagent (`agent_type`/`agent_id`), so the activity trail is mechanical. Recommend rewording §4 row 6b's "candidate mechanisms" to the decided A3.
-2. Spike: confirm `agent_type` for agents in this exact setup, i.e. after `EnterWorktree` and on Windows, with `PowerShell` and `Bash` both present. Confirm too that hook `cwd` is the worktree for subagent calls. It takes 10 minutes and is the first F0 task, alongside orchestration's R1 spike.
-3. F0 is the node that builds these hooks, so its own trail can only be git + trailers (unchecked), plus a hand-noted "hooks not yet live". Accept that and label it in F0's README rather than backfilling? Recommendation: accept and label.
-4. Should `activity.jsonl` log `Read`/`Grep`? That is useful evidence that a reviewer actually read the code (agentflow `track-read`), but it is noisy. Suggested: log reads only for `reviewer`/`security`, which supports "the loop ran" (`checked` vs files actually read).
-5. Is the TRX trait carried under xUnit v3 + MTP? (testing spec). If not, the rule → result join goes via test names.
-6. Public repo: activity records hold file paths and command prefixes only, never prompt text (agentkinOS hashed prompts for the same reason). Confirm there are no absolute user paths (`C:/Users/<user>/…`): store paths relative to the repo root.
+1. ~~requirements.md §6.6~~ **Resolved:** hook input identifies the subagent, so the activity trail is mechanical (A3). The requirements update pass rewords §4 row 6b.
+2. **(open)** Spike in F0a: confirm `agent_type` after `EnterWorktree` on Windows with both `PowerShell` and `Bash` present, and that hook `cwd` is the worktree for subagent calls.
+3. ~~F0's own trail~~ **Resolved:** F0a is git-only and labelled (see the F0a exception). F0b is the first fully witnessed node.
+4. Resolved (David, 2026-10-17): yes. `activity.jsonl` logs `Read`/`Grep` for `reviewer`, `security` and `investigator` only (Layout, Record schemas).
+5. **(open)** Is the `Rule` trait carried into the TRX under xUnit v3 + MTP (testing)? If not, rule → result joins on test names.
+6. ~~Absolute paths~~ **Resolved:** repo-relative paths only, with no prompt text or transcript paths. An absolute path fails the check.
+7. Resolved during reconciliation: the QA script path is `docs/qa/<plan-id>-<node-id>.md` in every contract (planning, testing, orchestration).
+8. Resolved (David, 2026-10-17): no. Only reviewer, security or gate FAILs count as attempts. David's steers (Pause 1, Pause 2, PR comments) still go through investigate → red → fix, with ids `D1`, `D2`… and files `findings/D<n>.md` / `verdicts/D<n>-<agent>.json` (Layout).

@@ -1,15 +1,15 @@
 # agents-skills.spec.md
 
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 Researched: 2026-10-17 · Settles: requirements.md §4 row 5 (roster, skills, why planning/orchestration aren't agents)
 
 ## Dependencies
 
-**Upstream (researched in parallel, NOT decided — assumptions stated):**
+**Upstream (all decided 2026-10-17; rows below were the research-time assumptions, superseded where the Contract says otherwise):**
 
 | Spec | What this spec assumes until it's decided |
 |---|---|
-| architecture | `src/` holds the projects (Api, Domain/Application, Infrastructure); `tests/` holds Unit, Integration, Architecture projects + `tests/postman/`. Rules live in the domain, not in controllers |
+| architecture | `src/` holds Api, Services, Persistence, Domain; `tests/` holds Domain.Tests, Services.Tests (if needed), Api.Tests, Architecture.Tests + `postman/`. Rules live in the rich domain, not in controllers |
 | api-contract | Routes under `/policies`, ProblemDetails names the rule ID. The reviewer checks status codes against this spec's per-rule table |
 | testing | Tester owns `tests/**` incl. Postman collection + environment. QA script template lives in testing.spec; scripts land in `docs/qa/` |
 | orchestration | Main-session orchestrator, one feature at a time; each agent commits its own TDD step (`test:` red by tester, `feat:`/`refactor:` by builder). Verdict JSON schema is owned by orchestration — this spec only drafts the *fields each agent emits* |
@@ -60,9 +60,9 @@ Recommend layers 2+3+4. Layer 3 alone is defeatable through Bash; layer 4 alone 
 - Therefore: **the main session moves into the feature worktree**, and every agent it spawns inherits that cwd. Mechanism: `EnterWorktree` with the target path. The docs: entering a path **outside** `<repo>/.claude/worktrees/` prompts for approval every time and "an `EnterWorktree` permission rule or 'don't ask again' doesn't suppress this prompt". Inside `.claude/worktrees/` it doesn't.
 - While the session is in a worktree, Claude Code blocks edits/commands/git redirects that target the main checkout — **for the session and every subagent it spawns**. That's the "agents never touch `main` or David's checkout" rule enforced for free.
 - Worktrees made by `git worktree add` (no Claude marker) are never removed by the periodic sweep — good; the git agent owns removal.
-- **Implication for requirements.md:** worktree path `../wt/F1-sell` → **`.claude/worktrees/F1-sell`** (branch still `feature/F1-sell`, created by git agent with `git worktree add`). Add `.claude/worktrees/` to `.gitignore`. Alternative (keep `../wt/`): David approves one prompt per feature — acceptable, honest HITL, but noisier.
+- **Implication for requirements.md:** worktree path `../wt/F1-sell` → **`.claude/worktrees/<plan>-<node>`** (e.g. `.claude/worktrees/build-F1`; branch `feature/<plan>/<node>`, created by git agent with `git worktree add`; orchestration C1). Add `.claude/worktrees/` to `.gitignore`. Alternative (keep `../wt/`): David approves one prompt per feature — acceptable, honest HITL, but noisier.
 - Secondary: an agent can also be told absolute paths, but Bash cwd still resolves to the session cwd and `cd` doesn't persist — fragile. Not recommended.
-- **Unverified:** whether workflow `agent()` subagents inherit a worktree the session entered *after* launch. Docs say subagents do; workflows run "in an isolated environment" — assume yes, **spike in F0**.
+- **Unverified:** whether workflow `agent()` subagents inherit a worktree the session entered *after* launch. Docs say subagents do; workflows run "in an isolated environment" — assume yes, **spike in F0a**.
 - Project `.claude/agents|skills` read through from the main checkout when the worktree lacks them — but our harness is tracked, so the worktree carries its own copy *at the branch's version*. Harness edits made on `main` mid-feature don't reach an in-flight worktree until rebase. Fine (one feature at a time) — note it.
 
 ### R5. Prior art lessons (agentflow_phase3, agentkinOS)
@@ -149,60 +149,136 @@ O1-A, O2-A, O3-C, O4-B, O5-A. Planning and orchestration stay in the main sessio
 - [x] **D4 models:** tester opus · builder sonnet · reviewer opus · security sonnet · **investigator opus** · git haiku.
 - [x] **D5–D10:** accepted as recommended, with D7 amended to `.claude/worktrees/<plan>-<node>` (orchestration C1). The **git agent alone** posts PR comments.
 - [x] **Architecture for agents:** builder, tester and reviewer load a contract-only `architecture.md` skill. **No agent reads `*.spec.md`**, so agents never see the rejected options.
+- [x] **Final rulings (David, 2026-10-17):**
+  - OQ9: the investigator works from the review packet only, with no shell. Revisit if F1 investigations stall.
+  - Write scopes (guardrails G1): the builder may create the root build files (`global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes`, the `.slnx`); the tester creates the `tests/*.csproj` files.
+  - David's steers (Pause 1, Pause 2, PR comments) reach the investigator as `D<n>` and don't count as attempts (orchestration).
 
-## Contract — PENDING (DRAFT)
+## Contract
+
+Binding. The six agents live in `.claude/agents/<name>.md` (project scope); `name` = `agent_type` in hooks = the `Agent:` trailer. Skills live in `.claude/skills/<name>/SKILL.md`. All are written by us; no third-party skills or plugins are installed.
+
+### Universal rules (every agent)
+
+- **No agent spawns agents** and **no agent loads skills at runtime**: `Agent` and `Skill` are absent from every `tools` list and repeated in `disallowedTools`. An agent's knowledge is its body plus its preloaded `skills:`.
+- **Agents never read `*.spec.md`** (or anything under `.claude/specs/`). The specs hold rejected options; agents get the contract only, via skills. Enforced by guardrails: PreToolUse denies Read/Grep/Glob on those paths and Bash commands naming them, for any call with `agent_type` set; a repo-root `.ignore` excludes `.claude/specs/` from Grep/Glob results (spike in F0a that the Grep tool honours it).
+- **Harness lock** (guardrails): no agent writes `**/.claude/{agents,skills,hooks,specs,workflows}/**`, `**/.claude/settings*.json`, `**/.githooks/**`, `.git/**` (by file tool) or `CLAUDE.md`.
+- Agents read `docs/requirements.md` rule rows by ID; the orchestrator's prompt gives plan id, node id, attempt, task and rule IDs, never spec text.
+- Every agent's **final message is one JSON object** (schemas below). Producer JSON (tester, builder, git) is a report only: gates are run by the orchestrator, never taken from it. Reviewer, security and investigator JSON is schema-checked by a SubagentStop hook, which blocks the stop until it conforms.
+- Commits carry the trailers `Agent`, `Plan`, `Node`, `Rule`, `TDD` (+ `Fixes-Finding`) per orchestration; explicit `git add <paths>` only.
 
 ### Roster
 
-| Agent | Role | Inputs (from orchestrator prompt) | Output | `tools` | `disallowedTools` | model / effort | `skills:` | Never |
-|---|---|---|---|---|---|---|---|---|
-| **tester** | Red: one failing test per rule/boundary; integration test + Postman request per endpoint; rule-violation examples; QA script after PASS | plan id, node id, rule IDs, api-contract excerpt, bug report (on retry) | commits `test: <RULE-ID> …` (red, compiling, failing for the right reason); JSON: tests added → rule IDs, failing-test names, QA script path | Read, Grep, Glob, Edit, Write, Bash | Agent, NotebookEdit, WebFetch, WebSearch | opus / high | xunit-testing, postman-collections, requirements-traceability | edit `src/**`; weaken/delete an existing assertion to fix a loop; mark tests `Skip`; write tests that pass before builder runs; push/branch/merge |
-| **builder** | Green + refactor; outside-in stub controller (step 2); real behaviour replaces stub | same + failing test names | commits `feat:`/`refactor:` per step; JSON: files changed, tests now passing, `dotnet build -warnaserror` + `dotnet test` result | Read, Grep, Glob, Edit, Write, Bash | Agent, NotebookEdit, WebFetch, WebSearch | sonnet / medium | dotnet10-webapi | edit `tests/**` or the Postman collection; add packages not in architecture.spec; catch-and-swallow to go green; reference `.claude/` from src; push/branch/merge |
-| **reviewer** | Fresh-context judge: requirements met, traceability, TDD evidence, anti-oracle, code quality/slop | plan/node, rule IDs, base SHA..HEAD, security verdict not shown (independence) | verdict JSON (below), first token `PASS`/`NEEDS_WORK` | Read, Grep, Glob, Bash | Edit, Write, NotebookEdit, Agent, WebFetch, WebSearch | opus / high | requirements-traceability, dotnet10-webapi (read for idioms), xunit-testing | modify anything; accept a claim it didn't reproduce (`dotnet test` itself); propose patches instead of findings; read builder/tester self-summaries as evidence |
-| **security** | OWASP API Top 10 2023 + .NET checks on the diff | as reviewer | verdict JSON with OWASP IDs, severity P0/P1/P2 | Read, Grep, Glob, Bash | Edit, Write, NotebookEdit, Agent, WebFetch, WebSearch | sonnet / high | owasp-api-security | modify anything; mark an "Out" item silently skipped (must be stated); fail on out-of-scope auth |
-| **git** | Branch + worktree create; rebase onto main; full suite in worktree; `gh pr create`; post-merge cleanup | op name + feature id; PASS verdict path (for PR op) | JSON per op: `{op, ok, branch, worktreePath, headSha, testSummary, prUrl}` | Read, Grep, Glob, Bash | Edit, Write, NotebookEdit, Agent, WebFetch, WebSearch | haiku / low | git-pr | merge; push to `main`; force-push; `--no-verify`; raise PR without PASS verdict file; resolve conflicts by editing code (returns conflict to orchestrator); remove a worktree with uncommitted work |
+| Agent | Role | Inputs | Output (final JSON) | `tools` | `disallowedTools` | model / effort | `skills:` | Write scope (hook-enforced) | Never |
+|---|---|---|---|---|---|---|---|---|---|
+| **tester** | Red. Writes the node's **full acceptance suite** (every success and failure row of its rules) in the red step, unit tests per rule/boundary, Postman requests; adds throwing signature stubs so red compiles; on the failure route writes a red test per testable finding; writes the QA script after PASS | plan, node, attempt, task, rule IDs; on retry the findings file path | commits `test(<rule>): red: …`; `{agent, step: red\|finding-red\|qa, commits[], tests[{name, file, rule_id}], stubs[{file, member}], qa_script, untestable[{finding_id, reason}]}` | Read, Grep, Glob, Edit, Write, Bash | Agent, Skill, NotebookEdit, WebFetch, WebSearch | opus / high | architecture, tdd-outside-in, requirements-trace | `tests/**` (incl. `tests/postman/**` and the `tests/*/*.csproj` files, which the tester creates), `docs/qa/**`; in `src/**` only member signatures whose body is `throw new NotImplementedException()` | weaken, delete or `Skip` an existing assertion; write a test that passes before green; random test data; skip a finding's test without a stated reason; any non-stub `src/` change; push, branch, merge |
+| **builder** | Outside-in: the stub controller, then green per layer (domain → services → persistence → api), then refactor | plan, node, attempt, task, rule IDs, failing test names; on retry the findings path and the red test | commits `feat(<rule>): green: …` / `refactor(<rule>): …`; `{agent, step: stub\|green\|refactor, layer, commits[], files[], rule_ids[]}` | Read, Grep, Glob, Edit, Write, Bash | Agent, Skill, NotebookEdit, WebFetch, WebSearch | sonnet / medium | architecture, dotnet10-webapi, tdd-outside-in, code-quality | `src/**`; root build files `*.slnx`, `global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes` | edit `tests/**` or Postman files; add a package the architecture skill doesn't list; `DateTime.Now/UtcNow/Today`, `Math.Round`/`decimal.Round`; catch-and-swallow to go green; leave a `NotImplementedException`; push, branch, merge |
+| **reviewer** | Fresh-context judge: rules and acceptance met, TDD order, anti-oracle, code quality (SOLID at this size, rule of three), slop | plan, node, attempt, rule IDs; the review packet path (diff, trailer log, gate receipts, written by the orchestrator under the node's trace dir). Security's verdict is not shown | verdict JSON v1, `agent: reviewer`, finding ids `R1..` | Read, Grep, Glob | Edit, Write, NotebookEdit, Bash, PowerShell, Agent, Skill, WebFetch, WebSearch | opus / high | architecture, tdd-outside-in, requirements-trace, code-quality, verdict-format | none | modify anything; treat producer JSON or commit messages as evidence (only the packet and the code); propose patches instead of findings; PASS with an unchecked node rule |
+| **security** | OWASP API Security Top 10 **2023** + .NET checks (R6) on the diff | as reviewer. Reviewer's verdict is not shown | verdict JSON v1, `agent: security`, ids `S1..`, `rule_id` = OWASP id (e.g. `API3:2023`) | Read, Grep, Glob | as reviewer | sonnet / high | owasp-api-security, verdict-format | none | modify anything; skip an "Out" item silently (`checked` row `n/a` + note); fail the node on out-of-scope auth (API1/2/5) |
+| **investigator** | Root cause of a FAIL (reviewer, security, a gate, or a David PR comment): rule, layer, files, why, fix direction. Diagnoses only | plan, node, attempt, the verdict/comment/gate-receipt paths, the review packet path | findings JSON (below); the orchestrator renders it to `findings.md` | Read, Grep, Glob | as reviewer | opus / high | architecture, root-cause | none (read-only; it does not write `findings.md` itself) | modify anything; prescribe code; merge two findings without saying so; claim a cause without file:line evidence |
+| **git** | Branch + worktree, rebase onto `origin/main` + full suite, push, draft PR, **all PR comments**, cleanup, archive | `op` + plan, node; per op: PR body file, verdict/receipt paths, finding ids, fix SHAs | `{agent, op, ok, branch, worktree, base_sha, head_sha, test_summary{exit_code, passed, failed}, pr_url, comments[{id, author, url, body}], comment_ids[], conflict_files[]}` | Read, Grep, Glob, Bash | Edit, Write, NotebookEdit, PowerShell, Agent, Skill, WebFetch, WebSearch | haiku / low | git-workflow | none by file tool; git operations only | merge; push to `main`; `--force*`; `--no-verify`; `git add -A`/`.`; resolve a conflict by editing (returns `conflict_files`); remove a worktree with uncommitted work; return or act on a comment not authored by `dpmorgandev`; `gh repo\|api\|auth` |
 
-Push: requirements.md says "every push is David's action" — then `gh pr create` (which needs a pushed branch) must be David's or explicitly approved. **Conflict flagged in Q1.**
+`git` ops: `setup` (fetch, `git worktree add .claude/worktrees/<plan>-<node> -b feature|bug/<plan>/<node> origin/main`), `integrate` (fetch, rebase, full suite), `pr` (`git push -u`, `gh pr create --draft --body-file`), `comment` (post the reviewer verdict, the security verdict and the rebase receipt, one comment each), `read-comments`, `reply` (one comment per addressed comment, naming the fixing SHA), `cleanup` (worktree remove, `branch -d` after David merges), `archive` (`chore/archive-<plan-id>` branch, David merges). `push`, `gh pr create` and `gh pr comment` are `ask` rules, so David approves each, bypass mode included.
 
-Verdict fields (reviewer/security; schema owned by orchestration.spec):
-`verdict (PASS|NEEDS_WORK)`, `agent`, `plan_id`, `node_id`, `attempt`, `base_sha`, `head_sha`, `evidence[] {command, exit_code, summary}`, `findings[] {id, rule_id|owasp_id, severity, file, line, what, why, route_to (tester|builder)}`, `rules_covered[]`, `rules_missing[]`, `notes[]`.
+### Agent frontmatter template (`.claude/agents/<name>.md`)
 
-Reviewer checklist headline: every node rule ID has ≥1 unit test at each boundary + integration test + Postman example; status codes match api-contract; red commit precedes green per rule (`git log --format`); no test assertion weakened after its red commit; no stubs left; slop checklist (below); architecture tests pass.
+```markdown
+---
+name: builder
+description: >-
+  Green and refactor for one plan node, outside-in. Dispatched by /feature only.
+tools: Read, Grep, Glob, Edit, Write, Bash
+disallowedTools: Agent, Skill, NotebookEdit, WebFetch, WebSearch
+model: sonnet
+effort: medium
+skills:
+  - architecture
+  - dotnet10-webapi
+  - tdd-outside-in
+  - code-quality
+---
+<!-- body: role · inputs · steps · output JSON · never-list. ≤ 120 lines. -->
+```
+
+Not set, on purpose: `permissionMode` (overridden by the session mode, R1), `isolation` (wrong worktree, R4), `mcpServers`, `hooks` (all hooks are settings-level, so one manifest), `memory`, `background`.
 
 ### Skills
 
-| Skill | Kind | Owner/used by | Content scope (≤ ~200 lines) |
+Agent-preloaded skills set `user-invocable: false` and never `disable-model-invocation: true` (that blocks preloading). Main-session skills use default invocation, no `context: fork`. Skills carry contract content in their own words; they never link to or quote a spec file.
+
+| Skill | Kind | Owner agents | Content outline |
 |---|---|---|---|
-| dotnet10-webapi | preloaded | builder (reviewer reads) | Only what we build: controllers + `[ApiController]` ProblemDetails/`AddProblemDetails`, `TimeProvider` injection, EF Core SQLite/Azure SQL provider switch, `decimal` + single rounding helper, DTO≠entity, minimal-diff refactor rules, build with warnings-as-errors. Points to architecture.spec Contract — doesn't restate it |
-| xunit-testing | preloaded | tester, reviewer | Naming, builders, plain `Assert`, `FakeTimeProvider`, `WebApplicationFactory` + SQLite in-memory, boundary-table pattern (`[Theory]`), "fails for the right reason" check, architecture-test lib usage. Points to testing.spec |
-| postman-collections | preloaded | tester | Collection v2.1 structure per endpoint/rule, environment file, example responses for each violation, run via **Postman CLI** (not Newman), QA script template ref |
-| owasp-api-security | preloaded | security | R6 table as checklist, grep commands per check, severity rubric, "stated out of scope" wording |
-| requirements-traceability | preloaded | reviewer, tester | Rule ID ↔ test name convention, coverage check commands, TDD-order git checks, anti-oracle checks, **slop checklist**: unexplained abstractions/interfaces with one impl, dead code, comments restating code, speculative generality, unused usings/packages, invented requirements, catch-all exception handling, magic dates/money not via helpers, inconsistent naming vs domain language |
-| git-pr | preloaded | git | Branch/commit/PR conventions (from orchestration.spec), worktree commands, rebase + full-suite recipe, refusal list |
-| /orient, /save-context, /load-context-chain | main session | David/orchestrator | per context.spec |
-| /plan-dag | main session | David/orchestrator | per planning.spec |
-| /plan-feature, /plan-bug, /plan-investigation | main session, **spec only** | — | built on first need (requirements.md) |
+| `architecture` | preloaded | tester, builder, reviewer, investigator | **Contract only, no options or rationale.** The four projects and their references (Services has no EF); where rules live (`Policy.Sell`, `policy.Cancel/Renew/RecordClaim`, `RefundCalculator`); `IPolicyRepository` (`GetByReference`, `Add`, `SaveChanges`), no generic repo/UoW; `UkCalendar.Today(TimeProvider)`, domain takes `DateOnly today`; `Money.Round` only; banned APIs; status-code map (400 shape / 422 rules / 409 state / 404) and the RFC 9457 body; `Guid Version` concurrency → 409; the allowed package list; the not-built list (events, caching, CQRS/MediatR, AutoMapper, auth, FluentValidation) as one line, no reasons |
+| `dotnet10-webapi` | preloaded | builder | Only what we build: `[ApiController]` + DataAnnotations, `UnmappedMemberHandling.Disallow`, the unknown-query-parameter filter, enums as names, DTO ≠ entity, ProblemDetails mapping, `TimeProvider` injection, EF Core SQLite/SQL Server switch, health checks, structured logging without PII, warnings-as-errors build, minimal-diff refactor |
+| `tdd-outside-in` | preloaded | tester, builder, reviewer | The outside-in order (acceptance suite red → stub controller → green per layer → refactor); red = compiles and fails for the right reason; throwing-stub rule; test conventions (sentence names, builders with valid defaults, plain `Assert`, `[Trait("Rule", …)]`, `WebApplicationFactory` + SQLite in-memory + `FakeTimeProvider`, `[Theory]` boundary tables); Postman v2.1 request naming by rule ID; QA script template (`docs/qa/<plan>/<node>.qa.md`) |
+| `requirements-trace` | preloaded | tester, reviewer | Rule ID ↔ test trait convention; every node rule has a success and failure row; red commit precedes green per rule (from the packet's trailer log); no assertion weakened after its red commit; no stub left; status codes match the architecture map |
+| `code-quality` | preloaded | reviewer, builder | SOLID at this size: SRP, DI only at real seams (repository, `TimeProvider`), no interface with one implementation otherwise; **rule of three** before extracting duplication; slop list: dead code, comments restating code, speculative generality, unused usings/packages, invented requirements, catch-all handlers, magic dates/money, naming off the domain language |
+| `verdict-format` | preloaded | reviewer, security | The verdict JSON schema v1 and its PASS/FAIL semantics, byte-identical to orchestration.spec's block (the wiring self-test diffs the two) |
+| `owasp-api-security` | preloaded | security | The R6 table as a checklist (In/Out per item, `n/a` wording for Out), the grep per check, the .NET extras (raw SQL, `decimal`, vulnerable packages, secrets in the diff), severity rubric (blocker/major/minor) |
+| `root-cause` | preloaded | investigator | Work only from the packet, verdict and receipts; locate the layer, name one cause per finding with file:line, distinguish symptom from cause, fix direction without code, decide testable vs untestable (reason required), the findings JSON |
+| `git-workflow` | preloaded | git | Branch/worktree naming, each op's exact commands, rebase + full suite recipe, PR body = the orchestrator's body file (trace summary + David's paragraph), comment posting, `read-comments` filters **in the command** (`gh pr view --json comments --jq` on `author.login == "dpmorgandev"`) so other authors' text never enters context, reply-with-SHA format, refusal list |
+| `feature` | main session | orchestrator (David invokes) | The loop: per orchestration.spec Contract |
+| `orient`, `save-context`, `load-context-chain` | main session | David / orchestrator | Per context.spec Contract |
+| `plan-dag`; `plan-feature`, `plan-bug`, `plan-investigation` | main session | David / orchestrator | Per planning.spec Contract (`plan-dag` built in F0a, the rest on first need) |
 
-Main-session skills that must ask David use default invocation (not `context: fork`). Agent-preloaded skills must **not** set `disable-model-invocation: true` (blocks preloading); set `user-invocable: false` to keep them out of David's `/` menu.
+The stale `decide` and `tdd` skills are not rebuilt (R7; decisions live in specs).
 
-### Mechanical boundaries (handed to guardrails.spec)
+**Line caps** (checked by the guardrails wiring self-test): agent body ≤ 120 lines; preloaded skill body ≤ 200 lines; `architecture` ≤ 150; main-session skill body ≤ 250; `description` ≤ 3 lines.
+
+### Verdict JSON (reviewer, security)
+
+The schema is **orchestration.spec's Verdict JSON schema v1, unchanged**; this spec does not fork it. Fields: `schema_version`, `agent` (`reviewer|security`), `plan_id`, `node_id`, `attempt`, `head_sha`, `diff_fingerprint`, `verdict` (`PASS|FAIL`), `checked[] {id, result: met|not-met|n/a, note}`, `findings[] {id R#|S#, rule_id, severity blocker|major|minor, title, evidence[] {file, line, excerpt}, expected, actual, testable, suggested_test | untestable_reason}`.
+
+Changes from this spec's earlier draft, to match: `NEEDS_WORK` → `FAIL`; `rules_covered/missing` → `checked[]`; `evidence[] {command, exit_code}` dropped (reviewer/security run nothing; command evidence is the orchestrator's gate receipts); P0–P2 → blocker/major/minor; `owasp_id` folded into `rule_id`; `route_to` dropped (every FAIL goes to the investigator).
+
+### Findings JSON (investigator)
+
+orchestration.spec's Contract adopts this as the Investigator findings schema v1 (same SubagentStop validation); the two must stay identical.
+
+```json
+{
+  "schema_version": 1, "agent": "investigator",
+  "plan_id": "build", "node_id": "F3", "attempt": 2, "head_sha": "<40 hex>",
+  "source": "reviewer | security | gate | david",
+  "source_ids": ["R1", "S2"],
+  "causes": [{
+    "id": "C1", "source_ids": ["R1"], "rule_id": "CANCEL-7",
+    "layer": "domain | services | persistence | api | tests | harness",
+    "evidence": [{ "file": "src/…/Policy.cs", "line": 88, "excerpt": "…" }],
+    "cause": "…", "fix_direction": "…",
+    "testable": true, "suggested_test": "Given/When/Then + target test class",
+    "untestable_reason": null
+  }]
+}
+```
+
+Rules: every `source_ids` entry is covered by at least one cause; `testable=false` ⇒ `untestable_reason` required. Source ids for non-verdict inputs: `G#` (gate failure), `D#` (a David steer: Pause 1, Pause 2 or a PR comment; rendered to `findings/D<n>.md`, no attempt increment).
+
+**Reconciled (2026-10-17):** the final orchestration Contract routes verdict → investigator → `findings/A<n>.md` → tester → builder, and adopts the findings schema.
+
+### Mechanical boundaries (scripts owned by guardrails.spec)
 
 | Rule | Mechanism |
 |---|---|
-| builder ≠ tests/ | PreToolUse(`agent_type==builder`, path ∈ `tests/**`) deny + SubagentStop diff gate |
-| tester ≠ src/ | same, mirrored |
-| reviewer/security read-only | no write tools + PreToolUse deny on mutating Bash (belt and braces) |
-| no merge / no push to main | permissions.deny `Bash(git push*main*)`, `Bash(gh pr merge*)`, `Bash(git merge*)` + PreToolUse |
-| no PR without PASS | PreToolUse on `gh pr create` requires `docs/trace/<plan>/<node>/verdict-*.json` PASS for head SHA |
-| agents stay in worktree | session `EnterWorktree` isolation checks (built in) |
+| per-agent write scope (roster column) | one PreToolUse hook keyed on `agent_type` + SubagentStop diff-scope check (start SHA recorded by SubagentStart per `agent_id`) |
+| tester `src/` stubs only | the diff check rejects any added `src/` member body other than `throw new NotImplementedException()` |
+| reviewer / security / investigator read-only | no write or shell tools (allowlist) + PreToolUse deny on any write by those `agent_type`s |
+| no spawning, no runtime skills | `Agent`, `Skill` absent from `tools` |
+| agents never read specs | PreToolUse deny + `.ignore` (Universal rules) |
+| no merge, no push to `main`, no force | permissions deny (incl. `gh pr merge *`) + PreToolUse; `ask` on push / `gh pr create` / `gh pr comment` |
+| no PR without receipts | PreToolUse on `gh pr create` (guardrails G14) denies unless the latest reviewer and security verdicts are PASS with `head_sha` = HEAD |
+| comments from `dpmorgandev` only | filter inside the `read-comments` command (git-workflow) + the orchestrator drops any returned comment by another author |
+| agents stay in the worktree | session `EnterWorktree` isolation (built in) |
 
 ## Open questions
 
-1. **Push vs PR (changes requirements.md):** "every push is David's action" contradicts "git agent raises the PR" (`gh pr create` needs the branch on the remote). Options: git agent pushes the *feature branch* only (permission `ask`, David approves each), or git agent prepares the PR command and David runs it.
-2. **Worktree path (changes requirements.md §3 Feature loop step 2):** `../wt/F1-sell` → `.claude/worktrees/F1-sell` to avoid an unsuppressible approval prompt per entry. Accept?
-3. Should reviewer/security have `Skill` removed from `tools`, so only preloaded skills shape them (no self-loaded extras)? Recommend yes.
-4. Per-rule tester↔builder ping-pong (≈15–20 dispatches/feature) vs batching all rules of a node per dispatch (fewer dispatches, weaker visible TDD history). Orchestration decides; this spec assumes per rule.
-5. Spike in F0: (a) workflow `agent()` inherits an `EnterWorktree`'d cwd; (b) `agent_type` value for project agents is exactly the `name`; (c) SubagentStop exit 2 re-prompts the agent with stderr; (d) Bash-write detection via diff gate works on Windows paths.
-6. Who records `start_sha` per dispatch for the diff gate — SubagentStart hook (mechanical, preferred) or orchestrator prompt?
-7. `fable` model tier/cost unverified — check before any role uses it.
-8. Security sees reviewer's verdict or not? Recommend neither sees the other's (independent lenses), orchestrator merges.
+1. ~~Push vs PR~~ **Resolved** (orchestration E): the git agent runs `git push -u` and `gh pr create --draft` behind `ask` rules.
+2. ~~Worktree path~~ **Resolved:** `.claude/worktrees/<plan>-<node>` (orchestration C1).
+3. ~~Remove `Skill` from reviewer/security~~ **Resolved:** removed from all six.
+4. Per-rule tester ↔ builder cycles vs batching per node. The acceptance suite is written in full in the red step (decided); the unit-cycle granularity is planning/orchestration's. **(open, not owned here)**
+5. Spike in F0a: (a) workflow `agent()` inherits an `EnterWorktree`'d cwd (moot unless workflows are used); (b) `agent_type` = `name` exactly; (c) SubagentStop exit 2 re-prompts the agent with stderr; (d) diff-scope check on Windows paths; (e) the Grep tool honours `.ignore`. **(open)**
+6. ~~Who records `start_sha`~~ **Resolved:** a SubagentStart hook (guardrails O2-A).
+7. ~~`fable`~~ **Resolved (moot):** no role uses it.
+8. ~~Security sees the reviewer's verdict~~ **Resolved:** neither sees the other's; both run in parallel.
+9. Resolved (David, 2026-10-17): the review packet only, with no shell, as the Contract says. Revisit if F1 investigations stall.
+10. Orchestration.spec to adopt the findings JSON and the investigator route (see "Differences to reconcile"). **(open, orchestration)**

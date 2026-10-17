@@ -1,6 +1,6 @@
 # infrastructure.spec.md
 
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 Researched: 2026-10-17 · Feature: F5 (last, time-boxed, first to cut)
 
 **Scope guard.** This is evidence, not a deployment. The Bicep is written for dev, test and prod, validated
@@ -12,7 +12,7 @@ hand-written lines over a larger generated surface.
 
 ## Dependencies
 
-| Depends on | What this spec assumes (not yet decided there) |
+| Depends on | What this spec relies on |
 |---|---|
 | `architecture.spec` | The app is host-agnostic. It reads `Database:Provider` and `ConnectionStrings:Policies` from config or env, exposes `/health/live` (no DB) and `/health/ready` (DB), and reaches Azure SQL with `Authentication=Active Directory Default`. Migrations are **SQL Server only**. If those keys or paths change, the app settings in `modules/app.bicep` change with them |
 | `deployment.spec` | Consumes this spec's outputs (`appName`, `sqlServerFqdn`, `sqlDatabaseName`, `resourceGroupName`) and runs what-if, deploy, migrations, app deploy and smoke test |
@@ -191,56 +191,135 @@ points a Uinsure reviewer would probe.
 
 ---
 
-## Contract — PENDING (DRAFT)
+## Contract
+
+Binding for F5. Builder, tester and reviewer get this section through the `architecture` skill, never the spec itself.
+
+### File tree
 
 ```text
 infrastructure/
   bicep/
-    bicepconfig.json            linter rules (key rules → error)
-    main.bicep                  targetScope='subscription'; RG; tags; calls modules; outputs
+    bicepconfig.json            linter rules; no-hardcoded-env-urls, secure-secrets-in-params,
+                                use-recent-api-versions, no-unused-params → error
+    main.bicep                  targetScope = 'subscription'; creates the RG; one tags object; calls modules; outputs
     modules/
-      monitoring.bicep          log-… (LA workspace) + appi-… (workspace-based)
-      sql.bicep                 sql-… (Entra-only, admin = deploy group) + sqldb-… + Azure-services firewall rule
-      app.bicep                 asp-… (Linux) + app-… (DOTNETCORE|10.0, MI, healthCheckPath, httpsOnly, minTls 1.2, ftps off)
+      monitoring.bicep          log-… (Log Analytics, 30 d) + appi-… (workspace-based)
+      sql.bicep                 sql-… (Entra-only, admin = Entra group) + sqldb-… + AllowAzureServices rule
+      app.bicep                 asp-… (Linux) + app-… (system-assigned MI, app settings below)
     env/
       dev.bicepparam            using '../main.bicep'
       test.bicepparam
       prod.bicepparam
-  validate.ps1                  bicep lint + build + build-params ×3; non-zero exit on any error
+  sql/
+    grant-app-identity.sql      → deployment.spec (runs after the Bicep deploy)
   pipelines/                    → deployment.spec
+  validate.ps1                  local validation (below); non-zero exit on any error
 ```
 
-**`main.bicep` parameters:** `environmentName` (`@allowed(['dev','test','prod'])`), `location` (default `uksouth`),
-`workload` (`uinsurepolicies`), `sqlAdminGroupObjectId`, `sqlAdminGroupName`, `appServiceSku`, `appServiceCapacity`,
-`sqlSkuName`, `sqlAutoPauseDelay`, `sqlMinCapacity`, `alwaysOn`, `owner`.
-No `@secure()` parameters exist. **That absence is the point.**
+### `main.bicep`
 
-**Web app settings (set by Bicep):**
+- `targetScope = 'subscription'`. It creates `rg-uinsurepolicies-<env>-uks`, then calls the three modules with `scope: rg`.
+  One deployment and one what-if cover everything.
+- **Parameters:** `environmentName` (`@allowed(['dev','test','prod'])`), `location` (default `uksouth`), `workload`
+  (default `uinsurepolicies`), `owner`, `sqlAdminGroupObjectId`, `sqlAdminGroupName`, `appServiceSku`, `appServiceCapacity`,
+  `alwaysOn`, `sqlSkuName`, `sqlAutoPauseDelay`, `sqlMinCapacity`, `sqlBackupRedundancy`.
+  **No `@secure()` parameter exists. That absence is the point.**
+- **Naming:** `<abbr>-${workload}-${environmentName}-uks`, built once in `main.bicep` and passed down. Modules never build names.
+- **Tags:** one object (`workload`, `environment`, `owner`, `managedBy: 'bicep'`, `repo`), applied to every resource with `union()`.
+- **Outputs (consumed by the pipeline):** `resourceGroupName`, `appName`, `appHostName`, `sqlServerFqdn`, `sqlDatabaseName`,
+  `appPrincipalName` (equal to `appName` for a system-assigned MI; used in `CREATE USER`).
+- **`.bicepparam` files** hold every per-environment value, because the CLI can't override parameters (R6). The Entra group object
+  ID in them is an identifier, not a secret. Until one-time setup, it is the all-zero GUID, with a comment saying so.
 
-| Setting | Value |
-|---|---|
-| `ASPNETCORE_ENVIRONMENT` | `Development` / `Test` / `Production` |
-| `Database__Provider` | `SqlServer` |
-| `ConnectionStrings__Policies` | `Server=tcp:${sqlFqdn},1433;Database=${dbName};Authentication=Active Directory Default;Encrypt=True;` |
-| `APPLICATIONINSIGHTS_CONNECTION_STRING` | `appi.properties.ConnectionString` |
+### Resources per environment (6, region `uksouth`)
 
-**Outputs (consumed by the pipeline):** `resourceGroupName`, `appName`, `appHostName`, `sqlServerFqdn`, `sqlDatabaseName`,
-`appPrincipalName` (equal to the app name for system-assigned MI, used in `CREATE USER`).
+| Resource | Name | dev | test | prod |
+|---|---|---|---|---|
+| Resource group | `rg-uinsurepolicies-<env>-uks` | ✓ | ✓ | ✓ |
+| App Service plan (Linux, `reserved: true`) | `asp-uinsurepolicies-<env>-uks` | B1 ×1 | B1 ×1 | P0v3 ×1 |
+| Web app | `app-uinsurepolicies-<env>-uks` | `alwaysOn: false` | `alwaysOn: false` | `alwaysOn: true` |
+| SQL server | `sql-uinsurepolicies-<env>-uks` | Entra-only | Entra-only | Entra-only |
+| SQL database | `sqldb-uinsurepolicies-<env>-uks` | `GP_S_Gen5_1`, auto-pause 60, min 0.5 | `GP_S_Gen5_1`, auto-pause 60, min 0.5 | `GP_S_Gen5_2`, auto-pause `-1`, min 1 |
+| SQL backup redundancy | (property) | Local | Local | Geo |
+| Log Analytics | `log-uinsurepolicies-<env>-uks` | 30 d | 30 d | 30 d |
+| Application Insights | `appi-uinsurepolicies-<env>-uks` | workspace-based | workspace-based | workspace-based |
 
-**Acceptance (F5 definition of done for infra):** `infrastructure/validate.ps1` exits 0. That means `bicep lint` has no errors on
-`main.bicep`, and `bicep build-params` succeeds for all three `.bicepparam` files. The README states
-"validated locally, never deployed, what-if not run".
+The 6 resources are the RG, the plan, the web app, the SQL server with its database, Log Analytics and App Insights.
+`app` and `sql` names must be globally unique. `uinsurepolicies` is distinctive enough that no `uniqueString()` suffix is added.
+If a name collides on first deploy, the fix is a one-line `workload` change.
+
+**Web app `siteConfig`:** `linuxFxVersion: 'DOTNETCORE|10.0'`, `healthCheckPath: '/health/ready'`, `httpsOnly: true`,
+`minTlsVersion: '1.2'`, `ftpsState: 'Disabled'`, `identity.type: 'SystemAssigned'`.
+
+### Managed identity → Azure SQL (Entra-only)
+
+1. `sql.bicep` sets `administrators` with `azureADOnlyAuthentication: true`, `principalType: 'Group'`, `login: sqlAdminGroupName`,
+   `sid: sqlAdminGroupObjectId`. There is no SQL login and no password anywhere.
+2. The admin is an Entra group per environment that holds the pipeline's deploy identity plus one human break-glass account.
+3. The firewall rule `AllowAllWindowsAzureIps` (`0.0.0.0`–`0.0.0.0`) lets App Service and hosted agents reach SQL.
+4. Bicep can't create the DB user. `infrastructure/sql/grant-app-identity.sql` (run by the pipeline as the admin group, after the deploy)
+   does an idempotent `CREATE USER [<appName>] FROM EXTERNAL PROVIDER` plus `db_datareader` and `db_datawriter`.
+   **No `db_ddladmin`**, because migrations run from the pipeline, not the app.
+
+### App settings (set by `app.bicep`) and what the API reads
+
+| App setting (env var) | Config key the API reads | Value |
+|---|---|---|
+| `Database__Provider` | `Database:Provider` | `SqlServer` |
+| `ConnectionStrings__Policies` | `ConnectionStrings:Policies` | `Server=tcp:${sqlServerFqdn},1433;Database=${sqlDatabaseName};Authentication=Active Directory Default;Encrypt=True;` |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | same name | `appi.properties.ConnectionString` |
+| `ASPNETCORE_ENVIRONMENT` | host environment | `Dev` / `Test` / `Production` |
+
+- The App Insights connection string is passed as a plain app setting. It's an identifier, not a credential (R3).
+- Deployed dev is **`Dev`, not `Development`**. `Development` turns on Scalar/OpenAPI and developer error detail, and those
+  must never be reachable on a public endpoint.
+- **App side, owned by the plan's logging task, not by F5:** the API registers `Azure.Monitor.OpenTelemetry.AspNetCore` only
+  when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set, and otherwise logs to the console. So the app runs the same with or
+  without F5.
+
+### Local validation (no `az`, ever)
+
+`infrastructure/validate.ps1` runs, in order, and stops at the first failure:
+
+1. `bicep lint infrastructure/bicep/main.bicep`
+2. `bicep build infrastructure/bicep/main.bicep --stdout > $null` (type-checks the modules against their API versions)
+3. `bicep build-params infrastructure/bicep/env/<env>.bicepparam --stdout > $null`, once each for dev, test and prod
+4. the YAML schema check (→ deployment.spec)
+
+The only tool needed is the standalone Bicep CLI (`winget install -e --id Microsoft.Bicep`). Nothing signs in to Azure.
+`az`, what-if and deploy are never run from this repo or this machine.
+
+**Acceptance (F5 infra done):** `validate.ps1` exits 0, and the README paragraphs below are present.
+
+### README paragraphs (F6 checklist)
+
+1. **Status:** "The Bicep is linted and built locally and never deployed. what-if was not run, because it needs a signed-in
+   subscription."
+2. **Shape:** subscription scope, 6 resources per environment, 3 modules, 3 `.bicepparam` files, plus the sizing table.
+3. **No secrets:** a system-assigned MI connects to Entra-only SQL, so there are no passwords. **Key Vault was considered and rejected**:
+   there is nothing to store. It arrives with the first real secret, such as a payment API key.
+4. **Next step, networking:** private endpoint for SQL, VNet integration for the app, public network access off, and a
+   self-hosted or Managed DevOps Pool agent in the VNet.
+5. **.NET 10 runtime:** "`DOTNETCORE|10.0` is inferred from the documented pattern and a Nov 2025 Q&A. It wasn't confirmed with
+   `az webapp list-runtimes`."
+
+### Cut order
+
+- **Plan level:** F7 is cut before F5. If F5 is cut, the README says so and keeps paragraph 3 as the design intent.
+- **Within F5 infra:** prod sizing differences (make all three the same) → the monitoring module (and its app setting) → the tags `union()`.
+- **Never cut:** the 3 param files, MI + Entra-only SQL, and a passing `validate.ps1`.
 
 ---
 
 ## Open questions
 
-1. **.NET 10 on App Service Linux GA?** It's very likely, but unverified without `az webapp list-runtimes`. Is David happy to state
-   it as "verified by pattern + Q&A, not by CLI"?
-2. Is the **free-offer** SQL property naming (`useFreeLimit`) correct? It's only relevant if I5-B is picked, and `bicep build` will tell.
-3. Who is the **SQL Entra admin**? Recommended: an Entra group containing the pipeline's deployment identity (and a human
-   break-glass). That decides how the `CREATE USER` step authenticates (see `deployment.spec`).
-4. Does the README include the networking "next step" paragraph (private endpoint, VNet integration, deny public access)?
-5. The requirements.md §4 row 8 lists **Key Vault**. If I3-A is chosen, the row should say "Key Vault considered and rejected
-   (no secrets)", not imply one is built.
-6. requirements.md §6 item 4 is now answered: **neither `az` nor `bicep` is installed.** Install `Microsoft.Bicep` (winget) before F5.
+1. **(open)** Is .NET 10 GA on App Service Linux? It's unverifiable without `az`, which is barred. README paragraph 5 states the
+   limit honestly.
+2. ~~Free-offer property names~~: **resolved**, moot. I5-A (serverless, not the free offer) was decided.
+3. ~~Who is the SQL Entra admin?~~: **resolved**. It's an Entra group per environment with the deploy identity plus a break-glass human
+   (the recommendation, accepted in the block decision).
+4. ~~Networking next-step paragraph?~~: **resolved**. Yes, README paragraph 4.
+5. ~~Key Vault row~~: **resolved** for the README (paragraph 3). Resolved: requirements.md §4 row 8 now says Key Vault was rejected. Updating requirements.md §4 row 8 to "considered and rejected"
+   is a follow-up outside this spec.
+6. ~~Tooling~~: **resolved**. David installs `Microsoft.Bicep` via winget before F5. `az` is not installed, and never will be for this repo.

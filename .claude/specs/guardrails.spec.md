@@ -1,5 +1,5 @@
 # guardrails.spec.md
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 Researched: 2026-10-17 · Settles: requirements.md §4 row 7 (each §3 Rule → its enforcing mechanism, git hooks, secrets)
 Environment checked: Claude Code 2.1.302 · Node v22.18.0 · Windows PowerShell 5.1 (no `pwsh`) · Git Bash (git 2.49.0, **no `jq`**) · .NET SDK 10.0.402 · gh 2.95.0 · no `gitleaks` · user settings `defaultMode: "auto"` + `skipDangerousModePermissionPrompt: true`
 
@@ -92,6 +92,43 @@ Git hooks are a separate question: git on Windows runs them in Git Bash's `sh`, 
 - agentkinOS `detect-loop.mjs`: denies 3rd identical call; fails open on corrupt state. `guards-manifest.json` + `guards-check.mjs` (121 lines): bidirectional declared↔wired check, `failMode` per guard, run in CI.
 - agentflow: `.sh` hooks needing jq/python fallbacks; `commit-on-stop.mjs` (rejected); `verify-gate.mjs` (evidence-read gate) — the shape of "no PASS → no PR".
 
+### R-AI. OWASP for AI applications (checked 2026-10-17)
+- **History: OWASP Top 10 for LLM Applications 2025.** Superseded by the 2026 list below; kept for the record. OWASP GenAI Security Project, dated 17 Nov 2024 on the resource page. IDs are `LLMnn:2025`:
+  - LLM01 Prompt Injection
+  - LLM02 Sensitive Information Disclosure
+  - LLM03 Supply Chain
+  - LLM04 Data and Model Poisoning
+  - LLM05 Improper Output Handling
+  - LLM06 Excessive Agency
+  - LLM07 System Prompt Leakage
+  - LLM08 Vector and Embedding Weaknesses
+  - LLM09 Misinformation
+  - LLM10 Unbounded Consumption
+
+  Sources: https://genai.owasp.org/llm-top-10/ and https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/. The 2026 PDF's revision history lists "2024-11-18 Version 2025 Release", so the edition is labelled "2025", not "v2.0".
+- **OWASP Top 10 for LLM Applications 2026** (the Contract maps this one). Resource page "OWASP GenAI LLM Top 10 2026", dated 3 Aug 2026: https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/. IDs and names verified 2026-10-17 from the official PDF (the page's Download link), whose cover reads "Version 2026"; "v1.0" appears only in an image filename. IDs are `LLMnn:2026`:
+  - LLM01 Prompt Injection
+  - LLM02 Sensitive Information Disclosure
+  - LLM03 Excessive Agency
+  - LLM04 Supply Chain
+  - LLM05 Data and Model Poisoning
+  - LLM06 Unbounded Consumption
+  - LLM07 Misinformation
+  - LLM08 Hidden Context Exposure (System Prompt Leakage, broadened)
+  - LLM09 Vector and Embedding Weaknesses
+  - LLM10 Improper Output Handling
+- **OWASP Top 10 for Agentic Applications for 2026.** That's the exact title, dated 9 Dec 2025, at https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/. The official PDF's cover reads "Version 2026 · December 2025". IDs are `ASInn:2026`. Names verified 2026-10-17 from that PDF's table of contents:
+  - ASI01 Agent Goal Hijack
+  - ASI02 Tool Misuse and Exploitation
+  - ASI03 Identity and Privilege Abuse
+  - ASI04 Agentic Supply Chain Vulnerabilities
+  - ASI05 Unexpected Code Execution (RCE)
+  - ASI06 Memory & Context Poisoning
+  - ASI07 Insecure Inter-Agent Communication
+  - ASI08 Cascading Failures
+  - ASI09 Human-Agent Trust Exploitation
+  - ASI10 Rogue Agents
+
 ## Options
 
 **O1. Per-agent path rules (builder↛tests, tester↛src)**
@@ -162,45 +199,135 @@ A is one file and one test suite, visible in `settings.json`. B co-locates the r
   - Live from the end of F0a.
 - [x] **D11:** the main session commits docs, specs and harness work directly to `main` until F0b starts. From F0b, a hook denies `git commit` on `main`, so everything goes through branch + PR.
 - [x] **D12:** Postman isn't in any hook, so it's manual only (testing O8).
-- [x] **Added (David): OWASP for the harness.** Write a mapping of the OWASP Top 10 for LLM Applications 2025 to our guards, and the agentic-applications list too once its version is verified. It must cover at least:
+- [x] **Added (David): OWASP for the harness.** Write a mapping of the OWASP Top 10 for LLM Applications 2026 to our guards, together with the OWASP Top 10 for Agentic Applications for 2026. It must cover at least:
   - **LLM01 prompt injection:** PR comments (only `dpmorgandev` is acted on), repo text and tool output.
-  - **LLM06 excessive agency:** deny and ask rules, and the harness lock.
+  - **LLM03 excessive agency:** deny and ask rules, and the harness lock.
   - **LLM02 sensitive information disclosure:** the privacy check before snapshots or docs reach a public repo.
   - **Supply chain:** no third-party skills or plugins.
+- [x] **Final rulings (David, 2026-10-17):**
+  - OQ3: the builder may create the root build files (`global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes`, the `.slnx`); the tester creates the `tests/*.csproj` files (G1).
+  - OQ4: `Bash(gh pr merge *)` is denied for everyone. David always merges in the GitHub UI (G5).
+  - OQ5: PR gate yes. `guard-bash.mjs` denies `gh pr create` unless the node's latest reviewer and security verdicts are PASS with `head_sha` = HEAD (G14).
+  - OQ6: two privacy denylists: the committed `.claude/hooks/privacy-denylist.txt` (generic patterns only) and an optional, gitignored `.githooks/privacy-denylist.local.txt` (private terms). Both consumers read both (G10).
+  - OQ7: the OWASP mapping is re-keyed to the OWASP LLM Top 10 2026 plus the Top 10 for Agentic Applications for 2026; the 2025 list stays in Research as history.
+  - Accepted as proposed: hooks block `--no-verify` and hook-path overrides for everyone (G11).
 
-## Contract — PENDING (DRAFT)
+## Contract
 
-Files: `.claude/settings.json` (permissions + hook wiring) · `.claude/hooks/guard-agent.mjs` · `guard-bash.mjs` · `gate-stop.mjs` · `gate-subagent.mjs` · `.claude/hooks/__tests__/guards.test.mjs` · `.githooks/pre-commit` · `.githooks/pre-push` (activated with `git config core.hooksPath .githooks`; worktrees share the repo config). All hooks: read stdin JSON, **catch every error → emit deny/block (fail closed)**, finish < 2 s except the build gates (`timeout: 300`).
+These rules bind every hook. Each hook reads its stdin JSON, **catches every error and emits deny/block (fails closed)**, and finishes in under 2 s. Paths are resolved **relative to their worktree root**: strip `…/.claude/worktrees/<plan>-<node>/` or use `git rev-parse --show-toplevel`, then match (R5). Any `agent_type` means a subagent. No `agent_type` means the main session.
 
-| # | Rule (§3 / spec) | Mechanism(s) | File | Fail mode | How it's tested |
+### Guard manifest
+
+This table *is* the manifest (D8). The wiring self-test (G13) checks it against `settings.json` and the hook directory.
+
+| ID | Law | Mechanism | File | Test (fixture in `guards.test.mjs`) | F0a probe |
 |---|---|---|---|---|---|
-| G1 | Builder cannot edit tests | (a) PreToolUse `Edit\|Write\|NotebookEdit\|Bash` → `agent_type=builder` allowlist; Bash leg parses write targets (floor) (b) SubagentStop `builder`: diff since start-SHA ∩ `tests/**` ≠ ∅ → block | guard-agent.mjs, gate-subagent.mjs | closed (unparseable/unknown → deny) | fixture: builder Edit `tests/X.cs` → deny; `src/X.cs` → allow; worktree path `…/.claude/worktrees/build-F1/tests/…` → deny; F0 live probe |
-| G2 | Tester cannot edit `src/` | same, mirrored allowlist `tests/**` | same | closed | mirrored fixtures |
-| G3 | Reviewer & security read-only | frontmatter `tools: Read, Grep, Glob`; G1 hook denies any write for these types (belt) | `.claude/agents/{reviewer,security}.md`, guard-agent.mjs | closed | self-test parses frontmatter: no Edit/Write/Bash; fixture write → deny |
-| G4 | Verdict is a receipt | SubagentStop `reviewer\|security`: `last_assistant_message` must parse as verdict JSON else block; hook writes `docs/trace/<plan>/<node>/verdicts/…` | gate-subagent.mjs | closed (bad JSON → block, cap 3) | fixture: malformed → block; valid → file written |
-| G5 | No PR without PASS | `ask` rule `Bash(gh pr create *)`; guard-bash.mjs denies `gh pr create` unless latest reviewer+security verdicts for current node = PASS and newer than HEAD | settings.json, guard-bash.mjs | closed (no verdict → deny) | fixture: FAIL verdict → deny; stale PASS → deny; fresh PASS → no decision (ask rule prompts David) |
-| G6 | No push to `main` | deny `Bash(git push * main*)`, `Bash(git push --force*)`, `Bash(git push -f*)`; guard-bash.mjs catches `HEAD:main`, `sh -c`; **pre-push** rejects any ref to `refs/heads/main` | settings.json, guard-bash.mjs, .githooks/pre-push | closed | fixtures; manual `git push origin HEAD:main` in a scratch clone → rejected |
-| G7 | Every push is David's | `ask` rule `Bash(git push *)` (prompts even in bypass, R3) | settings.json | n/a (prompt) | F0 probe in bypass + auto: prompt appears, names subagent |
-| G8 | Never merge (David merges) | deny `Bash(gh pr merge *)`, `Bash(git merge * main*)` in worktrees; guard-bash.mjs for wrapped forms | settings.json, guard-bash.mjs | closed | fixture |
-| G9 | Repo stays private | deny `Bash(gh repo edit *)`, `Bash(gh repo delete *)`, `Bash(gh api *)`, `Bash(gh auth *)`, `Bash(gh secret *)`; guard-bash.mjs `visibility`; optional PAT (D5) | settings.json, guard-bash.mjs | closed | fixture; with PAT: `gh repo edit --visibility public` → 403 |
-| G10 | Build gate on Stop | Stop: if `stop_hook_active` & 3 consecutive blocks → allow with loud `BUILD RED` reason; else `dotnet build -warnaserror` in cwd (worktree) → fail = block | gate-stop.mjs | **open after cap** (documented: avoids infinite loop) | fixture with a broken csproj in temp dir; cap counter test |
-| G11 | Builder exits green / tester exits compiling | SubagentStop `builder`: `dotnet test` green; `tester`: `dotnet build` ok (+ new test fails, if testing.spec wants an anti-oracle check) | gate-subagent.mjs | closed (cap 3, then escalate message) | fixture repos (tiny sln) |
-| G12 | Secrets never read/written | deny `Read`/`Edit` `//**/.env`, `//**/.env.*`, `//**/*.pfx`, `//**/*.pem`, `//**/*.key`, `//**/appsettings.*.local.json`, `//c/Users/*/AppData/Roaming/Microsoft/UserSecrets/**`; `.gitignore` same; pre-commit regex scan of staged diff (`Password=`, `AccountKey=`, `-----BEGIN .*PRIVATE KEY`, `ghp_`, `github_pat_`) | settings.json, .gitignore, .githooks/pre-commit | closed | self-test: `cat .env` denied (Bash file-command coverage, R4); staged fake key → commit rejected |
-| G13 | Harness can't be disarmed by agents | deny Edit/Write `/.claude/settings.json`, `/.claude/settings.local.json`, `//**/.claude/hooks/**`, `//**/.claude/agents/**`, `//**/.githooks/**`, `//**/.git/hooks/**`, `//**/.git/config` — **never** `.claude/**` (worktrees live there); deny `Bash(git * --no-verify*)`, `Bash(git commit -n*)`, `Bash(git config *)`, `Bash(git -c *)` | settings.json, guard-bash.mjs | closed | fixture: Edit `.claude/worktrees/x/src/A.cs` → **allowed** (regression for the enforce-boundaries lesson); Edit `.claude/hooks/a.mjs` → deny |
-| G14 | pre-commit: build | `dotnet build -warnaserror` (solution at worktree root) | .githooks/pre-commit | closed (non-zero exit aborts commit) | commit with a compile error → rejected |
-| G15 | pre-push: tests | `dotnet test` (unit + integration + architecture); refuse `refs/heads/main` (G6); Postman per D12 | .githooks/pre-push | closed | push with a red test → rejected |
-| G16 | Declared = wired | `guards.test.mjs`: every `.claude/hooks/*.mjs` referenced in settings.json and vice versa; every Contract row's fixture passes; run in pre-push | __tests__/guards.test.mjs | closed | itself; run once with a hook unwired → fails |
-| G17 | Hooks active on clone | `core.hooksPath` set by the F0 setup step and checked by `/orient` (context.spec); a guard that isn't installed is inert | setup note, /orient | — | `/orient` reports `core.hooksPath` |
+| G1 | Each agent writes only its own paths | PreToolUse `Edit\|Write\|NotebookEdit\|Bash`, keyed on `agent_type`, with an **allowlist** per role: builder `src/**` plus the root build files `*.slnx`, `global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes`; tester `tests/**`, which includes creating the `tests/*/*.csproj` files (+ G2); reviewer, security, git and any unknown type get **none**. The Bash leg parses write targets (redirects, `cp/mv/tee/sed -i`) and is a floor (R4). The main session is out of jurisdiction. All agents are denied `docs/trace/**` (traceability) | `guard-agent.mjs`, `lib/roles.mjs`, `lib/paths.mjs` | builder → `tests/X.cs` deny, `src/X.cs` allow, `global.json` allow; tester → `tests/T/T.csproj` allow, `Directory.Packages.props` deny; same via `…/.claude/worktrees/build-F1/tests/X.cs` → deny; reviewer Write → deny; unknown type → deny; no `agent_type` → allow | Log one Edit from a project subagent **and** one from a workflow `agent({agentType})`. `agent_type` must arrive (OQ1) |
+| G2 | Tester's `src/` writes are throwing stubs only | Tester may touch `src/**` only if every **added** line matches the stub grammar and **no line is removed**. The grammar allows: blank, `using`/`namespace`, braces, attributes, `///` docs, type declarations, member signatures, and bodies that are only `throw new NotImplementedException();` (block or `=>`). Edit: the diff of `old_string` → `new_string` is checked. Write: only allowed for a new file. Second leg: G3 re-checks the whole `git diff -U0 -- src/` at SubagentStop | `guard-agent.mjs`, `lib/stub-rule.mjs`, `gate-subagent.mjs` | signature + throw → allow; `return 0;` → deny; `if (` → deny; deleting a line → deny; Write over an existing `src/` file → deny | Tester adds `Policy.Cancel(...)` as a throwing stub. The red commit compiles, and the test fails with `NotImplementedException` |
+| G3 | What git says changed is in scope | SubagentStart records `HEAD` per `agent_id`. SubagentStop compares `git diff --name-only <start>` + untracked against the role's allowlist and the harness lock (G4), and reruns the stub rule for the tester. Out of scope → `decision: block` with the file list. `stop_hook_active` caps it at 3 blocks, then it stops with a loud reason so the orchestrator escalates | `gate-subagent.mjs` | builder writes `tests/A.cs` via `node -e` → block at stop; clean diff → allow; cap test | Probe that SubagentStart/Stop fire with `agent_id` + `agent_type` inside a worktree |
+| G4 | Harness lock: agents can't disarm the guards | Any subagent is denied writes to `**/.claude/{agents,skills,hooks,specs,workflows}/**`, `**/.claude/settings*.json`, `**/.githooks/**`, `.git/**` and `CLAUDE.md`, **including the copies inside worktrees**. The main session gets an `ask` rule for the same paths. Everything else under `.claude/worktrees/**` is exempt, and `docs/` is unaffected. Subagent Bash `git config *` is also denied (it protects `core.hooksPath`). **Live from the end of F0a** | `guard-agent.mjs`, `guard-bash.mjs`, settings `ask` | subagent Edit `.claude/worktrees/x/.claude/hooks/a.mjs` → deny; Edit `.claude/worktrees/x/src/A.cs` → **allow** (regression test for the enforce-boundaries lesson); main session Edit `.claude/hooks/a.mjs` → prompts | Main-session edit of `CLAUDE.md` prompts in bypass |
+| G5 | Repo admin, merge and force-push are nobody's | settings `deny` (holds in bypass, R3): `gh repo edit\|delete\|create *`, raw `gh api *`, `gh auth *`, `gh pr merge *` (David always merges in the GitHub UI), `git push --force*`. `guard-bash.mjs` catches wrapped forms (`sh -c`, `-f`, `--force-with-lease`). No PAT (D5) | settings.json, `guard-bash.mjs` | each pattern, bare and wrapped → deny (incl. `gh pr merge 3 --merge`) | `gh repo edit --visibility public` in bypass → denied |
+| G6 | Every push, PR and PR comment is David's call | settings `ask`: `git push *`, `gh pr create *`, `gh pr comment *`. These prompt even in bypass, and the prompt names the subagent | settings.json | self-test asserts the three rules are present | git agent pushes a feature branch in bypass + auto → David is prompted, and the prompt names `git` |
+| G7 | Nothing is pushed to `main` | settings deny `git push * main`. `guard-bash.mjs` catches `HEAD:main`, `:refs/heads/main` and wrapped forms. **pre-push** rejects any ref update to `refs/heads/main` | settings.json, `guard-bash.mjs`, `.githooks/pre-push` | `git push origin HEAD:main` → deny | In a scratch clone, a hand-run `git push origin HEAD:main` → pre-push rejects |
+| G8 | From F0b, no commits on `main` | If the current branch is `main` and `.githooks/main-locked` exists in `HEAD` (it's added by F0a's last commit), then `guard-bash.mjs` denies `git commit` and **pre-commit** exits 1. Before that marker, D11 allows commits on `main` | `guard-bash.mjs`, `.githooks/pre-commit`, `.githooks/main-locked` | commit on `main` with marker → deny; without marker → allow; on a `feature/*` branch → allow | After the marker commit, a test commit on `main` is refused |
+| G9 | Commits carry their trailers (shared with traceability) | `guard-bash.mjs` on `git commit` by a subagent: the message must carry `Agent:` = its `agent_type`, plus `Plan:` and `Node:`. The **commit-msg** hook requires `Agent/Plan/Node` on `feature/*` and `bug/*` branches. `git add -A` / `git add .` are denied for agents (traceability) | `guard-bash.mjs`, `.githooks/commit-msg` | builder commit with `Agent: tester` → deny; missing `Node:` → deny | One loop commit is accepted, and `git log` shows the trailers |
+| G10 | Nothing private reaches the public repo (shared with context) | **pre-commit** greps the staged diff against **two files** (format and scan owned by context C6): the committed `.claude/hooks/privacy-denylist.txt`, which holds **generic patterns only** (local absolute paths such as `[A-Za-z]:/Users/` and `/c/Users/`, emails other than the public noreply, key shapes such as `-----BEGIN .*PRIVATE KEY`, `ghp_`, `github_pat_`, `AccountKey=`, `Password=`, `ANTHROPIC_`), and the gitignored `.githooks/privacy-denylist.local.txt`, which holds private terms and is **optional** (absent → committed file only). `/save-context` reads both before writing a snapshot. A hit → commit rejected, with the line shown | `.githooks/pre-commit`, `.claude/hooks/privacy-denylist.txt`, `.githooks/privacy-denylist.local.txt` (local, gitignored) | staged `C:/Users/x` → rejected; staged fake `ghp_` → rejected; a term only in the local file → rejected; local file absent → scan still runs | Stage a fake key, then confirm rejection |
+| G11 | Git hooks gate commits and pushes | **pre-commit:** G8, G10, then `dotnet build -warnaserror`. **pre-push:** G7, `dotnet build`, `dotnet test` (all test projects), `dotnet ef migrations script --idempotent` (must succeed), and the self-test (`node --test .claude/hooks/__tests__`). `guard-bash.mjs` denies `--no-verify`, `commit -n`, `git -c core.hooksPath` and `git config core.hooksPath` (hook-path overrides) for everyone, the main session included (the git hooks' own leg; the one-time F0a install runs before the guard is live). Postman is manual only (D12) | `.githooks/pre-commit`, `.githooks/pre-push`, `guard-bash.mjs` | compile error → commit rejected; red test → push rejected; broken migration → push rejected | Each of the three, once, in a scratch branch |
+| G12 | Reviewer and security are read-only | Frontmatter `tools: Read, Grep, Glob` (D3). G1 denies their writes as a belt | `.claude/agents/{reviewer,security}.md` | self-test parses the frontmatter: no Edit, Write or Bash | — |
+| G13 | Declared = wired | `guards.test.mjs`. (i) Every `.claude/hooks/*.mjs` (not `lib/`) is referenced in `settings.json`, and every command there exists. (ii) Every manifest ID has at least one fixture, and every fixture passes. (iii) `core.hooksPath` = `.githooks`, and every `.githooks/*` is executable and LF. (iv) No `enabledPlugins`, `extraKnownMarketplaces` or `mcpServers` (supply chain). (v) settings `deny`/`ask` match this Contract **exactly**. It runs in pre-push and in `/orient` | `.claude/hooks/__tests__/guards.test.mjs` | unwire one hook → the test fails | Run once with a hook unwired, then once rewired |
+| G14 | No PR without PASS for HEAD | `guard-bash.mjs` on `gh pr create` (any agent or the main session): reads the node's verdict files (traceability layout; branch → `<plan>/<node>`), takes the **latest** reviewer verdict and the **latest** security verdict by `ts`, and denies unless both are `PASS` **and** both `head_sha` equal `git rev-parse HEAD`. A missing or unparseable verdict → deny (fails closed). It runs before G6's `ask` prompt | `guard-bash.mjs` | both PASS at HEAD → allow; reviewer PASS + security FAIL → deny; both PASS but `head_sha` ≠ HEAD (a later commit) → deny; no verdicts → deny; an older FAIL superseded by a later PASS → allow | In a scratch branch, `gh pr create` with a stale verdict → denied |
 
-Out of contract (deliberately): a generic detect-loop (O10-B); `disableBypassPermissionsMode` (D10); sandboxing (not on Windows native: macOS/Linux/WSL2 only).
+Hooks owned elsewhere but wired in the same file, so G13 covers them: `session-start.mjs` (context) and the traceability activity / render hooks.
+
+### settings.json permissions block (draft)
+
+```jsonc
+{
+  "permissions": {
+    "deny": [
+      "Bash(gh repo edit *)", "Bash(gh repo delete *)", "Bash(gh repo create *)",
+      "Bash(gh api *)", "Bash(gh auth *)", "Bash(gh pr merge *)",
+      "Bash(git push --force*)", "Bash(git push * main)"
+    ],
+    "ask": [
+      "Bash(git push *)", "Bash(gh pr create *)", "Bash(gh pr comment *)",
+      "Edit(//**/.claude/agents/**)", "Edit(//**/.claude/skills/**)", "Edit(//**/.claude/hooks/**)",
+      "Edit(//**/.claude/specs/**)", "Edit(//**/.claude/workflows/**)", "Edit(//**/.claude/settings*.json)",
+      "Edit(//**/.githooks/**)", "Edit(//**/.git/**)", "Edit(//**/CLAUDE.md)"
+    ]
+  },
+  "hooks": {
+    "SessionStart":  [{ "matcher": "startup|resume|clear|compact", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.mjs\"" }] }],
+    "PreToolUse":    [{ "matcher": "Edit|Write|NotebookEdit|Bash", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-agent.mjs\"", "timeout": 10 }] },
+                      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash.mjs\"", "timeout": 10 }] }],
+    "SubagentStart": [{ "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/gate-subagent.mjs\" start" }] }],
+    "SubagentStop":  [{ "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/gate-subagent.mjs\" stop", "timeout": 30 }] }]
+  }
+}
+```
+
+Notes on the block:
+- `Edit(...)` rules cover every built-in file-editing tool (Write, NotebookEdit).
+- The `ask` path rules also match subagents, but G4's hook denies those first.
+- Traceability adds its own hook entries to this file.
+- No `allow` rules carry security weight, because they do nothing in bypass (R3).
+
+### Files
+
+**Claude hooks** (Node `.mjs`, no npm deps, `.claude/hooks/`):
+- `guard-agent.mjs`: G1, G2, G4
+- `guard-bash.mjs`: G4 (Bash), G5, G7, G8, G9, G11 (no-verify, hook-path overrides), G14 (PR gate)
+- `gate-subagent.mjs`: G2 (second leg), G3
+- `lib/roles.mjs`, `lib/paths.mjs`, `lib/stub-rule.mjs`
+- `__tests__/guards.test.mjs` (`node:test`): G13 plus every fixture
+
+**Git hooks** (POSIX `sh`, LF via `.gitattributes` `.githooks/* text eol=lf`):
+- `.githooks/pre-commit`
+- `.githooks/commit-msg`
+- `.githooks/pre-push`
+- data files: `.githooks/main-locked`; `.githooks/privacy-denylist.local.txt` (optional, never committed). The committed denylist is `.claude/hooks/privacy-denylist.txt` (context C6)
+- `.gitignore` gains `.githooks/privacy-denylist.local.txt`
+
+**Install:** `git config core.hooksPath .githooks`, once per clone, as an F0a setup step. Worktrees share the repo config. G13(iii) and `/orient` report the setting if it's missing, because a git hook that isn't installed is inert.
+
+### Wiring self-test
+`node --test .claude/hooks/__tests__` is G13. It runs in pre-push, in `/orient`, and by hand after any harness edit. F0a is done when every F0a probe above has been run once and its result is noted in F0a's README, with "hooks not yet live" stated for the commits made before the lock.
+
+### OWASP for the harness
+The defence is **blast radius, not detection**. Every guard holds even if an agent's instructions are hijacked, because deny rules, ask rules, hooks and git hooks don't consult the model.
+
+| OWASP item (LLM Top 10 2026 · Agentic Top 10 for 2026) | Risk in this harness | Our guard / stance |
+|---|---|---|
+| LLM01:2026 Prompt Injection · ASI01:2026 Agent Goal Hijack | **PR comments:** anyone can comment on a public PR. **Repo text** (README, requirements, test data, code comments) and **tool output** (build logs, `gh` output) is read as instructions | PR comments are fetched with `gh pr view --json comments` and filtered on `author.login == "dpmorgandev"` before any text reaches an agent. Other authors are never acted on (orchestration). Repo text and tool output are treated as data. Residual risk is **accepted**, and it's bounded by G1–G9 and G14 |
+| LLM02:2026 Sensitive Information Disclosure | Local paths, private notes or keys committed to a public repo; snapshots in `docs/context/` | G10 (pre-commit and `/save-context` read the same two denylists). No secrets exist (no Key Vault; managed identity). Logs carry no PII (architecture) |
+| LLM03:2026 Excessive Agency · ASI02:2026 Tool Misuse and Exploitation · ASI03:2026 Identity and Privilege Abuse | `gh` is authenticated as David with repo admin. Agents could push, comment, merge, publish or edit the harness | G1/G2/G12 least privilege per role. No agent spawns agents. G5 deny (incl. `gh pr merge`), G6 ask, G7/G8 `main` protection, G14 PR gate, G4 harness lock. There's no server-side branch protection while the repo is private (R7) and no PAT (D5): **accepted**, with a talking point |
+| LLM04:2026 Supply Chain · ASI04:2026 Agentic Supply Chain Vulnerabilities | Third-party skills, plugins, MCP servers or hook packages run with our permissions | All skills, agents and hooks are ours. No plugins and no MCP in project settings (G13 iv). Hooks have no npm deps. NuGet packages are named in the architecture spec and pinned in `Directory.Packages.props`; vulnerability scanning is **out of scope** |
+| LLM05:2026 Data and Model Poisoning | No training or fine-tuning | **Out of scope.** Context poisoning → ASI06 |
+| LLM06:2026 Unbounded Consumption · ASI08:2026 Cascading Failures | Retry loops, stop-hook loops, token spend | Retry ladder (attempt 3 escalates, attempt 5 stops, a repeated fingerprint escalates early), the G3 block cap, hook timeouts. No generic loop breaker (D9). Spend is **accepted** (Max plan) |
+| LLM07:2026 Misinformation · ASI09:2026 Human-Agent Trust Exploitation | An agent claims "green" or "PASS" without it being true; David approves a smooth summary | Receipts over claims: the orchestrator runs builds and tests itself, plus G11 git hooks, hook-written verdicts, G14 and trailers (G9). David's pauses review real artefacts (tests, Postman, `walkthrough.md`). Ask prompts name the asking agent |
+| LLM08:2026 Hidden Context Exposure | Agent and skill prompts are in the repo | **Accepted by design:** they're public deliverables and hold no secrets |
+| LLM09:2026 Vector and Embedding Weaknesses | No RAG or embeddings | **Out of scope** |
+| LLM10:2026 Improper Output Handling · ASI05:2026 Unexpected Code Execution (RCE) | Agent output becomes shell commands, code and commits | `guard-bash.mjs` checks what runs, G3 checks what changed, and verdicts are parsed as JSON rather than trusted prose. Code passes tests, reviewer and security. There's no OS sandbox on Windows native: **accepted risk** |
+| ASI06:2026 Memory & Context Poisoning | Snapshots, `CLAUDE.md` and skills steer future sessions | Only the main session writes snapshots, and the G10 check runs before they're written. `/orient` waits for David's confirmation. G4 locks `CLAUDE.md`, skills and agents. Agents never read `*.spec.md` |
+| ASI07:2026 Insecure Inter-Agent Communication | Hand-offs between agents | No agent-to-agent channel: the orchestrator relays everything. Verdicts are written by SubagentStop as files, not taken as relayed text |
+| ASI10:2026 Rogue Agents | An agent acts outside its role | G3 diff-scope, G9 trailer check against `agent_type`, activity receipts cross-checked against git at render time (traceability) |
+
+**Out of contract (deliberately):** a generic detect-loop (D9), `disableBypassPermissionsMode` (D10), a PAT (D5), and sandboxing (unavailable on Windows native).
 
 ## Open questions
 
-1. **`agent_type` in practice** (R1): confirm with the F0 probe that it arrives for project subagents **and** for workflow `agent({agentType})`. If it doesn't for workflows, G1/G2's first leg falls back to frontmatter hooks (O1-B); the diff-scope leg is unaffected.
-2. **Hook `ask` in bypass** (R3): undocumented. G5 relies on the `ask` *rule*, not hook `ask`, for exactly this reason. Probe it anyway.
-3. **Which `settings.json` governs after `EnterWorktree`?** The main checkout's copy (desirable: a feature branch can't change its own guards) or the worktree's? Probe in F0. If it's the worktree's, G13 matters even more.
-4. **Contradiction for requirements.md §3:** "every push is David's action" vs feature loop step 5 "git agent… raises the PR" (which needs a push). The rec. (G7 `ask`) reconciles them: the agent *proposes* the push and David *approves* it. Reword §3 to "Every push and PR needs David's approval (ask rule); merging and making the repo public are David's alone."
-5. **requirements.md §3 should add:** "Guards hold in bypass and auto mode: deny rules, ask rules, hooks and git hooks. Allow rules and protected-path prompts don't." Also "no branch protection while private (GitHub Free, verified 403)".
-6. Builder allowlist beyond `src/**`: does F0's builder need root files (`.slnx`, `Directory.Build.props`, `global.json`, `.editorconfig`)? Who creates the test projects' csproj (tester, under `tests/`)?
-7. Does the main thread (orchestrator) write `docs/plans`, `docs/trace`, `docs/context` in the worktree or in David's checkout? requirements says agents never touch David's checkout. G-rules leave the main thread unrestricted, so this is orchestration/traceability's call.
-8. Stop-gate cost: `dotnet build` on every main-session Stop (including the analysis and chat turns) costs ~5–15 s each. Should it skip when `git status` shows no `.cs`/`.csproj` changes? (rec. yes)
+Resolved:
+- **Hook `ask` in bypass:** not relied on. Every prompt is an `ask` *rule* (G6, G4). It stays an F0a probe only.
+- **"Every push is David's" vs "the git agent raises the PR":** resolved by D4. The agent proposes and David approves via the `ask` rule. requirements.md §3 should read: "Every push, PR and PR comment needs David's approval; merging and visibility changes are David's alone."
+- **requirements.md §3 should state:** "Guards hold in bypass and auto mode (deny rules, ask rules, hooks, git hooks); allow rules and protected-path prompts don't. No branch protection while private (GitHub Free, verified 403)."
+- **Where the main thread writes `docs/trace`/`docs/context`:** in the worktree. Trails stay uncommitted until `chore(trace)` (traceability). Snapshots go to the current branch (context D8).
+- **Stop-hook build gate:** dropped. The orchestrator runs build and test gates via Bash, and G11 git hooks are the mechanical leg, so there's no per-turn `dotnet build` cost.
+
+Still open:
+1. **(open)** Does `agent_type` arrive for workflow `agent({agentType})` as well as for project subagents (G1 F0a probe)? If it doesn't, G1/G2's first leg falls back to frontmatter `hooks:` (O1-B). G3 is unaffected.
+2. **(open)** Which `settings.json` governs after `EnterWorktree`: the main checkout's copy or the worktree's? Probe in F0a. G4 locks the worktree copies either way.
+3. Resolved (David, 2026-10-17): the builder may create `global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes` and the `.slnx`; the tester creates the `tests/*.csproj` files under `tests/**` (G1).
+4. Resolved (David, 2026-10-17): `Bash(gh pr merge *)` is added to the deny list for everyone, in both the settings draft and G5. David always merges in the GitHub UI.
+5. Resolved (David, 2026-10-17): yes. `guard-bash.mjs` denies `gh pr create` unless the latest reviewer and security verdicts for the current node are PASS and their `head_sha` equals HEAD (G14, with fixtures).
+6. Resolved (David, 2026-10-17): two files. The committed `.claude/hooks/privacy-denylist.txt` holds generic patterns only; a gitignored, optional `.githooks/privacy-denylist.local.txt` holds private terms; the `/save-context` check and the pre-commit hook read both (G10, context C6).
+7. Resolved (David, 2026-10-17): re-keyed to the OWASP LLM Top 10 2026 plus the OWASP Top 10 for Agentic Applications for 2026, both verified from OWASP's own PDFs (R-AI). The 2025 list stays in Research as history.

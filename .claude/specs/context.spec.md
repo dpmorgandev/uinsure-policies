@@ -1,5 +1,5 @@
 # context.spec.md
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 Researched 2026-10-17 · source of truth: `docs/requirements.md` §4 row 0
 
 ## Dependencies
@@ -13,7 +13,7 @@ Researched 2026-10-17 · source of truth: `docs/requirements.md` §4 row 0
 **Consumed paths (owned by other specs; /orient reads them and never defines their shape)**
 - `docs/plans/active/*.plan.md` (YAML DAG: node status). Owner: `planning.spec`.
 - `docs/trace/<plan-id>/<node-id>/`, the trail for the node in flight. Owner: `traceability.spec`.
-- `git worktree list`, the branch convention `feature/F<n>-<slug>` and the worktree path `../wt/F<n>-<slug>`. Owner: `orchestration.spec`.
+- `git worktree list`, the branch convention `feature/<plan>/<node>` (or `bug/<plan>/<node>`) and the worktree path `.claude/worktrees/<plan>-<node>`. Owner: `orchestration.spec`.
 - `gh pr list`. The remote may not exist yet (requirements §6 item 2), so a missing remote is reported, not treated as an error.
 - `docs/lessons.md`, `docs/qa/`. Owners: planning and testing.
 
@@ -108,7 +108,7 @@ Researched 2026-10-17 · source of truth: `docs/requirements.md` §4 row 0
 - **D1 → B.** Plan/node/attempt/worktree are the exact things lost across sessions in this project. `plan-id: null` covers analysis sessions.
 - **D2 → B.** Observed snapshots peak at 193 lines, so a tight cap keeps the load brief small. Mechanical-only checkpoint triggers fix the measured 28/31 inflation.
 - **D3 → B.** Frontmatter is already authoritative in both prior arts. Drop the manifest that drifted.
-- **D4 → B (bash).** Git Bash is the default hook shell, and requirements §5 already mandates LF for `*.sh`. Facts plus a prompt beats a bare prompt. Add a one-line smoke test (`echo '{"source":"startup"}' | .claude/hooks/session-start.sh`) to avoid agentflow's silent format bug.
+- **D4 → B (bash).** Git Bash is the default hook shell, and requirements §5 already mandates LF for `*.sh`. Facts plus a prompt beats a bare prompt. Add a one-line smoke test (`echo '{"source":"startup"}' | node .claude/hooks/session-start.mjs`; the Decision moved the hook to Node) to avoid agentflow's silent format bug.
 - **D5 → B.** PreCompact can't capture reasoning, and blocking it is brittle. Node boundaries are where state changes, and the orchestrator owns them. C is a cheap add-on if David wants a belt as well.
 - **D6 → B.** "A self-reported trail isn't a receipt" (requirements §4 6b) applies equally to privacy. The denylist must be deterministic.
 - **D7 → A.** A single confirm gate, ported from the only part of agentkinOS orient that is portable.
@@ -127,48 +127,132 @@ Researched 2026-10-17 · source of truth: `docs/requirements.md` §4 row 0
   - `/orient` reads whichever checkout the session is in, and it is refused outside the repo root.
   - Only the main session saves snapshots.
   - Decisions live in the specs, so **no `docs/decisions.md`**. Update architecture's "record in `docs/decisions.md`" note.
+- [x] **Final rulings (David, 2026-10-17):**
+  - The privacy denylist is two files: the committed `.claude/hooks/privacy-denylist.txt` holds generic patterns only, and a gitignored, optional `.githooks/privacy-denylist.local.txt` holds private terms. Both consumers read both (C6).
 
-## Contract — PENDING (DRAFT outline only, not yet binding)
+## Contract
 
-```text
-DRAFT · docs/context/<YYYYMMDD-HHMMSS>-<agent>-<slug>.md   (UTC, slug ≤40 kebab)
----
-session-id, timestamp (from `date -u`, never estimated), agent,
-previous-context (basename|null), checkpoint, status (in-progress|blocked|final),
-plan-id (build|feat-NNN|bug-NNN|inv-NNN|null), node-id|null,
-phase, step|null, attempt (1–5)|null, branch, worktree (relative)|null,
-head (short sha), tests (X/Y|not-run)
----
-## Summary · ## Completed since last snapshot · ## Current state (blockers)
-## Next action (the first line is what the hook echoes) · ## Open questions
-## Decisions made (link docs/decisions.md entries, do not restate them)
-## Pointers (plan file, trace dir, PR #) · all present, (none) if empty
+Built first, as F0a step 0. Everything below is binding. Paths are repo-relative. Times are UTC.
 
-DRAFT · /save-context [--checkpoint] [--status ...] [--brief ...]
- 1 real clock  2 tail = sorted-last docs/context/*.md  3 gather git + plan facts
- 4 checkpoint rule (D2)  5 compose  6 cap check  7 privacy check (D6) → refuse on hit
- 8 write; never commit; report path, lines/cap, checkpoint, privacy: clean
+**C1. Snapshot file**
+- Path: `docs/context/<YYYYMMDD-HHMMSS>-<slug>.md`. Time comes from `date -u +%Y%m%d-%H%M%S`, never estimated. Slug: kebab-case, ≤ 40 chars, `[a-z0-9-]`.
+- Only the main session writes snapshots, so the filename carries no agent.
+- Frontmatter (every key present, `null` where it doesn't apply):
 
-DRAFT · /load-context-chain [--latest-only] [--max-depth N=5]
- read-only · walk to checkpoint/depth/null/broken · synthesise ≤50 lines
- oldest→newest · staleness >24h (or seconds_since_last_response) · CONFIRM gate
+| Key | Value |
+|---|---|
+| `timestamp` | ISO 8601 UTC, from `date -u +%Y-%m-%dT%H:%M:%SZ` |
+| `previous-context` | basename of the prior snapshot on this branch, or `null` |
+| `checkpoint` | `true` / `false` (C3) |
+| `status` | `in-progress` / `blocked` / `final` |
+| `plan` | `build` / `feat-NNN` / `bug-NNN` / `inv-NNN` / `null` (analysis) |
+| `node` | `F0a`..`F7` / `null` |
+| `phase` | `analysis` / `plan` / `loop` / `hitl` / `merge` |
+| `step` | `red` / `stub` / `green` / `refactor` / `review` / `security` / `investigate` / `rebase` / `qa` / `null` |
+| `attempt` | `1`–`5` / `null` |
+| `branch` | current branch name |
+| `worktree` | repo-relative path (`.claude/worktrees/<plan>-<node>`) / `null` |
+| `head` | short SHA |
+| `tests` | `X/Y` passing, or `not-run` |
+| `next-action` | one line, ≤ 120 chars; the hook echoes it |
+| `open-decisions` | integer count of items in the body section |
 
-DRAFT · /orient  (project-only; any path outside the repo root is refused)
- 1 CLAUDE.md  2 docs/requirements.md (headings + §6 open items)  3 .claude/specs/ status lines
- 4 docs/plans/active/* node statuses  5 git status/branch/log -5, worktree list (relativised)
- 6 gh pr list (or "no remote")  7 docs/trace/<plan>/<node>/ for the node in flight
- 8 run /load-context-chain VERBATIM → hold for David's confirmation  9 synthesis ≤60 lines
+**C2. Snapshot body.** Sections in this order, all present, `(none)` when empty, never omitted. **Hard cap 200 lines** for the whole file, frontmatter included.
+1. `## Summary`: ≤ 5 lines.
+2. `## Completed since last snapshot`: bullets, with commit SHAs where they exist.
+3. `## Current state`: branch + head, tests X/Y, uncommitted count, blockers.
+4. `## Next action`: expands the `next-action` key.
+5. `## Open decisions`: one bullet each, naming the spec or question it belongs to.
+6. `## Decisions made`: links to the spec's `## Decision` section (e.g. `.claude/specs/domain.spec.md#decision`). Never restate them.
+7. `## Pointers`: plan file, `docs/trace/<plan>/<node>/`, PR number. Pointers only; a snapshot never copies a trail.
 
-DRAFT · .claude/hooks/session-start.sh  (LF; registered SessionStart, matcher startup|resume|clear|compact)
- stdin JSON → source · prints ≤10k-char plain text: newest snapshot + age + Next action,
- branch, dirty count, worktrees (relative), active plans, then
- "Run /orient" (or "Run /load-context-chain" when source=compact) · writes nothing · exit 0 always
-```
+Content is about this repo's work only: no personal, relational or private-workspace material.
+
+**C3. `/save-context [--checkpoint] [--status in-progress|blocked|final] [--slug <slug>]`** (main session only)
+1. Read the clock: `date -u`.
+2. Tail = sorted-last `docs/context/*.md` on the current checkout, or `null`.
+3. Gather facts: `git rev-parse --abbrev-ref HEAD`, `git rev-parse --short HEAD`, `git status --porcelain | wc -l`, the active plan YAML (`plan`, `node`, `attempt`, node status), the latest test result if one ran this session (else `not-run`). Worktree is relativised against `git rev-parse --show-toplevel`.
+4. Checkpoint = true if any of these hold: `--checkpoint`; 4 non-checkpoints since the last checkpoint (so this is the 5th); the node reached DONE or HITL sign-off since the tail; `status: final`; the draft is over 150 lines. Nothing subjective.
+5. Compose C1 + C2.
+6. Cap: over 200 lines → refuse, report the count, and ask for a tighter draft.
+7. Privacy scan the draft (C6). Any hit → refuse, print each hit as `line: category`, write nothing.
+8. Write the file. Never commit, never stage. Report: path, lines/200, checkpoint, `privacy: clean`.
+
+Callers: David by hand, and the orchestrator at each node boundary (step change, verdict, attempt increment, HITL hand-off) and after a `compact` reload is confirmed. Subagents never call it.
+
+**C4. `/load-context-chain [--latest-only] [--max-depth N]`** (N defaults to 5; read-only, writes nothing)
+1. List `docs/context/*.md` sorted. None → say "no prior context on this branch" and go to step 6.
+2. Start at the newest. Follow `previous-context` until a `checkpoint: true` file (inclusive), depth N, `null`, or a broken link. `--latest-only` stops at one. A broken link is reported by name (for example a chain that forked across branches), not fatal.
+3. Staleness: newest `timestamp` older than 24h → flag it. If the session input supplied `seconds_since_last_response`, show it as idle time; it is informational only.
+4. Drift check: frontmatter `branch`/`head` against the live git values; any mismatch is flagged.
+5. Synthesise oldest → newest in ≤ 50 lines: where the work is, decisions made (as links), open decisions, the next action. Never paste snapshot text.
+6. **Confirm gate:** ask David "Resume with: `<next-action>`?" and stop. No writes or dispatches until he confirms or redirects.
+
+**C5. `/orient`** (project-only; read-only)
+0. Root guard: `git rev-parse --show-toplevel` must succeed and the cwd must sit inside it. Any path argument resolving outside the root is refused. It reads whichever checkout the session is in (main or a feature worktree).
+1. `CLAUDE.md`.
+2. `docs/requirements.md`: headings plus the §6 open items.
+3. The `Status:` line of each `.claude/specs/*.spec.md` (status line only).
+4. `docs/plans/active/*.plan.md`: node statuses.
+5. `git status -s`, branch, `git log --oneline -5`, `git worktree list` with every path relativised.
+6. `gh pr list`. No remote or a `gh` failure → print "no remote", not an error.
+7. `docs/trace/<plan>/<node>/` for the node in flight, if any.
+8. Print an orientation summary of ≤ 60 lines.
+9. Run the real `/load-context-chain` **verbatim** (no shadow, no summary of it). Its confirm gate is the final step: hold for David.
+
+**C6. Privacy denylist**
+- Two files, one pattern per line, same format:
+  - `.claude/hooks/privacy-denylist.txt`: committed, **generic patterns only** (it is published with the repo).
+  - `.githooks/privacy-denylist.local.txt`: **gitignored and optional**, holding private terms. Absent → only the committed file is used; never an error.
+- Format: `#` comment, blank ignored, a line starting `!` is an allow pattern, every other line is a deny pattern. Patterns are POSIX ERE, matched case-insensitive, so `grep -E` and JS `RegExp` agree (no `\d`, no lookaround).
+- Categories (the file holds the patterns; this spec never does, so the spec cannot trip its own scan):
+  - Absolute user paths: Windows drive paths under a users or development root, Git Bash `/c/...` and WSL `/mnt/c/...` forms, and `/home/<name>` / `/Users/<name>`. Each requires a real path segment after the root, so placeholders such as `<user>` don't match.
+  - Email addresses: a generic address regex. Allows: `noreply@anthropic.com`, `example.com`/`.org`, `git@github.com`.
+  - Keys and tokens: Anthropic key prefix and `ANTHROPIC_*KEY`, GitHub token prefixes (`ghp_` family and fine-grained PATs), AWS access-key IDs, PEM private-key headers, storage account-key connection strings and SAS signatures, and `key|secret|token|password` assignments to a 16+ char value.
+  - Private-workspace terms: names of private notes or private locations and their path fragments. These live **only in the local file**, never in the committed one. The prior project names agentkinOS and agentflow are allowed and are not listed.
+- Scan: `F` is the concatenation of the committed file and, if present, the local file. A hit is a line matching any deny pattern and no allow pattern:
+  `grep -nHiE -f <(grep -vE '^(#|!|$)' "$F") -- <files> | grep -viE -f <(sed -n 's/^!//p' "$F")`. Non-empty output = refuse.
+- Consumers: `/save-context` step 7 (the draft) and the guardrails pre-commit hook (staged files; scope owned by guardrails.spec). Both read both files. **`.claude/hooks/privacy-denylist.txt` is excluded from the scan**, since it matches itself; the local file is never staged.
+- `.gitignore` gains `.githooks/privacy-denylist.local.txt`.
+
+**C7. SessionStart hook: `.claude/hooks/session-start.mjs`**
+- Registration in `.claude/settings.json`: event `SessionStart`, matcher `startup|resume|clear|compact` (not `fork`), `{"type":"command","command":"node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.mjs\"","timeout":10}`.
+- Node built-ins only (`node:fs`, `node:path`, `node:child_process` running `git` via `execFileSync`). No network, no writes, no `gh`.
+- Reads stdin JSON (`source`, `cwd`, optional `seconds_since_last_response`). Unparseable input → `source=unknown`.
+- Stdout is exactly one JSON object: `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"<text>"}}`. `<text>` is truncated to 9,000 chars, keeping the last line:
+  ```text
+  [context] source=<source> branch=<branch> dirty=<n>[ idle=<h>h]
+  [context] latest snapshot: docs/context/<file> (<age>h old) | none
+  [context] next-action: <next-action key> | none
+  [context] worktrees: <relative paths, comma-separated> | none
+  [context] active plans: <plan file names> | none
+  <instruction>
+  ```
+  `<instruction>` is `Run /orient before any work.` for startup/resume/clear/unknown, and `Run /load-context-chain and confirm with David before resuming; then /save-context.` for compact.
+- Any failure (no git, no `docs/context/`, bad frontmatter) drops that line's value to `unknown`; the instruction line is always printed. **Always exits 0**, including on internal exceptions (top-level `try/catch`, `process.exitCode = 0`). It cannot block and never tries to run a skill.
+
+**C8. Commit convention**
+- Snapshots are written to the **current branch's** `docs/context/`. No hook or skill commits them.
+- Each is committed in its own commit, `docs(context): <slug>`, with the trailers traceability.spec requires. Never inside a red/green/refactor commit.
+- In a feature worktree, it lands on `main` with that feature's PR. Before F0b, commits on `main` are allowed. From F0b, a snapshot taken on `main` stays uncommitted and goes in the next feature branch's first `docs(context)` commit, so there's one chain on GitHub.
+- No `checkpoints.md`: `grep -l '^checkpoint: true' docs/context/*.md` is the manifest.
+
+**C9. F0a smoke tests** (all must pass before F0a closes)
+- S1. `echo '{"source":"startup"}' | node .claude/hooks/session-start.mjs` → exit 0; stdout parses as JSON; `hookEventName` = `SessionStart`; text ends `Run /orient before any work.`; ≤ 10,000 chars.
+- S2. Same with `"source":"compact"` → instruction names `/load-context-chain`.
+- S3. `echo 'not json' | node …` and a run with cwd outside any git repo → both exit 0 and print the instruction line.
+- S4. The S1 output piped through the C6 scan → no hits (worktree paths are relative).
+- S5. Denylist: one sample per category, built at runtime by string concatenation into a temp file (never committed) → each is a hit; the allowed addresses → no hit; staging `.claude/hooks/privacy-denylist.txt` doesn't trip pre-commit.
+- S6. `/save-context` with a planted absolute path → refused, nothing written. Clean run → file written, all 15 keys present, all 7 sections present, ≤ 200 lines, nothing staged.
+- S7. `/load-context-chain` with 0 snapshots → "no prior context" plus the confirm gate. With 2 chained snapshots → oldest → newest synthesis, stopping at the checkpoint.
+- S8. `/orient` given a path outside the repo root → refused.
+- S9. Live: David opens a new session in the repo → the first reply reflects the `[context]` lines and asks to run `/orient` (manual check, recorded in the F0a trail).
 
 ## Open questions
 
-1. Does `/orient` run inside a feature worktree session, or only from David's main checkout? That decides which `docs/context/` it reads (D8). It depends on orchestration.spec's worktree research (requirements §6 item 5).
-2. Agent snapshots: should subagents (tester/builder) ever call `/save-context`, or only the orchestrator? This spec assumes only the orchestrator (`agent: orchestrator|claude|david`).
-3. `docs/decisions.md` (used by the existing `/decide` skill name) is not in the §3 layout. Should it be added, or should decisions live inside specs only (§4: "decisions are recorded inside the spec")?
-4. Untested: does the SessionStart plain-stdout injection work identically under Git Bash on this machine? Verify with the smoke test in F0.
-5. Is the `seconds_since_last_response` staleness signal worth using in the hook, or is snapshot age enough?
+1. Resolved (Decision): `/orient` reads whichever checkout the session is in, refused outside the repo root (C5 step 0).
+2. Resolved (Decision): only the main session saves snapshots (C3).
+3. Resolved (Decision): decisions live in the specs; there is no `docs/decisions.md` (C2 section 6).
+4. Resolved by test: the hook is Node and emits `hookSpecificOutput` JSON; injection is verified by S1 and S9.
+5. Resolved: `seconds_since_last_response` is shown as `idle=` and in the C4 staleness line, informational only; snapshot age stays the staleness rule.
+6. Resolved (David, 2026-10-17): two files. The committed `.claude/hooks/privacy-denylist.txt` holds generic patterns only; a gitignored, optional `.githooks/privacy-denylist.local.txt` holds private terms; `/save-context` and the pre-commit hook read both (C6).

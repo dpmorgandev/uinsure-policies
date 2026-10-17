@@ -1,5 +1,5 @@
 # planning.spec.md
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 
 Scope: the one plan format every code-changing plan uses (reasoning + YAML DAG), how the
 orchestrator reads and advances it, a node's definition of done, the plan lifecycle and its
@@ -9,12 +9,12 @@ completion record, what `/plan-dag` asks David, the four `plan-*` skills, the in
 
 ## Dependencies
 
-Researched in parallel and **not decided yet**. This spec assumes:
+All decided 2026-10-17. This spec relies on:
 
 | Spec | What this spec assumes | If the assumption breaks |
 |---|---|---|
-| `api-contract` | Features map onto endpoints: Sell = `POST /policies`, Retrieve = `GET /policies/{reference}`, Cancel = `POST /policies/{reference}/cancellation` (+ quote, + `POST …/claims`), Renew = `POST /policies/{reference}/renewals`. The DAG names only the endpoints. Routes are owned there | Only the `endpoints:` strings in the template change |
-| `agents-skills` | Roles: `tester`, `builder`, `reviewer`, `security`, `git`. The orchestrator is the main session, not an agent. `david` is a valid owner | Rename the `role:` enum |
+| `api-contract` | Features map onto endpoints: Sell = `POST /policies`, Retrieve = `GET /policies/{ref}`, Cancel = `POST /policies/{ref}/cancellation` (+ `GET …/cancellation-quote`, + `POST …/claims`), Renew = `POST /policies/{ref}/renewals`. Routes are owned there | Only acceptance strings change |
+| `agents-skills` | Roles: `tester`, `builder`, `reviewer`, `security`, `investigator`, `git`. The orchestrator is the main session, not an agent. `david` is a valid owner | Rename the `role:` enum |
 | `traceability` | Trails are keyed `docs/trace/<plan-id>/<node-id>/`. So plan ids and node ids must be **stable, short and filesystem-safe**, with no slugs and no renames | Keying on something else would let slugs back into the ids |
 | `orchestration` | Consumes the DAG. It owns the loop, the verdict JSON, the worktree/branch naming and the HITL step. This spec only defines **what state the plan holds and who may change it** | Status names may change. The schema shape holds |
 | `testing` | Supplies the QA-script path (`docs/qa/<plan-id>-<node-id>.md`) and the full-suite command that a node's done-check runs | Path string only |
@@ -106,10 +106,10 @@ A note against Retrieve-first: GET-1 returns terms, payments, refunds and claims
 ## Recommendation
 
 1. **One file, one truth.** `docs/plans/active/<plan-id>.plan.md` holds the frontmatter, the reasoning prose and **exactly one** fenced ```` ```yaml dag ```` block under `## DAG`. There is no manifest. `/orient` lists `docs/plans/active/*.plan.md` and reads each plan's frontmatter and node statuses.
-2. **Ids:** `build`, `feat-NNN`, `bug-NNN`, `inv-NNN`, with NNN = max over `active/` + `archive/` + 1, zero-padded. No slugs (the title lives in frontmatter). Node ids are `F0a, F0b, F1…F5` in `build`, and `N1, N2…` in feat/bug plans (`bug-NNN`'s `N1` is always the reproduction test). Task ids are node-local (`t1…`). Trace key: `docs/trace/<plan-id>/<node-id>/`.
+2. **Ids:** `build`, `feat-NNN`, `bug-NNN`, `inv-NNN`, with NNN = max over `active/` + `archive/` + 1, zero-padded. No slugs (the title lives in frontmatter). Node ids are `F0a, F0b, F1…F5` in `build`, and `N1, N2…` in feat/bug plans (`bug-NNN`'s `N1` is always the reproduction test). *(Superseded in the Contract: nodes run to F7, and the reproduction test is N1's first task.)* Task ids are node-local (`t1…`). Trace key: `docs/trace/<plan-id>/<node-id>/`.
 3. **Status writes are branch commits** (A2), labelled `plan(<plan-id>/<node-id>): <from> → <to>`. Only the orchestrator writes node/task status. Only David writes `approved`. Plan-level `status` is derived (see Contract), never hand-set except `draft → approved`.
 4. **Node DoD is mechanical first, human last.** Every item is a check whose output is evidence (§Contract "Node definition of done"). `done` is set as the last commit before the PR. **It is only true on `main` once David has merged.** `/orient` flags any node marked `done` on a branch that isn't merged.
-5. **Build order (D2 + C2):** F0a harness → F0b skeleton → F1 Retrieve → F2 Sell → F3 Cancel (+COULD-1 quote, +COULD-2 claims) → F4 Renew (+COULD-3 cheque, **+CANCEL-5**). F5 IaC/deploy evidence `depends_on: [F0b]`, `cuttable: true`, budget 3h, scheduled last.
+5. **Build order (D2 + C2):** F0a harness → F0b skeleton → F1 Retrieve → F2 Sell → F3 Cancel (+COULD-1 quote, +COULD-2 claims) → F4 Renew (+COULD-3 cheque, **+CANCEL-5**). F5 IaC/deploy evidence `depends_on: [F0b]`, `cuttable: true`, budget 3h, scheduled last. *(D2 rejected in the Decision: F1 is Sell, F2 Retrieve.)*
 6. **Retry ladder counts per node** (one attempt = one reviewer/security FAIL cycle on that node, whatever the cause). Counting "per same error" (agentflow) needs judgement. Counting per node is mechanical.
 7. **Archive (E2)** as a git-agent procedure. A completion record is built from git and appended to `docs/lessons.md` if there's a lesson. A lesson is **required** when any node hit attempt ≥ 3, was escalated, or was cut.
 8. **Investigation recommendations gain a third kind, `amend-node`** (a revised approach for the parent node's attempt 4), next to `feature` and `bug`. Without it, the attempt-3 investigation has nowhere to put its main output. **This changes requirements.md** (it currently allows only feature/bug).
@@ -128,194 +128,358 @@ A note against Retrieve-first: GET-1 returns terms, payments, refunds and claims
   - **F5 IaC + pipeline:** cuttable, 3 h budget, `depends_on: [F0b]`.
   - **F6 README:** must. It's built from a checklist of every "the README states…" in the specs.
   - **F7 Pitch deck:** cuttable. Generated from the DAG plus the trace trails.
-  - **F8 React API-testing frontend:** cuttable, a stretch goal, in `src/web/`. Starts only after F0–F6 pass.
-- [x] **Cut order:** F8 → F7 → F5. F0–F4 and F6 are never cut.
+- [x] **React frontend: removed from this build plan (David, 2026-10-17).** It gets its own brief, mockups and plan DAG after the build plan finishes. It will cover more than an API demo, for example displaying the traceability trails. Reserve `src/web/` in the layout, but build nothing for it in this plan.
+- [x] **Cut order:** F7 → F5. F0–F4 and F6 are never cut.
 - [x] **Your involvement per feature: two pauses.**
   - **Pause 1, mid-loop:** the acceptance tests are red and the stub controller is green. You call the stub in Postman and read the tests, then the loop continues.
   - **Pause 2, HITL sign-off:** reviewed using a generated `walkthrough.md`, which lists each commit in order (red, stub, domain, services, persistence, refactor) with one line each, plus the QA script and Postman.
   - These pauses change orchestration's loop and requirements.md §3.
+- [x] **Final rulings (David, 2026-10-17):**
+  - New rule SELL-7 (policy amount > 0, else 422) joins F1.
+  - OQ7: only reviewer, security or gate FAILs count as attempts. David's steers at Pause 1, Pause 2 and in PR comments don't increment `attempt`; they still go investigate → red → fix as findings `D1`, `D2`…
+  - OQ8: a standalone investigation is committed on a `chore/inv-NNN` branch via PR.
+  - Accepted as proposed: `tests/rule-coverage.pending.txt` is empty once F4 is done.
 
-## Contract — PENDING (DRAFT: plan file template incl. YAML DAG schema example for F1)
+## Contract
 
-### Lifecycle
+Binding. Where this section and `docs/requirements.md` §3 disagree, this section wins until requirements.md is updated (an F0a acceptance item).
+
+**The React frontend is out of this plan.** It gets its own brief, mockups and plan DAG later. `src/web/` is reserved in the layout only.
+
+### Files, ids, derived paths
+
+- One plan = one file, `docs/plans/active/<plan-id>.plan.md`: frontmatter, reasoning prose, and **exactly one** ```` ```yaml dag ```` block. No manifest, no `feature_list.json`.
+- Plan ids: `build`, `feat-NNN`, `bug-NNN`, `inv-NNN`. NNN = max over `active/` + `archive/` + 1, zero-padded to 3. No slugs; the title lives in frontmatter.
+- Node ids: `F0a`, `F0b`, `F1`…`F7` in `build`; `N1`, `N2`… in feat/bug plans. Task ids are node-local (`t1`…). Ids are never renamed.
+- Per node: branch `feature/<plan>/<node>` (`bug/<plan>/<node>` in a bug plan), worktree `.claude/worktrees/<plan>-<node>`, trace `docs/trace/<plan>/<node>/`, QA script `docs/qa/<plan>-<node>.md`.
+
+### Lifecycle and node states (David's two pauses are states)
 
 ```text
-plan:  draft ──(David sets approved)──► approved ──(first node in_progress)──► active
-       active ──(every node done|cut)──► done ──(archive procedure, merged)──► archived
-node:  pending ──► in_progress ──► hitl ──► done          (done = merged into main)
-                       │  ▲          │
-                       ▼  │ (fail)   └─(David rejects: back into loop, attempts++)
-                    investigating (attempt 3) ──► in_progress (attempt 4)
-                       └──► escalated (attempt 5 fail; David decides)      any ──► cut (David only)
-task:  pending ──► done            (red/green/refactor commits are the evidence; see trace)
+plan:  draft ─(David commits approved_by/on)─► approved ─(first node in_progress)─► active
+       active ─(every node done|cut)─► done ─(archive PR merged)─► archived
+node:  pending ─► in_progress ─► paused_acceptance ─► in_progress ─► hitl ─► done
+                    │  ▲                                              │      (done = PR merged
+                    │  └── FAIL: attempt++ · David steer D<n>: no++ ◄┘       into main)
+                    ├──► investigating (attempt 3, or repeated fingerprint) ─► in_progress
+                    └──► escalated (attempt 5; David decides)            any ─► cut (David only)
+owner: david nodes:  pending ─► in_progress ─► done   (no loop, no pauses)
 ```
 
-Plan-level `status` is derived. The file stores it only as a cache that the orchestrator refreshes on each status commit. `investigation` plans have no DAG: `draft → approved → active → done (findings + recommendations written) → archived`.
+| State | Meaning | Leaves when |
+|---|---|---|
+| `paused_acceptance` | **Pause 1.** The node's full acceptance suite is red and the stub controller is green. The run ends. David calls the stub in Postman and reads the tests | David says continue → `in_progress` (green steps). A change he asks for → failure route as steer `D<n>`, no `attempt++` |
+| `hitl` | **Pause 2.** Draft PR open. David signs off using the generated `walkthrough.md` (each commit in order, one line each), the QA script and Postman, on port 5080 from the worktree | David signs the QA script, marks the PR ready and merges → `done`. A David finding → failure route as steer `D<n>`, no `attempt++` |
+| `investigating` | `/plan-investigation` is open for this node. The run ends | David accepts/rejects the recommendations → `in_progress` |
+| `escalated` | Attempt 5 reached. The run ends | David amends the plan, cuts the node, or takes it over |
+
+Plan `status` is derived; the file caches it, refreshed on each status commit. `inv-NNN` plans have no DAG: `draft → active → done (findings + recommendations written) → archived`.
 
 ### Who may change what
 
 | Field | Writer | Mechanism |
 |---|---|---|
-| `approved_by`, `approved_on`, plan `draft→approved` | David only | David's own commit to `main`. The orchestrator refuses a plan without it |
-| node/task `status`, `attempts`, `branch`, `pr` | orchestrator | Commit on the feature branch in the worktree |
-| node `cut`, escalation outcome | David | Recorded by the orchestrator with `decided_by: david` |
-| reasoning prose | the `plan-*` skill at draft time. Amended only by David or a new plan | — |
+| `approved_by`, `approved_on` | David only | `build`: David's commit on `main` (allowed until F0b starts). Later plans: David's commit on the plan's first node branch, before the loop starts. The orchestrator refuses an unapproved plan |
+| node `status`, `attempt`, `branch`, `worktree`, `pr`; task `status` | orchestrator (main session) | A commit on the node's branch, labelled `plan(<plan>/<node>): <from> → <to>`. It reaches `main` at merge |
+| `cut`, escalation outcome | David | Recorded by the orchestrator with `decided_by: david` |
+| prose, `rules`, `acceptance`, `depends_on` | the `plan-*` skill at draft time; afterwards David or an accepted `amend-node` | — |
+| move to `archive/`, completion record | git agent | `chore/archive-<plan-id>` branch (see Archive) |
 
 ### Orchestrator read algorithm
 
-1. Parse the single ` ```yaml dag ` block. Validate the invariants: ids unique; every `depends_on` resolves; no cycle; every `rules:` id exists in `docs/requirements.md` (**a missing id is a hard stop: `/plan-feature` adds rule ids there first**); every node has ≥1 `acceptance`.
+1. Parse the single ` ```yaml dag ` block. Validate: ids unique; every `depends_on` resolves; no cycle; every `rules:` id exists in `docs/requirements.md` (**a missing id is a hard stop**; `/plan-feature` adds it there first); every node has ≥1 `acceptance`; no non-cuttable node depends on a cuttable one.
 2. Refuse if plan `status` is `draft`.
-3. **Next node** = the first node, in file order, with `status: pending`, all `depends_on` `done`, and `owner` ≠ `david`. If a node is `in_progress | investigating | hitl | escalated`, resume it instead (one feature at a time). A `david` node blocks its dependents until David marks it done.
-4. If there is no next node and every node is `done|cut`, the plan is `done` → archive.
+3. Resume any node in `in_progress | paused_acceptance | investigating | hitl | escalated` (one feature at a time). Otherwise **next node** = the first `pending` node in file order whose `depends_on` are all `done` and whose `owner` ≠ `david`. A `david` node blocks its dependents until David marks it done.
+4. No next node and every node `done|cut` → plan `done` → archive.
 
-### Node definition of done (all items, in order; each leaves evidence in `docs/trace/<plan-id>/<node-id>/`)
+`main` shows an in-flight node as `pending` by design. `/orient` reads in-flight state from the worktree copies listed by `git worktree list`.
 
-1. Every task `done`. Every rule in `rules:` has ≥1 unit test **and** ≥1 integration test naming the rule id (the testing spec sets the naming).
-2. The reviewer verdict is PASS against `rules:` + `acceptance:`, and the security verdict is PASS (verdict JSON per orchestration).
-3. Rebased onto the latest `main`. Full suite green **in the worktree** (unit + integration + architecture). `dotnet build` has zero warnings.
-4. Postman requests for every endpoint in `endpoints:`, including one example per rule-violation response.
-5. QA script written at `qa:`. **David has run it from the worktree and signed it** (the sign-off line is in the QA file, committed).
-6. PR raised. `status: done` committed as the branch's last commit. **David merges**: only then is it done on `main`.
+### Node definition of done (in order; each leaves evidence in the node's `trace`)
 
-`owner: david` nodes (F0a) skip items 2 and 4. Their acceptance is David's review in-session plus item 3.
+1. Every task `done`. Every rule in `rules:` has tests tagged `[Trait("Rule","<id>")]` per the testing spec, its ids are gone from `tests/rule-coverage.pending.txt` (empty once F4 is done), and the rule-coverage check passes.
+2. Reviewer PASS and security PASS for the current diff fingerprint.
+3. The git agent has rebased onto `origin/main`; the full suite is green in the worktree; `dotnet build` has zero warnings; the idempotent migration script generates.
+4. Postman v2.1 requests for the node's endpoints, with one example per violation response.
+5. `chore(trace)` committed; draft PR raised (body from the trace summary plus David's paragraph); verdicts and the rebase receipt posted as PR comments.
+6. QA script at `qa:` signed by David from the worktree; `status: done` committed; **David merges**. Only then is the node done on `main`.
+
+`owner: david` nodes skip 2, 4 and 5; their acceptance is David's in-session review. `evidence`/`docs` nodes skip the rule-coverage part of 1 and item 4.
 
 ### Plan file template (`docs/plans/active/<plan-id>.plan.md`)
 
 ````markdown
 ---
-plan_id: build            # build | feat-NNN | bug-NNN | inv-NNN
-kind: build               # build | feature | bug | investigation
-title: Initial build of the Uinsure Policies API
-status: approved          # derived cache: draft|approved|active|done|archived
+plan_id: feat-001          # build | feat-NNN | bug-NNN | inv-NNN
+kind: feature              # build | feature | bug | investigation
+title: <short title>
+status: draft              # derived cache: draft|approved|active|done|archived
 created: 2026-10-17
-approved_by: David Morgan # set by David only; empty while draft
-approved_on: 2026-10-17
-requirements_rev: <git short hash of docs/requirements.md at approval>
-parent: null              # bug: {plan, node, rule}; feat/bug from an investigation: inv-NNN
+approved_by:               # David only; empty while draft
+approved_on:
+requirements_rev:          # git short hash of docs/requirements.md at approval
+parent: null               # bug: {plan, node, rule}; from an investigation: inv-NNN
 ---
-# build: Initial build of the Uinsure Policies API
+# <plan-id>: <title>
 ## Why
 ## Approach
 ## Rejected alternatives      <!-- ≥1, required: the skill refuses to write the plan without one -->
-## Prior work consulted       <!-- grep hits from docs/plans/ + docs/lessons.md, or "none" -->
+## Prior work consulted       <!-- hits from docs/plans/ + docs/lessons.md, or "none" -->
 ## DAG
 ```yaml dag
 nodes:
-  - id: F2                       # stable; trace key docs/trace/build/F2/
-    title: Sell
-    kind: feature                # harness | feature | bug | evidence
-    owner: loop                  # loop | david
-    depends_on: [F1]             # F1 = Retrieve (if D2 adopted)
-    rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6]
-    endpoints: ["POST /policies"]          # names per api-contract.spec (assumed)
+  - id: N1                    # stable, never renamed
+    title: <short title>
+    kind: feature             # harness | feature | bug | evidence | docs
+    owner: loop               # loop | david
+    depends_on: []            # node ids in this plan
+    rules: [SELL-2]           # ids present in docs/requirements.md; [] for non-rule nodes
+    acceptance:               # ≥1 checkable statement
+      - "<statement>"
+    status: pending           # pending|in_progress|paused_acceptance|investigating|hitl|escalated|done|cut
+                              # cut/escalated outcomes add decided_by: david
+    attempt: 0                # reviewer/security/gate FAIL cycles on this node; David's steers (D<n>) don't count; never reset
     cuttable: false
-    budget_hours: 5
-    status: pending              # pending|in_progress|investigating|hitl|escalated|done|cut
-    attempts: 0                  # failed reviewer/security cycles on this node
-    branch: null                 # set by git agent, e.g. feature/F2-sell
-    pr: null
-    qa: docs/qa/build-F2.md
-    investigations: []           # inv-NNN opened at attempt 3
-    tasks:                       # executed in order; edges only between nodes
-      - {id: t1, role: tester,  step: acceptance, rules: [SELL-6], title: "Failing POST→GET round-trip test + Postman request", status: pending}
-      - {id: t2, role: builder, step: stub,       title: "Controller returns hard-coded 201 so Postman can call it", status: pending}
-      - {id: t3, role: tester,  step: tdd, rules: [SELL-2], title: "Start date today..today+60 inclusive; past → 422", status: pending}
-      - {id: t4, role: tester,  step: tdd, rules: [SELL-3], title: "End = start + 1y − 1d; 29 Feb start", status: pending}
-      - {id: t5, role: tester,  step: tdd, rules: [SELL-4, SELL-5], title: "1–3 holders; ≥16 on start date (16th birthday passes)", status: pending}
-      - {id: t6, role: tester,  step: tdd, rules: [SELL-1], title: "Duplicate reference → 409; unique index", status: pending}
-      - {id: t7, role: tester,  step: tdd, rules: [SELL-6], title: "Payment created for full amount with generated reference", status: pending}
-      - {id: t8, role: tester,  step: violations, title: "Integration tests + Postman examples for every 409/422 ProblemDetails", status: pending}
-    acceptance:
-      - "POST then GET returns the sold policy with end date, holders, property and payment"
-      - "Each SELL rule violation returns RFC 7807 naming the rule in plain English"
-      - "Boundaries tested with FakeTimeProvider: day 0, day 60, day 61, yesterday; 16th birthday on start"
+    budget: 2h                # time box; null = unset
+    branch: null              # feature/<plan>/<node> | bug/<plan>/<node>; set by the git agent
+    worktree: null            # .claude/worktrees/<plan>-<node>
+    pr: null                  # PR number
+    qa: docs/qa/<plan>-<node>.md
+    trace: docs/trace/<plan>/<node>/
+    tasks: standard           # a named list below, or an explicit ordered list
 ```
-<!-- `step: tdd` tasks expand into red (tester) → green (builder) → refactor (builder) commits.
-     The tester/builder split per step is orchestration's to fix; the plan names the rule, not the keystrokes. -->
-## Attempt log                <!-- orchestrator appends: attempt n · date · verdict ref · what changes next -->
-## Completion record          <!-- appended at archive, from git; see below -->
+## Attempt log                <!-- orchestrator appends: attempt n · date · verdict/finding ref · what changes next -->
+## Completion record          <!-- appended at archive, from git -->
 ````
 
-**Draft build DAG (node headers only):** F0a harness (`owner: david`, kind harness, no rules) → F0b walking skeleton (deps F0a; acceptance: architecture test fails on a deliberate layering breach, health endpoint callable in Postman, loop ran end to end) → F1 Retrieve [GET-1] → F2 Sell [SELL-1..6] → F3 Cancel [CANCEL-1a/1b/1c/2/3/4/6, COULD-1, COULD-2] → F4 Renew [RENEW-1/2, 3a, 3b, 4, 5, 6, COULD-3, CANCEL-5] · F5 IaC/deploy evidence (kind evidence, deps F0b, cuttable, budget 3h, scheduled after F4).
+Explicit task form: `- {id: t1, role: tester, step: red, title: "...", status: pending}`. Edges exist only between nodes; tasks run in order.
 
-### Completion record (appended at archive, values from git, never typed)
+**Named task lists**
+
+| List | Tasks, in order (each is one or more commits; `walkthrough.md` follows this order) |
+|---|---|
+| `standard` | t1 tester **red**: the full acceptance suite (every success and failure row for the node's rules), unit tests per rule, and `src/` signatures that only throw `NotImplementedException` · t2 builder **stub** controller → **Pause 1** · t3 builder green **domain** · t4 **services** · t5 **persistence** · t6 **api** · t7 builder **refactor** · t8 reviewer ∥ security · t9 git **integrate** (rebase, full suite, `chore(trace)`, draft PR) · t10 tester **QA script** → **Pause 2** |
+| `standard-docs` | t1 builder writes · t2 reviewer ∥ security · t3 git integrate · t4 tester QA script → **Pause 2** (no Pause 1) |
+| `session` | Built by David with the main session; no subagent loop |
+
+### The build DAG (`docs/plans/active/build.plan.md`)
+
+```yaml dag
+nodes:
+  - id: F0a
+    title: Harness
+    kind: harness
+    owner: david
+    depends_on: []
+    rules: []
+    tasks: session
+    cuttable: false
+    budget: null
+    acceptance:
+      - "CLAUDE.md, the six agents, our own skills (incl. the contract-only architecture skill), Node .mjs hooks with a manifest table and a passing wiring self-test, sh git hooks (pre-commit build; pre-push build + tests + idempotent migration script)"
+      - "Spike: a subagent dispatched after EnterWorktree inherits the worktree (cwd and writes land there); receipt in the trace"
+      - "Spike: agent_type arrives in PreToolUse and SubagentStop hook input for each of the six agents"
+      - "Spike: which settings.json (main checkout or worktree copy) governs the session and subagents inside a worktree"
+      - "Spike: ask rules on git push / gh pr create / gh pr comment still prompt in bypass mode"
+      - "A failed spike is fixed in F0a or recorded as a design change; never passed silently"
+      - "Harness lock live: a provoked subagent write to .claude/agents/** is denied, including inside a worktree"
+      - "Postman CLI and Bicep CLI installed; postman --version and bicep --version recorded"
+      - "requirements.md updated: F0 split, rule→node mapping, CANCEL-5 in F4, CANCEL-7 and COULD-2a–c added, amend-node, attempts per node, two pauses, F6/F7, React out, no /plan-archive"
+      - "docs/readme-checklist.md lists every 'the README states…' from the spec Contracts (extracted by the main session; agents never read specs)"
+      - "/plan-dag run; build.plan.md approved by David's commit on main"
+  - id: F0b
+    title: Walking skeleton
+    kind: feature
+    owner: loop
+    depends_on: [F0a]
+    rules: []
+    tasks: standard
+    cuttable: false
+    budget: null
+    acceptance:
+      - "Four src projects with the architecture references; architecture tests pass and a deliberate layering breach fails them (shown in the red commit)"
+      - "/health/live and /health/ready (DB) answer; one WebApplicationFactory integration test on SQLite in-memory with FakeTimeProvider"
+      - "Initial SQL Server migration; pre-push generates the idempotent script; SQLite uses EnsureCreated()"
+      - "BannedApiAnalyzers bans DateTime.Now/UtcNow/Today; UkCalendar.Today(TimeProvider) tested across the BST/GMT change"
+      - "RFC 9457 error mapping skeleton: a 500 returns a generic detail and traceId, no stack trace outside Development"
+      - "Azure.Monitor.OpenTelemetry.AspNetCore wired in the composition root, on only when APPLICATIONINSIGHTS_CONNECTION_STRING is set; console logging otherwise; a test proves startup without it; no PII in log templates"
+      - "OpenAPI 3.1 + Scalar in Development only"
+      - "Postman v2.1 collection + local environment call health via the Postman CLI"
+      - "The commit-on-main deny hook is active from F0b start"
+      - "The loop ran end to end: both pauses, walkthrough.md, signed QA script, PR merged, trace complete"
+  - id: F1
+    title: Sell (+ bare GET)
+    kind: feature
+    owner: loop
+    depends_on: [F0b]
+    rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7]
+    tasks: standard
+    cuttable: false
+    budget: null
+    acceptance:
+      - "POST /policies → 201 + Location; every Sell test is a POST → GET round trip through a bare GET /policies/{ref}"
+      - "Every numbered-rule failure → 422 with violations[] (all reported), including SELL-7 amount ≤ 0; SELL-1 duplicate → 409, with abc-1 and ABC-1 the same policy"
+      - "400 for shape: malformed JSON, missing field, unknown field, unknown or integer enum, postcode > 8, bad reference pattern"
+      - "Boundaries on FakeTimeProvider in Europe/London: day 0, 60, 61, yesterday; 16th birthday on the start date; a named 29 Feb test (End = 28 Feb next year)"
+      - "SELL-6: a Payment for the full amount with a generated reference"
+  - id: F2
+    title: Retrieve
+    kind: feature
+    owner: loop
+    depends_on: [F1]
+    rules: [GET-1]
+    tasks: standard
+    cuttable: false
+    budget: null
+    acceptance:
+      - "Unknown reference → 404 problem body"
+      - "status derived from today: Pending, Active, Expired (Cancelled is covered in F3)"
+      - "startDate/endDate/amount describe the current term; terms[] holds the history; full response shape per api-contract"
+  - id: F3
+    title: Cancel (+ quote, + claims)
+    kind: feature
+    owner: loop
+    depends_on: [F2]
+    rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2a, COULD-2b, COULD-2c]
+    tasks: standard
+    cuttable: false
+    budget: null
+    acceptance:
+      - "POST /policies/{ref}/cancellation (empty body = today) and GET …/cancellation-quote return ruleApplied and the day counts, and agree for the same date"
+      - "CANCEL-4 and COULD-2c → 409; CANCEL-7 blocks a date after the latest term's end"
+      - "POST /policies/{ref}/claims; any claim → £0 refund; Cancelled overrides the derived status"
+      - "A concurrent write → 409 via the Version token"
+  - id: F4
+    title: Renew
+    kind: feature
+    owner: loop
+    depends_on: [F3]
+    rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5]
+    tasks: standard
+    cuttable: false
+    budget: null
+    acceptance:
+      - "POST /policies/{ref}/renewals appends a term the day after the current end; window end − 30 days to end, inclusive"
+      - "RENEW-3b: auto-renew off with a paymentMethod → 422; COULD-3: a defaulted Cheque → 422 asking for another method"
+      - "CANCEL-5: cancelling a renewed policy ends it; the current term follows the normal rules and a future term is refunded in full"
+  - id: F5
+    title: IaC + pipeline (evidence, never deployed)
+    kind: evidence
+    owner: loop
+    depends_on: [F0b]
+    rules: []
+    tasks: standard-docs
+    cuttable: true
+    budget: 3h
+    acceptance:
+      - "Hand-written Bicep modules at subscription scope; bicep build and bicep build-params succeed for dev, test and prod"
+      - "Pipeline: build/test → dev → test → prod from one stage template; AzureCLI@2 with what-if; prod approval; idempotent migrations; curl /health/ready smoke; schema-checked offline"
+      - "APPLICATIONINSIGHTS_CONNECTION_STRING supplied as an app setting; managed identity to Entra-only SQL; no secrets"
+      - "az never run; nothing deployed"
+  - id: F6
+    title: README
+    kind: docs
+    owner: loop
+    depends_on: [F4]
+    rules: []
+    tasks: standard-docs
+    cuttable: false
+    budget: null
+    acceptance:
+      - "Every item in docs/readme-checklist.md is ticked and links to the README section that satisfies it; F5's items say 'cut' if F5 was cut"
+  - id: F7
+    title: Pitch deck
+    kind: docs
+    owner: loop
+    depends_on: [F6]
+    rules: []
+    tasks: standard-docs
+    cuttable: true
+    budget: null
+    acceptance:
+      - "Generated from build.plan.md and docs/trace/build/**; no hand-typed counts"
+```
+
+(Status fields omitted above: every node starts `pending`, `attempt: 0`, with `branch`, `worktree`, `pr` null and `qa`/`trace` derived from the id.) File order is the schedule: F5 sits after F4 so it is not picked straight after F0b.
+
+**Why F0b owns the App Insights wiring, not F5:** F5 is cuttable and the logging decision is not. The wiring is app code that is testable without Azure. F5 only supplies the connection string.
+
+### Cut order
+
+**F7, then F5.** F0a–F4 and F6 are never cut. A cut is David's decision, recorded as `status: cut` with `decided_by: david`, and it requires a lesson.
+
+### The four `plan-*` skills
+
+All four start with the prior-work search (`docs/plans/` + `docs/lessons.md`), write the template above, and refuse a plan without ≥1 rejected alternative or with a rule id missing from requirements.md. Feature and bug plans are **micro-DAGs**: the same schema, nodes `N1…`, `tasks: standard`, and the same worktree/branch pattern.
+
+| Skill | Trigger | Inputs | Output |
+|---|---|---|---|
+| `/plan-dag` | Once, in F0a | requirements.md, spec Contracts, David's answers | `docs/plans/active/build.plan.md` (draft), the build DAG above |
+| `/plan-feature` | A change request, or an accepted `feature` recommendation | A description or an `inv-NNN` recommendation; new rule ids are added to requirements.md first | `feat-NNN.plan.md`, usually one node; branch `feature/feat-NNN/N1` |
+| `/plan-bug` | A defect found **after merge**, incl. a comment on a merged PR (pre-merge defects stay in the failure route) | Symptom, the broken rule id, the introducing plan/node/commit from the trace + `git log -S`/blame | `bug-NNN.plan.md`, `parent: {plan, node, rule}`; branch `bug/bug-NNN/N1`. **N1's t1 is the failing reproduction test** |
+| `/plan-investigation` | Attempt 3, a repeated fingerprint, or David's question | A **falsifiable** question (otherwise bounced), parent `{plan, node}` if escalating, a 30-min time box. The read-only investigator does the digging | `inv-NNN.plan.md`: question, hypothesis, evidence, findings, `recommendations:`. No DAG, no code. When escalated from a node it is committed on that node's branch; a standalone one (no parent node) is committed on a `chore/inv-NNN` branch via PR, which David merges |
+
+The reproduction test is a task, not its own node: a merged node must leave `main` green, and pre-push runs the tests.
+
+`/plan-dag` asks David once, defaults pre-filled from the Decision: the feature list and order; the rule → node mapping; budgets and the cut line against Monday 2026-10-19; anything deferred out of the plan; extra acceptance per node; then approval.
+
+Recommendations block:
+
+```yaml recommendations
+- {kind: amend-node, target: build/F1, reason: "SELL-2 fails near midnight: validator reads UTC, not UkCalendar.Today", status: proposed}
+- {kind: bug, target: null, rule: GET-1, reason: "GET omits the payment reference since the F1 merge", status: proposed}
+```
+
+Kinds: `feature | bug | amend-node`. David sets each `status` to `accepted | rejected`. Accepted `feature`/`bug` → `/plan-feature`/`/plan-bug` with `parent: inv-NNN`. Accepted `amend-node` → it briefs the parent node's next attempt. The investigation links forward (`opened: [feat-NNN]`) and the new plan links back (`parent`).
+
+### Retry ladder (per node)
+
+One attempt = one FAIL from reviewer, security or a gate. `attempt` counts them and never resets. **David's steers don't count:** a change at Pause 1, a finding at `hitl`, or a `dpmorgandev` comment on the open PR goes through the same failure route (investigate → red → fix) as `D1`, `D2`… with `findings/D<n>.md` (traceability), and leaves `attempt` unchanged.
+
+| `attempt` becomes | Action | Node status |
+|---|---|---|
+| 1–2 | **Failure route:** the investigator writes `findings.md`; the tester writes a red test from it (skipped only if untestable, with a reason); the builder gets findings + red test; reviewer ∥ security re-run | `in_progress` |
+| 3, **or earlier on a repeated finding fingerprint** | Stop. `/plan-investigation` with `parent: <plan>/<node>`. The run ends until David decides the recommendations | `investigating` |
+| 4 | Failure route, briefed by the accepted `amend-node` | `in_progress` |
+| 5 | Stop and ask David: amend the plan, cut the node, or take it over | `escalated` |
+
+### Archive
+
+After David merges the last node (or every node is `done|cut`), the git agent, on `chore/archive-<plan-id>`: moves the plan to `docs/plans/archive/`, appends the completion record (values from git, never typed), appends any required lesson, and raises a PR that David merges. It refuses to archive without a lesson when one is required.
 
 ```yaml
 completed: 2026-10-19
 outcome: success            # success | partial (some nodes cut) | failed | abandoned
 nodes:
-  - id: F2
+  - id: F1
     outcome: done           # done | cut | escalated
-    branch: feature/F2-sell
+    branch: feature/build/F1
     merge_commit: <hash>    # git log --merges --grep=<branch>
-    pr: <number/url>
+    pr: <number>
     commits: 23             # git rev-list --count <merge>^1..<merge>^2
-    files_changed: 14       # git diff --name-status, list in trace not here
-    attempts: 1
-    qa_signed: docs/qa/build-F2.md
-lessons: [ "L-004" ]        # ids in docs/lessons.md; [] allowed only for clean success
+    files_changed: 14       # git diff --name-status <merge>^1 <merge>
+    attempt: 1
+    qa_signed: docs/qa/build-F1.md
+lessons: [L-004]            # ids in docs/lessons.md; [] only for a clean success
 ```
 
-### What `/plan-dag` asks David (one round, defaults pre-filled; it runs once)
+### Lessons (`docs/lessons.md`, append-only, public)
 
-1. Feature list and order: confirm the draft DAG above (F0 split? Retrieve-first?).
-2. Rule → node mapping: confirm, especially CANCEL-5 → F4 and the COULDs' homes.
-3. Budget per node, and the cut line: which nodes are `cuttable` (default F5 only) and the deadline arithmetic against Monday 2026-10-19.
-4. Anything in requirements.md David wants **out** of the build plan (deferred to a later `feat-NNN`).
-5. Acceptance additions per node beyond the generated ones (David's own interview talking points).
-6. Approve: David sets `approved_by/approved_on` and commits. Until then the file stays `draft`.
-
-Before asking, it searches `docs/plans/` and `docs/lessons.md` (prior work) and reads requirements.md + all specs' Contracts. It **refuses** to emit a node whose rule id isn't in requirements.md, and a plan without ≥1 rejected alternative.
-
-### The four skills
-
-| Skill | Trigger | Inputs | Output | Built |
-|---|---|---|---|---|
-| `/plan-dag` | Once, after analysis | requirements.md, spec Contracts, David's answers | `docs/plans/active/build.plan.md` (draft) | **Now** |
-| `/plan-feature` | A change request to the live system, or an approved `feature` recommendation | Description or `inv-NNN` rec. Adds new rule id(s) to requirements.md first | `feat-NNN.plan.md`, usually 1 node | First change request |
-| `/plan-bug` | A defect found **after merge** (pre-merge defects stay in the feature loop) | Symptom, the broken rule id, the introducing plan/node/commit found from the trace + `git log -S`/blame | `bug-NNN.plan.md`. **`N1` = failing reproduction test** (tester only), `N2` = fix | First escaped defect |
-| `/plan-investigation` | Attempt 3, a stuck loop, or David's question | A **falsifiable** question (otherwise bounced), parent `{plan,node}` if escalating, 30-min time box | `inv-NNN.plan.md`: question, hypothesis, evidence, findings, `recommendations:` list. **No DAG, no code, no branch** | First stuck loop (may be during F1/F2) |
-
-All four start with the prior-work search, and all write the template above. Investigation recommendations block:
-
-```yaml recommendations
-- {kind: amend-node, target: build/F2, reason: "SELL-3 failures are TimeProvider not injected into validator; inject and retest", status: proposed}
-- {kind: bug, target: null, rule: GET-1, reason: "GET omits payment reference since F1 merge", status: proposed}
-```
-
-David flips each `status` to `accepted | rejected`. Accepted `feature`/`bug` → the orchestrator runs `/plan-feature`/`/plan-bug` with `parent: inv-NNN`. Accepted `amend-node` → the parent node's attempt 4 is briefed with it. The investigation links forward (`opened: [feat-NNN]`) and the new plan links back (`parent`), which gives traceability its cross-link.
-
-### Retry ladder (per node; one attempt = one FAIL verdict cycle from reviewer or security, or a David rejection at HITL)
-
-| Attempt | Action | Node status |
-|---|---|---|
-| 1–2 | Bug report → tester/builder. The brief must state **what is different** from the last attempt (logged in Attempt log) | in_progress |
-| 3 | Stop the loop. `/plan-investigation` with `parent: <plan>/<node>`. The run ends: David reviews the recommendations | investigating |
-| 4 | Retry, briefed by the accepted `amend-node` recommendation | in_progress |
-| 5 (fails) | Stop. Escalate to David with the attempt log + investigation. David chooses: amend the plan, cut the node, or take it over | escalated |
-
-Never more than 5. The counter does not reset when the failure changes.
-
-### Lessons (`docs/lessons.md`, append-only, public repo, so nothing private)
+**Required** when a node reached attempt ≥ 3, was escalated, or was cut. The orchestrator drafts it from the attempt log and findings; the git agent commits it on the archive branch. Every `plan-*` skill reads it in the prior-work search. A correction is a new entry referencing the old id, never an edit.
 
 ```markdown
-## L-004 · build/F2 · 2026-10-18 · #time #tdd
-- Happened: SELL-2 boundary tests passed locally, failed after midnight UTC.
-- Lesson: every date rule reads TimeProvider; a test at 23:59/00:01 is now in the testing spec.
+## L-004 · build/F1 · 2026-10-18 · #time #tdd
+- Happened: SELL-2 boundary tests passed in the day, failed after 23:00 UTC during BST.
+- Lesson: every date rule reads UkCalendar.Today; a 23:59/00:01 Europe/London pair is now in the testing spec.
 ```
-
-Written at archive (required on attempt ≥ 3 / escalated / cut / failed) and at the close of every investigation. Read by the prior-work search of every `plan-*` skill. Corrections are new entries that reference the old id, never edits.
 
 ## Open questions
 
-1. **Approval on `main`:** David approving = David committing the plan to `main`. Confirm that David committing to `main` himself is fine (the rule only forbids *agents* pushing to `main`).
-2. **Archive branch:** a separate `chore/archive-<id>` PR per plan, or fold the archive into the next feature branch's first commit? The second option saves a PR but mixes concerns. Guardrails/orchestration to confirm.
-3. **Mid-loop state visibility:** with A2, `main` shows `F2: pending` while F2 is in flight. `/orient` must read the worktree's copy of the plan. Context spec to confirm.
-4. **"Appendix data":** if the task PDF's appendix holds *sample records* (not just the schema), a dev seed makes Retrieve-first natural for HITL in Postman. Not verified here: someone needs to check the PDF.
-5. **Requirements.md changes implied:**
-   - the F0 split
-   - the F1/F2 order
-   - CANCEL-5 moves to F4
-   - `amend-node` as a recommendation kind
-   - attempts counted per node
-   - no `/plan-archive` skill
+1. ~~Approval on `main`~~ **Resolved:** `build` is approved by David's commit on `main` (allowed until F0b starts); later plans by David's commit on their first node branch.
+2. ~~Archive branch~~ **Resolved:** a separate `chore/archive-<id>` PR, by the git agent.
+3. ~~Mid-loop state visibility~~ **Resolved:** `/orient` reads worktree copies via `git worktree list`.
+4. ~~requirements.md changes~~ **Resolved:** owed as an F0a acceptance item.
+5. Resolved in reconciliation (2026-10-17): the task PDF's appendix is a field list only, with no sample records, so there's no seed data from it. Postman pre-request scripts generate the data. "Appendix data": if the task PDF's appendix holds sample records, a dev seed would help HITL in Postman. Someone needs to check the PDF.
+6. **(open)** Budgets for every node except F5 (3h), and the clock time at which David cuts F7, then F5. `/plan-dag` asks.
+7. Resolved (David, 2026-10-17): no. Only reviewer, security or gate FAILs count. David's steers at Pause 1, Pause 2 and in PR comments go investigate → red → fix as `D<n>` without incrementing `attempt` (Retry ladder).
+8. Resolved (David, 2026-10-17): on a `chore/inv-NNN` branch via PR (the four `plan-*` skills table).
+9. Resolved in reconciliation (2026-10-17): F7 is a self-contained `pitch-deck.html`, as David suggested. F7's output format (slides file or markdown).

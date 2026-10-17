@@ -1,5 +1,5 @@
 # orchestration.spec.md
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 Researched: 2026-10-17 · Input: `docs/requirements.md` §3 (Feature loop, Planning model, Rules), §5, §6 items 3, 5, 7
 Environment checked: Claude Code 2.1.302, git 2.49.0, gh 2.95.0, Windows 11, remote `origin` already set (github.com/dpmorgandev/uinsure-policies-api)
 
@@ -10,7 +10,7 @@ Scope: the feature loop as a state machine. It runs from picking a node to archi
 | Spec | What this spec assumes (not decided there yet) | If the assumption breaks |
 |---|---|---|
 | `planning` | Plan YAML holds node `status`/`attempts`/`branch`/`pr`, written only as feature-branch commits (its option A2). Node ids `F0a, F0b, F1…`, `N1…`. Attempts are counted **per node**, one per FAIL cycle. Attempt 3 is `/plan-investigation`, and it can recommend `amend-node` | The state section moves: the trace stays the receipt either way |
-| `agents-skills` | Roster: `git`, `tester`, `builder`, `reviewer`, `security`. The orchestrator is the main session running a skill, **not** an agent. Each agent has a `.claude/agents/<name>.md` so that `agent_type` in hooks is its name | Without named agent types, hook-side identity is lost (see traceability) |
+| `agents-skills` | Roster (six, per its D1): `git`, `tester`, `builder`, `reviewer`, `security`, `investigator`. The orchestrator is the main session running a skill, **not** an agent. Each agent has a `.claude/agents/<name>.md` so that `agent_type` in hooks is its name | Without named agent types, hook-side identity is lost (see traceability) |
 | `testing` | One full-suite command (`dotnet test <sln>`). A rule filter (`--filter "Rule=SELL-2"` on VSTest, or `--filter-trait` on xUnit v3/MTP). QA script at `docs/qa/<plan-id>-<node-id>.md` | Only the command strings in the gates change |
 | `architecture` | The SQLite connection string is relative to the content root. Dev startup applies migrations or creates the DB | HITL DB isolation needs an explicit path override |
 | `guardrails` | Enforces the hooks named here (no push to `main`, PR gate, path ownership, no `git add -A`) | This spec names gates. Guardrails implements them |
@@ -150,117 +150,141 @@ Our own pre-PR rebase already makes the branch linear on top of `origin/main`. A
   - **Only comments by `dpmorgandev` are acted on.** Everything else is ignored. This guards against prompt injection once the repo is public.
   - A comment on an already-merged PR becomes a `/plan-bug`.
 - [x] requirements.md edits: apply them in the requirements update pass.
+- [x] **Final rulings (David, 2026-10-17):**
+  - OQ7: a Postman receipt before PAUSE 2. The orchestrator runs the node's real-time-runnable Postman folder with the Postman CLI against the worktree API on port 5080 and records pass/fail in `loop.jsonl`. David still steps through manually, and Postman stays out of every git hook. It depends on an F0a check that the CLI runs a local collection without login; if that fails, Postman is David-only.
+  - OQ8: only reviewer, security or gate FAILs count as attempts. David's steers at PAUSE 1, PAUSE 2 and in PR comments don't increment the attempt; they still go investigate → red → fix, as findings `D1`, `D2`… in `findings/D<n>.md`.
+  - Accepted as proposed: the stub-controller commit carries `TDD: stub`, and the PR isn't raised while David's paragraph is empty.
 
-## Contract — PENDING (DRAFT outline)
+## Contract
+
+Binding for `/feature`. The skill (`.claude/skills/feature/SKILL.md`) restates this section as executable steps; agents never read this spec.
+
+### Invocation and identifiers
+- `/feature <plan-id> <node-id>`, e.g. `/feature build F1`. It runs in the **main session** (the orchestrator, not an agent). The node must be `ready` in `docs/plans/active/<plan-id>.plan.md` (all `depends_on` merged), else it refuses.
+- Branch `feature/<plan-id>/<node-id>` (or `bug/<plan-id>/<node-id>` for a `bug-NNN` plan). Worktree `.claude/worktrees/<plan-id>-<node-id>`. Trail dir `docs/trace/<plan-id>/<node-id>/` (layout owned by traceability).
+- F0a is built by David in-session and does **not** run this loop; F0b is the first `/feature` run.
 
 ### State machine (one node)
-```text
-            ┌────────────────────────────────────────────────────────────────────────┐
- PICK ──► SETUP ──► RED ──► GREEN ──► REVIEW(reviewer ∥ security) ──PASS──► INTEGRATE ──► PR_DRAFT ──► QA ──► HITL
- (next ready (git: fetch,  (tester:  (builder:  │ both verdicts must exist, be      (git: fetch,   (E1: David      (script   │
-  node in DAG) worktree add, commits  commits    │ schema-valid and bound to the     rebase         pushes +         from     │ sign-off ──► MERGE_WAIT
-              EnterWorktree) red)     green/     │ current diff fingerprint)         origin/main,   gh pr --draft)   testing  │   (David merges; marks
-                                      refactor)  FAIL                                 full suite)                   spec)     │    PR ready first)
-                                        ▲        ▼                                                                            │        │
-                                        │   BUG_REPORT ── attempts++ ──┬─ attempts ≤ 2 ──► RED (different approach)           │        ▼
-                                        │                              ├─ attempts = 3 ──► INVESTIGATE (/plan-investigation)  │    ARCHIVE
-                                        │                              │                    └─ David picks: amend-node ─► RED │  (ExitWorktree; git:
-                                        │                              ├─ attempts = 4 ──► RED (investigation's approach)     │  worktree remove,
-                                        │                              └─ attempts = 5 ──► ESCALATED (stop; David decides)    │  branch -d after David
-                                        └──────────────── HITL defect (pre-merge) = BUG_REPORT, source: david ◄───────────────┘  pulls; plan → archive)
- Any gate whose receipt is missing ──► BLOCKED (never PASS). Any commit after INTEGRATE invalidates it ──► INTEGRATE again.
-```
-- Transitions are recorded as events in `docs/trace/<plan>/<node>/loop.jsonl` (format: traceability spec). The **current state is derived from the last event**, never kept as a separate mutable field. Plan YAML `status/attempts` is updated by the orchestrator as a branch commit at SETUP, at each attempt and at PR_DRAFT (planning A2).
-- **Resume after crash or compaction:** `/orient` reads `loop.jsonl` plus `git log origin/main..HEAD` with trailers. If they disagree, **git wins** (e.g. a green commit exists after the last logged event: the state is GREEN-done, and the event is backfilled with `source: reconciled`).
-- **Who runs what:** the orchestrator (main session) runs every gate command itself. Producers' claims are never used as gate input.
+Every step ends in its gate. The orchestrator runs each gate itself via Bash and appends the result to `loop.jsonl`. **A gate with no receipt is BLOCKED, never PASS.** A failed gate on steps 2–6 goes to step 8 (FAIL route).
 
-### Gates (each writes a receipt; a missing receipt is BLOCKED)
-| Gate | Check (run outside the producer's turn) | Receipt |
-|---|---|---|
-| after RED | rule-filtered tests **fail**. The diff touches only `tests/**`. The commit has `TDD: red` | `gate.red` |
-| after GREEN | rule tests pass. Full build has warnings-as-errors. The diff touches only `src/**` | `gate.green` |
-| REVIEW | 2 verdicts, schema-valid (SubagentStop hook), `diff_fingerprint` = current `git diff origin/main...HEAD \| git patch-id --stable` | `verdict.*` |
-| INTEGRATE | rebase clean. Full suite (unit + integration + architecture) exit 0 on the post-rebase HEAD | `gate.integrate` with `head_sha` |
-| PR | PreToolUse deny on `gh pr create`/`git push` unless the receipts above exist for the current HEAD (and E1: these are David's commands anyway) | `pr` event |
-| HITL | QA script signed by David, `signed_sha` = HEAD | `signoff` |
+| # | State | Agent | Action | Writes | Gate (orchestrator, outside the producer's turn) |
+|---|---|---|---|---|---|
+| 1 | SETUP | git | `git fetch origin`; `git worktree add .claude/worktrees/<p>-<n> -b <branch> origin/main`. Orchestrator then calls `EnterWorktree({path})` and commits plan status `in-progress`, `attempt: 1` | worktree, branch, `plan(<p>/<n>): ready → in-progress` commit | branch name and worktree path match; `git rev-parse --show-toplevel` = worktree; plan commit present |
+| 2 | RED | tester | Full acceptance suite for every node rule (each success and failure row), unit tests per rule, Postman requests; `src/` signatures whose bodies are only `throw new NotImplementedException()` | `test(<rule>): red: …` commits, `TDD: red` | build passes; rule-filtered tests **fail**; diff ⊆ `tests/**` + throw-only `src/` signatures (hook); every node rule has a `[Trait("Rule",…)]` test |
+| 3 | STUB | builder | Stub controller: real routes and contracts, canned responses | `feat(<node>): stub controller` commit, `TDD: stub` | build passes; app starts; routes answer (smoke); acceptance suite still red; diff ⊆ `src/Uinsure.Policies.Api/**` |
+| 4 | **PAUSE 1** | — (David) | Orchestrator prints the HITL block (below). David calls the stub in Postman and reads the tests. Replies `go` or `change: …` | `pause1` event | David's `go`. `change:` → a **steer** `D<n>` through step 8 with `source: david` (no attempt++) |
+| 5 | GREEN | builder | One dispatch per layer: domain → services → persistence → api; then optional refactor | `feat(<rule>): green: <layer> …` per layer, `refactor(<rule>): …`; `TDD: green\|refactor` | after each layer: build passes and that layer's rule tests pass; diff ⊆ `src/**`; after api: acceptance suite green |
+| 6 | GATES | orchestrator | `dotnet build -warnaserror`; full `dotnet test`; rule-coverage check; diff-scope check (`git diff --name-only origin/main...HEAD` vs the node's allowed paths); no `NotImplementedException` left in `src/` | `gate.*` events | all exit 0 |
+| 7 | REVIEW | reviewer ∥ security | Two `Agent` calls in one message; neither sees the other's verdict. Inputs: plan/node, rule ids, `base_sha..head_sha`, the gate receipts | verdict JSON (SubagentStop hook validates and writes `verdicts/<A<n>\|D<n>>-<agent>.json`, traceability) | both verdicts present, schema-valid, `head_sha`/`diff_fingerprint` = current; both PASS → 9, any FAIL → 8 |
+| 8 | FAIL route | investigator → tester → builder | On a reviewer, security or gate FAIL: attempt++ (plan commit), findings `findings/A<n>.md`. On a David **steer** (PAUSE 1 `change:`, PAUSE 2 `defect:`, a PR comment): **no attempt++**, the next steer id `D<n>`, findings `findings/D<n>.md`, and a `steer` event. Investigator returns findings JSON (rendered to that file). Tester writes one red test per testable finding (`Fixes-Finding:` trailer), or records the untestable reason. Builder goes green with the findings + red test. Then back to 6 | `findings/A<n>.md` or `findings/D<n>.md`, `test(<rule>): red: fix <finding>`, `fix(<rule>): …` | red test fails before the fix, passes after; then steps 6–7 re-run. Ladder below |
+| 9 | QA | tester | QA script, steps tagged `[RULE-ID]`, sign-off block | `docs/qa/<p>-<n>.md` commit | every node rule appears in ≥1 step |
+| 10 | INTEGRATE | git | `git fetch origin`; `git rebase origin/main`; full suite on the post-rebase HEAD. A conflict is returned to the orchestrator, never resolved by editing code | `gate.integrate {head_sha, test summary}` | rebase clean; full suite exit 0 on HEAD. **Any later commit invalidates it** |
+| 11 | TRACE | orchestrator (render script) → git | Render `walkthrough.md` (every commit in order, one line each), node `README.md`, requirements matrix; git commits all trail files once | `chore(trace): <node> trail` | completeness check passes (fails loudly on a missing link) |
+| 12 | PR | git | `git push -u origin <branch>`, `gh pr create --draft` with the body template. Each command is an `ask` prompt to David | `pr {url}` event; plan commit `in-progress → in-review` before push | PreToolUse PR gate (guardrails G14): the latest reviewer and security verdicts are PASS with `head_sha` = HEAD, plus `gate.integrate` for the current HEAD; David's "From David" paragraph is non-empty (the PR waits for it); push to `main` denied |
+| 13 | VERDICTS | git | Posts three comments: reviewer verdict, security verdict, rebase receipt (`ask` on `gh pr comment`) | `pr.comment` events | three comments exist (`gh pr view --comments`) |
+| 14 | **PAUSE 2** | orchestrator, then David | **Postman receipt first:** the orchestrator starts the API from the worktree on port 5080 and runs the node's real-time-runnable Postman folder with the Postman CLI (`postman collection run tests/postman/Uinsure.Policies.postman_collection.json -e tests/postman/local.postman_environment.json -i "<node folder>"`), then stops the API. Then HITL sign-off with `walkthrough.md`, the QA script and Postman, which David still steps through manually. David replies `sign-off` or `defect: …` | `gate.postman {cmd, exit, ok, head}` event; `signoff {sha}` | the `gate.postman` result is printed in the HITL block (a fail is shown, not hidden; David decides). `signed_sha` = HEAD. `defect:` → a steer `D<n>` through step 8 with `source: david` (no attempt++) |
+| 15 | PR COMMENTS | orchestrator → FAIL route → git | `gh pr view --comments --json comments`; only `author.login == dpmorgandev` and not yet answered. Each comment becomes a steer `D<n>` (`source: pr-comment`, comment id, no attempt++) through step 8 on the same branch; then 6–7, 10, 11 (trail re-render), git pushes (`ask`) and replies with the fix SHA | `pr.comment.fixed {comment_id, sha}` | each acted-on comment has a reply naming a SHA on the branch; new commits re-ran INTEGRATE and re-require PAUSE 2 |
+| 16 | MERGE | — (David) | David marks the PR ready and merges with a merge commit (repo allows merge commits only) | `merged {sha}` (detected via `gh pr view --json state,mergeCommit`) | PR state `MERGED` |
+| 17 | ARCHIVE | orchestrator, git | `ExitWorktree`; git removes the worktree (refuses if uncommitted work) and deletes the local branch after David pulls; plan status `done` and archive via `chore/archive-<id>` (planning); lesson if attempt ≥ 3, escalation or cut | `archived` event | worktree gone; plan shows `done` on `main` |
 
-### Verdict JSON schema (DRAFT; reviewer and security return exactly this as their final message)
+A comment on an already merged PR is not handled here: it becomes a `/plan-bug`.
+
+### Retry ladder (attempts counted per node, one per FAIL cycle)
+Only reviewer, security or gate FAILs count. David's steers (`D<n>`: PAUSE 1, PAUSE 2, PR comments) take the step 8 route but never increment `attempt`.
+| Attempt | Route |
+|---|---|
+| 1–2 | step 8: investigate → red → fix |
+| 3 | stop the loop; open `/plan-investigation` (`inv-NNN`). David approves its outcome (continue, `amend-node`, or cut); attempt 4 follows the investigation's approach |
+| 4 | step 8 with the investigation's findings |
+| 5 | **ESCALATED**: stop and ask David. No further automatic attempt |
+| any | a FAIL finding fingerprint `(rule_id, file, sha1(title))` equal to one from the previous attempt jumps straight to attempt 3 |
+
+### Verdict JSON schema v1 (reviewer and security, final message)
+The SubagentStop hook blocks the agent from stopping until its final message validates. Aligned with agents-skills' field list, with two changes: `verdict` is `PASS|FAIL` (not `NEEDS_WORK`), and reviewer/security run no commands, so evidence is the orchestrator's gate receipts (`gate_refs`), not their own.
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["schema_version","agent","plan_id","node_id","attempt","head_sha","diff_fingerprint","verdict","checked","findings"],
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version","agent","plan_id","node_id","attempt","base_sha","head_sha","diff_fingerprint","verdict","gate_refs","rules_covered","rules_missing","findings"],
   "properties": {
     "schema_version": { "const": 1 },
     "agent":   { "enum": ["reviewer","security"] },
-    "plan_id": { "type": "string", "pattern": "^(build|feat-\\d{3}|bug-\\d{3})$" },
-    "node_id": { "type": "string", "pattern": "^(F\\d+[a-z]?|N\\d+)$" },
+    "plan_id": { "pattern": "^(build|feat-\\d{3}|bug-\\d{3})$" },
+    "node_id": { "pattern": "^(F\\d+[a-z]?|N\\d+)$" },
     "attempt": { "type": "integer", "minimum": 1, "maximum": 5 },
-    "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "diff_fingerprint": { "type": "string" },
+    "base_sha": { "pattern": "^[0-9a-f]{40}$" },
+    "head_sha": { "pattern": "^[0-9a-f]{40}$" },
+    "diff_fingerprint": { "type": "string", "description": "git diff base...head | git patch-id --stable" },
     "verdict": { "enum": ["PASS","FAIL"] },
-    "checked": {
-      "description": "What was examined: an empty list makes PASS invalid (hook rejects). Proves the loop ran.",
-      "type": "array", "minItems": 1,
-      "items": { "type": "object", "additionalProperties": false, "required": ["id","result"],
-        "properties": { "id": { "type": "string", "description": "rule id (SELL-2) or OWASP id (API3:2023)" },
-                        "result": { "enum": ["met","not-met","n/a"] },
-                        "note": { "type": "string" } } } },
-    "findings": {
-      "type": "array",
-      "items": { "type": "object", "additionalProperties": false,
-        "required": ["id","rule_id","severity","title","evidence","expected","actual","testable"],
-        "properties": {
-          "id": { "type": "string", "pattern": "^[RS]\\d+$", "description": "R1.. reviewer, S1.. security; unique per verdict" },
-          "rule_id": { "type": "string", "description": "requirements.md rule id, or OWASP API Top 10 2023 id" },
-          "severity": { "enum": ["blocker","major","minor"] },
-          "title": { "type": "string", "maxLength": 120 },
-          "evidence": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["file"],
-              "properties": { "file": { "type": "string" }, "line": { "type": "integer" }, "excerpt": { "type": "string" } } } },
-          "expected": { "type": "string" },
-          "actual": { "type": "string" },
-          "testable": { "type": "boolean" },
-          "suggested_test": { "type": "string", "description": "Required when testable: Given/When/Then + target test class" },
-          "untestable_reason": { "type": "string", "description": "Required when testable=false" } } } }
+    "gate_refs": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "loop.jsonl gate events read" },
+    "rules_covered": { "type": "array", "items": { "type": "string" }, "description": "rule ids (reviewer) or OWASP ids e.g. API3:2023 (security) checked and met" },
+    "rules_missing": { "type": "array", "items": { "type": "string" } },
+    "findings": { "type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id","rule_id","severity","file","what","why","route_to"],
+      "properties": {
+        "id": { "pattern": "^[RS]\\d+$" },
+        "rule_id": { "type": "string", "description": "requirements.md id or OWASP API Top 10 2023 id" },
+        "severity": { "enum": ["P0","P1","P2"] },
+        "file": { "type": "string" }, "line": { "type": "integer" },
+        "what": { "type": "string", "maxLength": 200 }, "why": { "type": "string" },
+        "route_to": { "enum": ["tester","builder"] } } } },
+    "notes": { "type": "array", "items": { "type": "string" } }
   }
 }
 ```
-Hook-side semantic checks (beyond the schema):
-- `verdict=PASS` ⇒ there are no `blocker`/`major` findings, and `checked` covers every rule id of the node (read from the plan YAML).
-- `verdict=FAIL` ⇒ there is at least one finding.
-- `head_sha`/`diff_fingerprint` must equal the hook's own computation, so a verdict about stale code is rejected.
+Hook-side semantic checks: `PASS` ⇒ no P0/P1 findings, `rules_missing` empty, and `rules_covered` ⊇ the node's rule ids (reviewer) or the stated OWASP checklist (security). `FAIL` ⇒ ≥ 1 finding. `head_sha` and `diff_fingerprint` must equal the hook's own computation.
 
-### Bug report handoff (DRAFT)
-The orchestrator renders one file per FAIL: `docs/trace/<plan>/<node>/bugs/A<attempt>.md`. It is generated from the verdict JSON, not rewritten by hand. It has these parts:
-- a header with plan, node, attempt n of 5, source (`reviewer|security|david`), and the verdict receipt ids
-- one section per finding: rule id · severity · expected · actual · evidence (file:line) · `suggested_test`
-- a block for the **tester**: "write a failing test for each testable finding, commit `TDD: red`, with `Fixes-Finding: R1` trailer"
-- a block for the **builder**: "make it green. Untestable findings listed with reasons"
-- **Previous attempts:** one line each (from `loop.jsonl`), so attempts 2+ try a *different* approach
-- a fingerprint `(rule_id, file, title-hash)`. If the same fingerprint was in the previous attempt, the orchestrator escalates to attempt 3 at once (agentflow convergence lesson).
+**Investigator findings (schema v1, final message; read-only agent, the hook renders `findings/A<n>.md`, or `findings/D<n>.md` for a steer):**
+`{schema_version:1, plan_id, node_id, attempt, source: reviewer|security|gate|david|pr-comment, source_ref (verdict finding ids, gate event, or PR comment id), findings[{id: "I<n>", rule_id, layer: domain|services|persistence|api|tests, files[], root_cause, fingerprint, testable, suggested_test (Given/When/Then + test class, when testable), untestable_reason (when not)}], previous_attempts[] (one line each, from loop.jsonl)}`. The rendered file adds a tester block and a builder block so attempt n+1 tries a different approach.
 
-### Branch, commit, PR conventions (DRAFT)
-- **Branch:** `feature/<plan-id>/<node-id>`, e.g. `feature/build/F1`, `bug/bug-001/N1`. No slug, matching planning's stable-id rule. requirements.md's `feature/F1-sell` example changes. **Worktree:** `.claude/worktrees/<plan-id>-<node-id>`.
-- **Commit subject:** `test(<rule>): red: <behaviour>` · `feat(<rule>): green: <behaviour>` · `refactor(<rule>): <what>` · `plan(<plan>/<node>): <from> → <to>` · `chore(trace): <node> trail`.
-- **Trailers:** `Agent:`, `Plan:`, `Node:`, `Rule:`, `TDD: red|green|refactor`, optional `Fixes-Finding:`.
-  - `Agent`/`Plan`/`Node` are enforced by a hook (PreToolUse on `git commit` denies a mismatch against `agent_type` and the branch name). See traceability.
-  - Never commit-on-stop. Explicit `git add <paths>` only, never `-A` or `.`.
-- **PR:** draft. The title is `<node-id>: <node title>`. The body is generated from the trail (traceability spec): rules → tests → commits table, attempts and verdicts, the QA script link, and how to run the API from the worktree.
+### Commits
+- Subjects: `test(<rule>): red: …` · `feat(<rule>): green: …` · `feat(<node>): stub controller` · `fix(<rule>): …` · `refactor(<rule>): …` · `plan(<p>/<n>): <from> → <to>` · `chore(trace): <node> trail`.
+- Trailers `Agent`, `Plan`, `Node`, `Rule`, `TDD: red|stub|green|refactor`, optional `Fixes-Finding`. A hook checks `Agent/Plan/Node` against `agent_type` and the branch. Explicit `git add <paths>` only; never commit-on-stop.
 
-### HITL step (DRAFT)
-1. The orchestrator prints: the worktree path, `dotnet run --project <wt>/src/<Api> --urls http://localhost:5080`, the Postman env `baseUrl=http://localhost:5080`, the QA script path, and `dotnet test <wt>/<sln>`.
-2. David opens `<wt>/Uinsure.Policies.slnx` in VS 2026 if he wants to read or debug, steps through the QA script and ticks it.
-3. David replies with one of:
-   - `sign-off`: the orchestrator records `signoff` with HEAD
-   - `defect: …`: a BUG_REPORT with source david, back into the loop
-4. David marks the PR ready and merges with a merge commit. Then he tells the orchestrator (or `/orient` detects it via `gh pr view`), and ARCHIVE runs.
+### Branching
+- **`main` is the integration branch.** There is no `develop` branch and no integration agent. Feature and bug branches are cut from `origin/main`, rebased onto `origin/main` at step 10, and merged by David with a merge commit, so TDD commits and their SHAs survive on `main` and `git log --first-parent main` shows one line per feature. David's own checkout is never touched (fetch only updates remote-tracking refs). The README states this.
+
+### PR body template (generated at step 12; David adds one paragraph)
+```markdown
+## <node-id>: <node title>
+Plan `<plan-id>` · rules: SELL-1, SELL-2, … · attempts: <n>
+
+<!-- David: one paragraph in his own words; `gh pr create` waits until it's written -->
+
+| Rule | Tests | Red commit | Green commit |
+|---|---|---|---|
+| SELL-2 | 6 (4 unit, 2 integration) | abc1234 | def5678 |
+
+Tests: <passed>/<total> on <head_sha> after rebase onto origin/main <main_sha>.
+Verdicts: reviewer PASS · security PASS (posted as comments below).
+Walkthrough: docs/trace/<plan>/<node>/walkthrough.md · QA script: docs/qa/<plan>-<node>.md
+
+Run it: `dotnet run --project src/Uinsure.Policies.Api --urls http://localhost:5080`
+_Generated from the trace by /feature; the paragraph above is David's._
+```
+
+### PR comment templates (all posted by the git agent)
+- **Reviewer / security verdict:** `**<Agent> verdict: PASS|FAIL** (attempt <n>, head <short_sha>)` · checked: `<rules_covered>` · missing: `<rules_missing or none>` · findings table `id | rule | severity | file:line | what` (or "none") · `Receipt: docs/trace/<p>/<n>/verdicts/<round>-<agent>.json`.
+- **Rebase receipt:** `**Rebase + full suite: PASS** · rebased onto origin/main <main_sha> · HEAD <head_sha> · <passed>/<total> tests (unit, integration, architecture) · command: <cmd> · exit 0`.
+- **Fix reply (to a dpmorgandev comment):** `Fixed in <sha> (steer D<n>): <one line>. Red test: <test name> or untestable: <reason>.`
+
+### HITL environment
+- Printed by the orchestrator at both pauses: the worktree path, `dotnet run --project src/Uinsure.Policies.Api --urls http://localhost:5080` (run from the worktree), Postman environment `baseUrl=http://localhost:5080`, the QA script path, and `dotnet test`.
+- **Port 5080**, fixed (one feature at a time). **SQLite DB per worktree:** the relative `Data Source` resolves under the worktree's content root; `*.db` is gitignored and recreated at each pause. David may open the worktree's `Uinsure.Policies.slnx` in VS 2026.
+- **Postman:** David steps through it manually at both pauses. Before PAUSE 2 the orchestrator also runs the node's real-time-runnable folder (the node's folder; requests that need a fake clock aren't in it, per api-contract) as the `gate.postman` receipt. Postman is in no git hook. **Depends on an F0a check** that the Postman CLI runs a local collection without login; if that check fails, there's no receipt (`gate.postman(skipped)`) and Postman is David-only.
+
+### Resume across sessions
+- State is **derived**, never stored as a mutable field: the last `loop.jsonl` event, reconciled with `git log origin/main..HEAD` trailers. If they disagree, **git wins**, and the missing event is backfilled with `source: reconciled`.
+- `/orient` (SessionStart hook + snapshot in the branch's `docs/context/`) names the plan, node, branch, attempt and next action. `/feature <p> <n>` re-run on a node that has a worktree calls `EnterWorktree({path})` instead of SETUP and continues at the derived state.
+- A pause survives a session end: re-running `/feature` at PAUSE 1/2 re-prints the HITL block and waits. A gate result from a previous session is reused only if its `head` equals the current HEAD; otherwise the gate re-runs.
 
 ## Open questions
-1. **requirements.md contradiction:** "every push is David's" vs "git agent … raise the PR". Recommend E1 and rewording step 5 to "git agent prepares; David pushes and opens a draft PR".
-2. **requirements.md order:** PR (step 5) comes before QA/HITL (step 6). Recommend a *draft* PR at step 5, ready after sign-off, plus the stated rule "any commit after integration re-runs integration".
-3. **requirements.md:** worktree path `../wt/F1-sell` and branch `feature/F1-sell`. Recommend `.claude/worktrees/<plan>-<node>` and `feature/<plan>/<node>` (stable ids, per planning). Also add "agents enter the worktree via `EnterWorktree`; `isolation: worktree` is not used" to §3.
-4. Spike R1a–c before F0 work starts. If workflow agents don't inherit the worktree, A1/A3 are ruled out on that alone.
-5. F0 bootstrap: F0 builds the hooks that witness the loop. Does F0 run its own loop, witnessed only by git and commit trailers, with hook receipts starting at F1? Recommendation: yes, and say so in the F0 trail. Pretending otherwise would be the exact "empty trace reads as nothing happened" failure.
-6. Is a `git` *agent* worth it, versus the orchestrator running these git commands itself? Its value is a narrow tool allowlist and an `agent_type` in the trail. That belongs to agents-skills.
-7. Postman in HITL: does the orchestrator run the Postman CLI collection before handing to David (a cheap receipt), or is it David-only? This links to §6.1.
+1. ~~Push vs PR contradiction~~ **Resolved** (Decision E): the git agent runs push and `gh pr create --draft` under `ask`.
+2. ~~PR before HITL~~ **Resolved**: draft PR before PAUSE 2, ready after sign-off; any later commit re-runs INTEGRATE.
+3. ~~Worktree and branch names~~ **Resolved**: `.claude/worktrees/<plan>-<node>`, `feature/<plan>/<node>`; requirements.md updated in the requirements pass.
+4. **(open)** Spike R1a–c in F0a. If `EnterWorktree` does not carry subagents, fall back to B2 (one `claude` session started in the worktree per feature).
+5. ~~F0 bootstrap~~ **Resolved**: F0a is built in-session with no loop, witnessed by git and trailers; F0b is the first loop run with hook receipts.
+6. ~~Git agent worth it~~ **Resolved** (agents-skills D1): yes, six agents.
+7. Resolved (David, 2026-10-17): before PAUSE 2 the orchestrator runs the node's real-time-runnable Postman folder via the Postman CLI against the worktree API (port 5080) and records `gate.postman` in `loop.jsonl`. David still steps through manually; Postman is in no git hook. It depends on an F0a check that the CLI runs a local collection without login, else David-only (step 14, HITL environment).
+8. Resolved (David, 2026-10-17): only reviewer, security or gate FAILs count as attempts. David's steers at PAUSE 1, PAUSE 2 and in PR comments don't increment the attempt; they go investigate → red → fix as `D1`, `D2`… with `findings/D<n>.md` (steps 4, 8, 14, 15; retry ladder).

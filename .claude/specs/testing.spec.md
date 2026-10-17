@@ -1,5 +1,5 @@
 # testing.spec.md
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 Researched: 2026-10-17 · Input: `docs/requirements.md` §2, §3, §4 row 4 · Agents act only on **Contract**, once it is decided.
 
 ## Dependencies
@@ -132,43 +132,120 @@ Also a "today" boundary at the clock: `FakeTimeProvider` at 23:30 UTC in BST, if
   - CANCEL-7 for dates after the end.
   - A CANCEL-5 future term gets a full refund, per requirements.
 - [x] **Reconcile:** the architecture-test library is **NetArchTest.eNhancedEdition**, not ArchUnitNET (architecture D8), so drop the ArchUnitNET xUnitV3 check from Q6.
+- [x] **Final rulings (David, 2026-10-17):**
+  - Postman receipt before Pause 2: the orchestrator runs the node's real-time-runnable folder via the Postman CLI against port 5080 and records pass/fail in `loop.jsonl` (orchestration). David still steps through manually; Postman is still in no git hook. It depends on the Q6 F0a check (local run without login), else David-only.
+  - Central package management (architecture): test package versions are pinned in the root `Directory.Packages.props`.
+  - Accepted as proposed: the stub-controller commit carries `TDD: stub`; `tests/rule-coverage.pending.txt` is empty after F4; the tester creates the `tests/*.csproj` files.
 
-## Contract — PENDING (DRAFT: conventions + QA script template)
+## Contract
 
-**Projects and packages (DRAFT).** `xunit.v3`, `Microsoft.Extensions.TimeProvider.Testing`, `Microsoft.AspNetCore.Mvc.Testing`, `Microsoft.EntityFrameworkCore.Sqlite`, arch lib per architecture.spec. Nothing in `tests/` references `.claude/`.
+Binding. Where Research, Options or Recommendation above say otherwise (project names, ArchUnitNET, Postman in pipeline), this section wins.
 
-**Naming.** Class = subject + `Tests` (`SellPolicyTests`, `CancellationRefundTests`, `SellEndpointTests`). Method = sentence with underscores stating condition and outcome: `Start_date_today_plus_60_is_accepted`. One behaviour per test; theories (`[Theory]` + `[InlineData]`) only for genuinely equivalent inputs — boundary pairs stay separate tests so each edge is visible in the test list and the git log.
+### C1. Test projects
+| Project | References | Holds |
+|---|---|---|
+| `tests/Uinsure.Policies.Domain.Tests` | Domain | Rule logic at every boundary (`Policy`, `RefundCalculator`, `Money.Round`), `DateOnly today` passed in. No `FakeTimeProvider`. |
+| `tests/Uinsure.Policies.Services.Tests` | Services, Domain | Only if a Services class has logic beyond orchestration. `UkCalendar.Today` qualifies, so it is expected from F0b. |
+| `tests/Uinsure.Policies.Api.Tests` | Api, Persistence | Integration / acceptance suite over HTTP (C5). |
+| `tests/Uinsure.Policies.Architecture.Tests` | all four src projects | Layering rules (owned by architecture.spec) via NetArchTest.eNhancedEdition, plus the rule-coverage check (C4). |
+| `tests/postman/` | — | `Uinsure.Policies.postman_collection.json` (v2.1) + `local.postman_environment.json` (C9). |
 
-**Rule traits.** `[Trait("Rule", "SELL-2")]` on every rule test (string literal, exact ID from requirements.md). Every rule ID in §2 must have ≥1 unit test and, where it yields a status code, ≥1 integration test. Rule-less tests (plumbing) carry no Rule trait.
+Nothing in `tests/` references `.claude/`. Test package versions are pinned once, in the root `Directory.Packages.props` (central package management, architecture C8); `tests/Directory.Build.props` holds shared test settings only. The tester creates the `tests/*/*.csproj` files.
 
-**Builders.** `tests/*/Builders/`: `SellPolicyRequestBuilder`, `PolicyholderBuilder`, `PolicyBuilder`. `Build()` with no overrides yields a **valid** object relative to `TestClock.Today`; a test overrides only the field under test (`.WithStartDate(TestClock.Today.AddDays(61))`). No randomness.
+### C2. Packages
+- `xunit.v3` 4.0.x on Microsoft.Testing.Platform; `global.json` → `"test": {"runner": "Microsoft.Testing.Platform"}`. No `Microsoft.NET.Test.Sdk` (verify in F0). Plain `Assert` only.
+- `Microsoft.Extensions.TimeProvider.Testing` 10.11.0 (Services.Tests, Api.Tests).
+- `Microsoft.AspNetCore.Mvc.Testing` 10.0.x (verify in F0).
+- `Microsoft.EntityFrameworkCore.Sqlite`, same version as Persistence's EF Core (verify in F0).
+- `NetArchTest.eNhancedEdition` (version verify in F0).
+- `Microsoft.Testing.Extensions.TrxReport` (pipeline test results; version verify in F0).
+- `dotnet-ef` as a local tool in `.config/dotnet-tools.json` (pre-push, C8).
+- Not used: FluentAssertions, Shouldly, AwesomeAssertions, AutoFixture, Bogus, Testcontainers (deferred), Moq-style mocking libraries.
 
-**Time.** Never `DateTime.Now`. Unit: `new FakeTimeProvider(TestClock.StartOfToday)`. Integration: factory registers the same fake; tests may `SetUtcNow` to cross a boundary.
+### C3. Conventions
+- **Naming.** Class = subject + `Tests` (`SellPolicyTests`, `RefundCalculatorTests`, `SellEndpointTests`). Method = a sentence with underscores stating condition and outcome: `Start_date_today_plus_61_is_rejected`. One behaviour per test. `[Theory]` only for genuinely equivalent inputs; each boundary side is its own test.
+- **Builders.** `tests/<project>/Builders/` (`SellPolicyRequestBuilder`, `PolicyholderBuilder`, `PolicyBuilder`, `CancellationRequestBuilder`, `RenewalRequestBuilder`, `ClaimRequestBuilder`). `Build()` with no overrides yields a **valid** object relative to `TestClock.Today`; a test overrides only the field under test (`.WithStartDate(TestClock.Today.AddDays(61))`). No random data, no `Guid.NewGuid()` references: each integration test passes its own literal reference (e.g. `"SELL2-AT-61"`).
+- **Clock.** `TestClock.Now = 2026-10-17T12:00:00Z`, `TestClock.Today = 2026-10-17` (same date in UTC and Europe/London). Every boundary reads as arithmetic from `TestClock.Today`. `DateTime.Now/UtcNow/Today` are banned (BannedApiAnalyzers) in tests too.
+- **Rule trait.** Every test that proves a rule carries `[Trait("Rule", "<ID>")]`: a string literal, exactly one ID per attribute, the ID exactly as in `docs/requirements.md` (compound row `RENEW-1/2` is traited as `RENEW-1` or `RENEW-2`). A test may carry several. Plumbing tests carry none. Filter: `dotnet test --solution Uinsure.Policies.slnx -- --filter-trait "Rule=SELL-2"`.
+- **Assertions (integration).** Status first; then for errors the RFC 9457 body: `type` = `/problems/<rule-id-lowercase>`, `ruleId`, and for 422 the `violations[]` list; for success the body, read back via `GET` (every Sell test is a POST → GET round trip).
 
-**Integration.** `PoliciesApiFactory` per class; HTTP via `factory.CreateClient()`; assert status first, then ProblemDetails (`title`/`detail` names the rule) or body. Each test uses its own policy reference.
+### C4. Rule-coverage check
+`RuleCoverageTests` in Architecture.Tests, so it runs in every `dotnet test` (pre-push, pipeline). Computed from source text, no build of other test projects needed:
+1. **Universe U** = IDs in the first column of the rule tables in `docs/requirements.md`, matched by `^\|\s*((SELL|GET|CANCEL|RENEW|COULD)-\d+[a-z]?(/\d+)?)\s*\|`; `X-1/2` expands to `X-1`, `X-2`. U must include SELL-7, CANCEL-7, COULD-2, COULD-2a, COULD-2b, COULD-2c, RENEW-3a and RENEW-3b; the test fails if any of these is missing from requirements.md.
+2. **Traits T** = every literal matched by `\[Trait\("Rule",\s*"([^"]+)"\)\]` in `tests/**/*.cs`, keyed by project.
+3. **Pending P** = IDs listed in `tests/rule-coverage.pending.txt` (one per line): rules of plan nodes not yet built. The tester removes a node's IDs in that node's red step. The file is empty when F4 is done.
+4. Fails, listing offenders, when: an ID in U∖P has no trait in `Domain.Tests`/`Services.Tests` (unit) **or** none in `Api.Tests` (integration); a trait in T is not in U (typo guard); an ID in P already has a trait (stale pending).
 
-**TDD loop (outer/inner).** Outer: failing integration test + Postman request (commit `test(<RULE>): red …`). Stub controller to compile/run. Inner per rule: red (unit test, compiles, fails) → green → refactor, one commit each. Outer goes green last. (Commit message format owned by orchestration.spec.)
+### C5. Integration harness
+- `PoliciesApiFactory : WebApplicationFactory<Program>`, one per test class (`IClassFixture`). If `Program` isn't visible, add `public partial class Program;` (verify in F0 whether .NET 10 generates it).
+- `ConfigureTestServices`: remove the app's `DbContextOptions<PoliciesDbContext>`, register SQLite on one **open** `SqliteConnection("DataSource=:memory:")` owned by the factory, `EnsureCreated()` once; register `services.AddSingleton<TimeProvider>(factory.Clock)` where `Clock` is a `FakeTimeProvider` at `TestClock.Now`.
+- Each test class constructor resets `Clock` to `TestClock.Now`; a test may `SetUtcNow` to cross a boundary. HTTP via `factory.CreateClient()`.
+- **BST boundary (required):** with `Clock` at `2027-06-30T23:30:00Z` (00:30 BST on 1 Jul), UK today is `2027-07-01`. Services.Tests: `UkCalendar_today_at_23_30_UTC_in_BST_is_the_next_UK_date`. Api.Tests: `Start_date_of_the_UTC_date_at_23_30_UTC_in_BST_is_rejected_as_past` (start `2027-06-30` → 422 SELL-2). Plus the GMT control: `2027-01-15T23:30:00Z` → UK today `2027-01-15`.
+- SQLite cannot prove SQL Server-specific behaviour (unique-violation codes, migrations); the pre-push idempotent script (C8) proves migrations generate; the rest is a README-stated gap.
 
-**Hooks.** `.githooks/pre-commit`: `dotnet build -warnaserror`. `.githooks/pre-push`: build + `dotnet test`. LF, executable bit, `core.hooksPath .githooks`.
+### C6. Outside-in TDD sequence (per feature node)
+| # | Step | Who | Content | Commit `TDD:` |
+|---|---|---|---|---|
+| 1 | Red: acceptance | tester | The **full** acceptance suite in Api.Tests: every success and failure row for the node's rules, each traited; the Postman requests; the throwing `src/` stubs needed to compile (C7); node IDs removed from `rule-coverage.pending.txt`. Builds; acceptance tests fail. | `red` |
+| 2 | Stub controller | builder | Controller action(s) returning hard-coded happy-path responses (status, `Location`, body shape). Happy-path rows go green; rule-violation rows stay red. | `stub` |
+| — | **Pause 1** | David | Calls the stub in Postman; reads the acceptance tests. Loop waits. | — |
+| 3 | Domain | tester → builder | Red unit tests in Domain.Tests for each rule boundary (`red`), then real domain behaviour replaces the throws (`green`). | `red`, `green` |
+| 4 | Services | tester → builder | Red Services.Tests where Services has logic (`red`), then orchestration + `UkCalendar` (`green`). | `red`, `green` |
+| 5 | Persistence | builder | Configurations, repository, migration. Acceptance rows depending on storage go green. | `green` |
+| 6 | Api | builder | Stub replaced by the real controller → service call, error mapping. **The whole acceptance suite goes green last.** | `green` |
+| 7 | Refactor | builder | No behaviour change; full suite stays green. | `refactor` |
+| 8 | Review | reviewer, security | Verdicts. On FAIL: the failure route (orchestration.spec). | — |
+| 9 | QA script | tester | `docs/qa/<plan-id>-<node-id>.md` from C10, after both PASS. | — |
+| — | **Pause 2** | orchestrator, David | The orchestrator first records the `gate.postman` receipt (C9). Then HITL sign-off with `walkthrough.md`, the QA script and Postman. | — |
 
-**Postman.** `tests/postman/Uinsure.Policies.postman_collection.json` (v2.1) + `local.postman_environment.json` (`baseUrl`). Folders per feature (`F1 Sell/`, `F2 Retrieve/` …), each with `happy path` and `rule violations`. Request name: `<RULE> · <condition> → <status>`, e.g. `SELL-2 · start today+61 → 422`. Each request has ≥1 `pm.test` whose name starts with the rule ID. Data self-created (`{{$guid}}` references); dates from pre-request scripts.
+No test is weakened or deleted after its red commit (reviewer checks).
 
-**QA script template** — `docs/qa/<plan-id>/<node-id>.qa.md`:
+### C7. Tester `src/` stub rule (hook-checkable)
+In a tester turn, a change under `src/**` is allowed only if it **adds** lines (no existing `src/` line is modified or deleted) and every added line, trimmed, matches one of:
+
+```text
+blank            ^$
+brace            ^[{}];?$
+using            ^using [\w.]+;$
+namespace        ^namespace [\w.]+;$
+type header      ^(public|internal)( (sealed|static|abstract|partial))* (class|record|struct|interface|enum) \w+(<[^>]+>)?(\(.*\))?( : [\w.<>, ]+)?;?$
+member signature ^(public|internal|protected)( (static|virtual|override|abstract|async))* [\w.<>?\[\], ]+ \w+(<[^>]+>)?\([^)]*\)( => throw new NotImplementedException\(\);)?$
+auto-property    ^(public|internal) [\w.<>?\[\], ]+ \w+ \{ get; (init; |set; )?\}$
+enum member      ^\w+,?$
+throw            ^throw new NotImplementedException\(\);$
+```
+
+Any other line (an `=` initialiser, `return`, `if`, any `new` other than `new NotImplementedException()`, attributes, logic) denies the edit. Green replaces every throw; a remaining `NotImplementedException` in `src/` at step 7 fails review. The PreToolUse mechanism is owned by guardrails.spec.
+
+### C8. Git hooks
+`.githooks/` (sh, LF via `.gitattributes`, executable bit in the index), enabled with `git config core.hooksPath .githooks`. `--no-verify` and hook-path overrides are denied to everyone (guardrails G11).
+- **pre-commit:** `dotnet build Uinsure.Policies.slnx -warnaserror`. Red commits pass because they compile.
+- **pre-push:** `dotnet build -c Release -warnaserror` → `dotnet test --solution Uinsure.Policies.slnx -c Release --no-build` → `dotnet tool restore && dotnet ef migrations script --idempotent --project src/Uinsure.Policies.Persistence --startup-project src/Uinsure.Policies.Api -o "$TMPDIR/migrate.sql"`. Any non-zero exit blocks the push; the script is not committed.
+- Postman is in no hook.
+
+### C9. Postman
+- v2.1 collection + `local` environment (`baseUrl` = `http://localhost:5080`, the HITL port). No secrets exist.
+- Run **manually** by David with the Postman CLI: `postman collection run tests/postman/Uinsure.Policies.postman_collection.json -e tests/postman/local.postman_environment.json`. Not in hooks, not in the pipeline (the pipeline smoke is `curl /health/ready`).
+- **Receipt before Pause 2:** the orchestrator runs the same command with `-i "<node folder>"` against the worktree API on port 5080 and records pass/fail as `gate.postman` in `loop.jsonl` (orchestration). The node folder holds only real-time-runnable requests (api-contract's real-time column). It depends on the F0a check in Q6 (a local collection runs without login); if that fails, Postman is David-only. David still steps through manually.
+- Folders per node (`F1 Sell`, `F2 Retrieve`, …), each with `happy path` and `rule violations`. Request name: `<RULE> · <condition> → <status>`, e.g. `SELL-2 · start today+61 → 422`. Each request has ≥1 `pm.test` whose name starts with the rule ID.
+- Requests create their own data; dates come from pre-request scripts on the real clock (the HITL API runs on the real `TimeProvider`).
+
+### C10. QA script template — `docs/qa/<plan-id>-<node-id>.md`
 ```markdown
 # QA script — <plan-id> / <node-id> — <feature name>
-Rule IDs: SELL-1, SELL-2, …            Branch/worktree: feature/F1-sell @ ../wt/F1-sell
-Commit under test: <sha>               API URL: http://localhost:<port>  Environment: local
+Rule IDs: SELL-1, SELL-2, …     Branch: feature/<plan-id>/<node-id>   Worktree: .claude/worktrees/<plan-id>-<node-id>
+Commit under test: <sha>        API URL: http://localhost:5080        Environment: local
 Preconditions:
-- [ ] `dotnet test` green in the worktree (paste summary: passed/failed/skipped)
-- [ ] API started from the worktree with a fresh SQLite file: <command>
-- [ ] Postman collection + `local` environment imported from this branch
+- [ ] `dotnet test` green in the worktree (passed / failed / skipped: __ / __ / __)
+- [ ] API started from the worktree with its own SQLite file: <command>
+- [ ] Postman collection + `local` environment from this branch
 
 | # | Rule | Postman request | Steps / input | Expected | Actual | Pass/Fail |
 |---|---|---|---|---|---|---|
-| 1 | SELL-2 | SELL-2 · start today+61 → 422 | Send; inspect body | 422; ProblemDetails names "60 days in advance" | | |
+| 1 | SELL-2 | SELL-2 · start today+61 → 422 | Send; inspect body | 422; `type` /problems/sell-2; `ruleId` SELL-2 | | |
 | 2 | … | | | | | |
 
-Exploratory notes / defects found (each defect → back into this feature's loop, not /plan-bug):
+Exploratory notes / defects (each defect becomes a finding on this node's failure route, not a /plan-bug):
 
 ## Sign-off
 Result: ☐ PASS ☐ FAIL       Steps passed: __ / __
@@ -177,9 +254,9 @@ Notes:
 ```
 
 ## Open questions
-- **Q1 (SELL-3, leap day):** start 2028-02-29 → `AddYears(1)` = 2029-02-28, −1 day = **2029-02-27** (365 days cover). Alternative reading: end 2029-02-28. Requirements say "handled and tested" but not the expected value → `/decide` before F1.
-- **Q2 (SELL-5, leapling):** DOB 29 Feb 2012, start 28 Feb 2028 is fine (2028 is leap); but in non-leap years does a 29-Feb-born turn 16 on 28 Feb or 1 Mar? (`DateOnly.AddYears` clamps to 28 Feb.) Edge only — `/decide`, likely "1 Mar" or "accept clamp", one test either way.
-- **Q3 (all date rules):** is "today" UTC or Europe/London? Decides whether a 23:30-UTC-in-BST test exists. Owned by architecture.spec.
-- **Q4:** cancellation date after the term end, or a pro-rata refund on a `CANCEL-5` future term — not specified; api-contract/architecture to settle, tests follow.
-- **Q5 (changes requirements.md):** §3 "Local git hooks run the build and tests" → should read "pre-commit builds; pre-push builds and tests", because red commits must be committable. §5 Postman bullet → "Newman can't run the v3 collection format (and is unmaintained); use the Postman CLI". §6 item 1 → proposed "no".
-- **Q6 (verify in F0):** xunit.v3 4.x + ArchUnitNET xUnitV3 adapter compatibility; Postman CLI local-file run without login; whether `public partial class Program` is still needed on .NET 10; Testcontainers.MsSql version if O3b adopted.
+- ~~Q1 SELL-3 leap day~~ resolved: 29 Feb start → 28 Feb end, named test.
+- ~~Q2 SELL-5 leapling~~ resolved: moot.
+- ~~Q3 today~~ resolved: Europe/London; BST boundary test in C5.
+- ~~Q4 after-end / CANCEL-5~~ resolved: CANCEL-7 (422); CANCEL-5 future term gets a full refund.
+- **Q5 — requirements.md edits.** Resolved in reconciliation (2026-10-17): applied to §3, §5 and §6. §3 "Local git hooks run the build and tests" → "pre-commit builds; pre-push builds, tests and generates the idempotent migration script"; §5 Postman → "Newman can't run the v3 format and is unmaintained; use the Postman CLI"; §6 item 1 → closed "no" (manual only); add rule rows CANCEL-7, COULD-2a, COULD-2b, COULD-2c (C4 fails until they exist).
+- **Q6 (open, verify in F0):** xunit.v3 4.x on MTP without `Microsoft.NET.Test.Sdk`; NetArchTest.eNhancedEdition version and loading on net10; `Microsoft.AspNetCore.Mvc.Testing`/EF SQLite/TrxReport versions; whether `public partial class Program` is still needed; Postman CLI install and local-file run without login; `dotnet ef migrations script --idempotent` exits 0 before the first migration exists.

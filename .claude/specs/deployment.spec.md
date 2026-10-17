@@ -1,6 +1,6 @@
 # deployment.spec.md
 
-Status: RESEARCH COMPLETE — decision pending
+Status: DECIDED — contract final (2026-10-17)
 Researched: 2026-10-17 · Feature: F5 (last, time-boxed, first to cut)
 
 **Scope guard.** One Azure DevOps multi-stage YAML pipeline, written as evidence. It's **never connected** to an Azure DevOps
@@ -13,7 +13,7 @@ be checked offline (see R8), and the README says exactly that.
 
 | Depends on | Assumption made here |
 |---|---|
-| `infrastructure.spec` | Subscription-scope `main.bicep` + `env/<env>.bicepparam`. Outputs `resourceGroupName`, `appName`, `appHostName`, `sqlServerFqdn`, `sqlDatabaseName`, `appPrincipalName`. Host is App Service Linux (if it becomes Container Apps, the app-deploy step changes, and so does the build: image push instead of zip) |
+| `infrastructure.spec` | Subscription-scope `main.bicep` + `env/<env>.bicepparam`. Outputs `resourceGroupName`, `appName`, `appHostName`, `sqlServerFqdn`, `sqlDatabaseName`, `appPrincipalName`. Host is App Service Linux (decided), so the build publishes the Api project (one of four src projects) as a zip, with no image |
 | `architecture.spec` | `/health/live` and `/health/ready` exist. Migrations are **SQL Server only**, never applied at app start-up. Config keys are `Database__Provider` and `ConnectionStrings__Policies` |
 | `testing.spec` | Assumed suites: unit, integration (`WebApplicationFactory` on SQLite), architecture. All run by `dotnet test` on the solution. Postman is **not** run in the pipeline (it belongs to the local hook/HITL decision) |
 | `guardrails.spec` | No secrets in YAML. There are no pipeline secrets at all with workload identity federation |
@@ -161,62 +161,127 @@ Uinsure-relevant claims.
   - `ubuntu-latest` + `global.json`.
   - The YAML is schema-checked offline.
   - Environments are named `uinsurepolicies-dev|test|prod`.
+- [x] **Final rulings (David, 2026-10-17):**
+  - OQ3: the YAML and Bicep checks stay in the manual `validate.ps1`. They are in no git hook.
+  - Accepted as proposed: the deployed dev host environment is named `Dev`, never `Development` (infrastructure).
 
 ---
 
-## Contract — PENDING (DRAFT)
+## Contract
+
+Binding for F5. It's written as evidence. **Never connected to Azure DevOps, and never run.**
+
+### Files
 
 ```text
 infrastructure/
   pipelines/
-    azure-pipelines.yml           trigger: main · pool ubuntu-latest · stages below
+    azure-pipelines.yml         trigger: main · pr: none · pool: vmImage ubuntu-latest · stages below
     templates/
-      deploy-env.yml              parameters: env, serviceConnection, dependsOn · one deployment job
+      deploy-env.yml            stage template; parameters: env, serviceConnection, dependsOn
   sql/
-    grant-app-identity.sql        idempotent CREATE USER FROM EXTERNAL PROVIDER + datareader/datawriter
-  validate.ps1                    (shared with infrastructure.spec) + YAML schema check
+    grant-app-identity.sql      idempotent CREATE USER [$(AppName)] FROM EXTERNAL PROVIDER + db_datareader/db_datawriter
+  validate.ps1                  shared with infrastructure.spec; step 4 = YAML schema check
 ```
+
+### Stages
 
 ```text
 Build ──► Dev ──► Test ──► Prod_Plan ──► [Approval on env uinsurepolicies-prod] ──► Prod
-          (auto)  (auto)   (what-if,       (UI-configured check)                    (deploy)
+          (auto)  (auto)   (what-if,       (configured in the ADO UI)                (deploy)
                             no env)
 ```
 
-**Stage `Build`** (job, not deployment):
-1. `UseDotNet@2` (`useGlobalJson: true`)
-2. `dotnet restore` · `dotnet build -c Release -warnaserror`
-3. `dotnet test -c Release --no-build --logger trx` → `PublishTestResults@2` (unit + integration + architecture)
-4. `dotnet tool restore` (dotnet-ef pinned in `.config/dotnet-tools.json`) · `dotnet ef migrations has-pending-model-changes` (fail if true)
-5. `ASPNETCORE_ENVIRONMENT=Production dotnet ef migrations script --idempotent -o $(Build.ArtifactStagingDirectory)/migrations.sql`
-6. `dotnet publish src/Uinsure.Policies.Api -c Release -o publish` → zip → `app.zip`
-7. `PublishPipelineArtifact@1` `drop` = `app.zip`, `migrations.sql`, `infrastructure/` (bicep + sql)
+`Dev`, `Test` and `Prod` are the **same stage template** called three times:
 
-**Template `deploy-env.yml`** (deployment job → `environment: uinsurepolicies-${{ parameters.env }}`, `strategy: runOnce`):
-1. `AzureCLI@2`: `az deployment sub what-if` then `az deployment sub create --location uksouth --parameters env/${env}.bicepparam`;
-   read outputs into pipeline variables (`##vso[task.setvariable ...]`)
-2. `AzureCLI@2`: install go-sqlcmd if absent · run `grant-app-identity.sql` · run `migrations.sql` (Entra auth as deploy identity)
-3. `AzureWebApp@1`: `app.zip` → `$(appName)`
-4. `bash`: curl `/health/ready` with retries (fail the stage if not 200)
+```yaml
+- template: templates/deploy-env.yml
+  parameters: { env: dev, serviceConnection: sc-uinsurepolicies-dev, dependsOn: Build }
+# test → dependsOn: Dev · prod → dependsOn: Prod_Plan
+```
 
-**Stage `Prod_Plan`** (plain job, prod service connection, no environment): `az deployment sub what-if` + echo the path of `migrations.sql`
-in the summary. It makes **no changes**.
+### Stage `Build` (plain job)
 
-**Variables:** none secret. Per-env values come from `.bicepparam` and template parameters only.
+1. `UseDotNet@2` with `useGlobalJson: true`. The SDK version and the MTP test runner both come from `global.json`.
+2. `dotnet restore`, then `dotnet build -c Release --no-restore -warnaserror`.
+3. `dotnet test -c Release --no-build -- --report-trx` (MTP), then `PublishTestResults@2` (VSTest/TRX format). Covers Domain.Tests,
+   Services.Tests, Api.Tests and Architecture.Tests. Postman isn't run.
+4. `dotnet tool restore` (dotnet-ef pinned in `.config/dotnet-tools.json`), then
+   `dotnet ef migrations has-pending-model-changes --project src/Uinsure.Policies.Persistence --startup-project src/Uinsure.Policies.Api`.
+   It fails if there are changes.
+5. With `ASPNETCORE_ENVIRONMENT=Production`, `dotnet ef migrations script --idempotent --project src/Uinsure.Policies.Persistence --startup-project src/Uinsure.Policies.Api -o $(Build.ArtifactStagingDirectory)/migrations.sql`.
+6. `dotnet publish src/Uinsure.Policies.Api -c Release -o publish` (only the Api project is published; it carries Services,
+   Persistence and Domain), then `ArchiveFiles@2` → `app.zip`.
+7. `PublishPipelineArtifact@1` publishes `drop`, which holds `app.zip`, `migrations.sql` and `infrastructure/` (bicep + sql).
 
-**Acceptance (F5 definition of done for deployment):** `infrastructure/validate.ps1` passes the YAML schema check on both YAML files,
-and the README states plainly: *"Never connected to Azure DevOps; templates not expanded by a real compiler; approvals are
-configured in the ADO UI and documented here."*
+### Template `deploy-env.yml` (one `deployment` job, `environment: uinsurepolicies-${{ parameters.env }}`, `strategy: runOnce`)
+
+1. **Infra:** `AzureCLI@2` (bash) runs `az deployment sub what-if --location uksouth --parameters bicep/env/<env>.bicepparam`, then
+   `az deployment sub create` with the same arguments. It reads the outputs (`appName`, `appHostName`, `sqlServerFqdn`,
+   `sqlDatabaseName`) into variables with `##vso[task.setvariable]`. The what-if output stays in the log as the record of the change.
+2. **SQL:** `AzureCLI@2` installs go-sqlcmd if it's absent. Then, as the deploy identity (`--authentication-method ActiveDirectoryDefault`):
+   - `grant-app-identity.sql -v AppName=$(appName)` runs first, because the system-assigned MI exists only after step 1.
+   - Then `migrations.sql`. The script is **idempotent**: each migration is guarded by `__EFMigrationsHistory`, so a re-run is a no-op.
+     Migrations are never applied at app start-up.
+3. **App:** `AzureWebApp@1` with `appType: webAppLinux` deploys `app.zip` to `$(appName)`. Confirm the input names against the task
+   reference when writing.
+4. **Smoke:** `curl --fail --retry 10 --retry-delay 6 --retry-all-errors https://$(appHostName)/health/ready`. A non-200 fails the stage.
+   `/health/ready` hits the DB, so it proves the MI grant too.
+
+### Stage `Prod_Plan` (plain job, prod service connection, no environment)
+
+`az deployment sub what-if` for prod, plus a run summary pointing at `migrations.sql` in the `drop` artifact. It makes **no changes**.
+It exists so that the prod approver reads the infra diff and the exact SQL **before** clicking Approve. Approval happens before a stage
+starts, so without this stage the approver would approve blind.
+
+**Prod approval:** an Approval check on environment `uinsurepolicies-prod` (approver: release manager, timeout 72 h). It lives in
+the ADO UI, not the YAML, so the README is its only evidence. That's a platform limit, not a gap.
+
+**Variables:** none are secret, and there is no variable group. Per-environment values come only from `.bicepparam` and template parameters.
+
+### One-time setup (README list; none of it done)
+
+1. Create an ADO project and a pipeline from `infrastructure/pipelines/azure-pipelines.yml`.
+2. Create three ARM service connections using **workload identity federation**: `sc-uinsurepolicies-dev|test|prod`. Authorise each one
+   for this pipeline only, never "all pipelines".
+3. Give each connection's identity rights at **subscription scope** to its own subscription (Contributor, or a narrower custom role),
+   because `main.bicep` creates the RG.
+4. Create one Entra group per environment as the SQL admin, holding that environment's deploy identity plus a break-glass human.
+   Put its object ID and name in `<env>.bicepparam`.
+5. Create the environments `uinsurepolicies-dev`, `uinsurepolicies-test` and `uinsurepolicies-prod`. They aren't auto-created
+   from YAML. Add the Approval check on prod.
+
+### Offline schema check (`validate.ps1` step 4)
+
+`check-jsonschema` (Python), run against Microsoft's Azure Pipelines `service-schema.json` (the schema behind the
+`check-azure-pipelines` pre-commit hook), on both YAML files. **The claim is exactly:** "the YAML is valid against the schema;
+template expansion, `${{ }}` expressions, task inputs, service connections and environments are not checked". The flag name is
+confirmed when the step is written (R8 **(?)**). `validate.ps1` (Bicep and YAML checks) is run by hand; it is in no git hook.
+
+**Acceptance (F5 deployment done):** `validate.ps1` passes the schema check on both files, and the README statement below is present.
+
+### README statement (verbatim)
+
+> **Never connected, never run.** This pipeline has never been connected to an Azure DevOps organisation or run. No service
+> connections, environments or approvals exist. The Bicep is linted and built locally, and the YAML is schema-checked locally.
+> Neither what-if nor a real pipeline compile was run, because both need Azure or Azure DevOps. The repo's real gate is its local
+> git hooks (requirements §3, "No CI"). This pipeline shows how CI/CD would look at Uinsure.
+
+### Cut order
+
+- **Plan level:** F7 is cut before F5.
+- **Within deployment:** `Prod_Plan` (what-if moves inside Prod) → the schema check (the README says "unvalidated") → the stage
+  template (three explicit stages).
+- **Never cut:** the prod environment approval, the WIF connections, migrations as a pipeline step, and the `/health/ready` smoke test.
 
 ---
 
 ## Open questions
 
-1. D2 is the real interview conversation: **script (review-gated) vs bundle (Learn's automation default)**. Which does David want to defend?
-2. Is go-sqlcmd preinstalled on `ubuntu-latest`, and does `ActiveDirectoryDefault` pick up the `AzureCLI@2` login? **(?)** Unverified. The
-   contract includes an install step either way.
-3. Should the YAML schema check join the local git hook, or stay a manual `validate.ps1`? (`guardrails.spec` / `testing.spec` own hooks.)
-4. requirements.md §3 says "validated locally". **Suggest amending it** to "Bicep linted and built locally; pipeline YAML schema-checked
-   locally. Neither what-if nor a pipeline compile is possible without Azure/ADO, and neither was run", so the claim matches the receipt.
-5. requirements.md §3 "No CI" vs a pipeline with a Build+test stage: worth one sentence in the README so a reviewer doesn't read
-   it as a contradiction (the pipeline is the Uinsure-shaped design; the hooks are what actually gate this repo).
+1. ~~Script vs bundle~~: **resolved**. It's the idempotent script, because it's review-gated: the approver reads `migrations.sql`.
+   The talking point is that Learn's default for automation is the bundle, and we chose the script deliberately.
+2. **(open)** Is go-sqlcmd preinstalled on `ubuntu-latest`, and does `ActiveDirectoryDefault` pick up the `AzureCLI@2` login? It's
+   unverifiable offline. The contract installs it if absent. The fallback is `az account get-access-token --resource https://database.windows.net/`.
+3. Resolved (David, 2026-10-17): no. The YAML/Bicep check stays the manual `validate.ps1` and is in no git hook.
+4. Resolved in reconciliation (2026-10-17): requirements.md §3 now says "validated locally and never connected to Azure". Amend requirements.md §3's "validated locally" to match the README statement. That's a follow-up outside this spec.
+5. ~~"No CI" vs a Build stage~~: **resolved**. The README statement's last two sentences cover it.
