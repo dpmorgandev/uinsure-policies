@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Uinsure.Policies.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "health/live",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "http://localhost:5080"
+    }
+  }
+}
