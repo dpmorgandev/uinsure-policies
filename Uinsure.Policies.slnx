@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj" />
+    <Project Path="src/Uinsure.Policies.Domain/Uinsure.Policies.Domain.csproj" />
+    <Project Path="src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj" />
+    <Project Path="src/Uinsure.Policies.Services/Uinsure.Policies.Services.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Uinsure.Policies.Api.Tests/Uinsure.Policies.Api.Tests.csproj" />
+    <Project Path="tests/Uinsure.Policies.Architecture.Tests/Uinsure.Policies.Architecture.Tests.csproj" />
+    <Project Path="tests/Uinsure.Policies.Domain.Tests/Uinsure.Policies.Domain.Tests.csproj" />
+    <Project Path="tests/Uinsure.Policies.Services.Tests/Uinsure.Policies.Services.Tests.csproj" />
+  </Folder>
+</Solution>

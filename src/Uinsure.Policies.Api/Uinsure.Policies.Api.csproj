@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Uinsure.Policies.Services\Uinsure.Policies.Services.csproj" />
+    <ProjectReference Include="..\Uinsure.Policies.Persistence\Uinsure.Policies.Persistence.csproj" />
+    <ProjectReference Include="..\Uinsure.Policies.Domain\Uinsure.Policies.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

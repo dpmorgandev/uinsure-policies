@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Uinsure.Policies.Domain\Uinsure.Policies.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
