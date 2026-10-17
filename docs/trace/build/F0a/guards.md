@@ -47,5 +47,29 @@
    force-push rule string was denied with `G5: force-push is denied for everyone`. That's the intended
    floor. Scripts that carry such strings go in a file (`node <file>`).
 
+## t14: settings deny and ask rules, .ignore — 2026-10-17
+
+`.claude/settings.json` now carries the Contract's permissions block. guardrails' settings draft is
+followed exactly, except for the push-to-`main` deny, which David dropped in t13 (G7 is marker-gated):
+- **deny** (holds in bypass): repo edit, delete and create, raw `api`, `auth`, and `pr merge` for `gh`;
+  force-push for `git`.
+- **ask**: `git push *`, `gh pr create *`, `gh pr comment *` (G6), and `Edit(//**/…)` for the harness
+  paths (`.claude/{agents,skills,hooks,specs,workflows}/**`, `.claude/settings*.json`, `.githooks/**`,
+  `.git/**`, `CLAUDE.md`), which gives G4's main-session prompt.
+- `.ignore` at the repo root holds `.claude/specs/`. It's a convenience only; `guard-agent.mjs` is the guard.
+
+**Live receipt (G4, main session):** an Edit to `CLAUDE.md` prompted in bypass mode.
+- First attempt: approved by mistake. The one-character change was reverted at once, and `git diff`
+  was clean.
+- Second attempt: **David denied it**, and the tool result read "The user doesn't want to proceed with
+  this tool use". This is the receipt; the first attempt only showed that the prompt appears.
+
+G6's ask rules were proven in t5. The deny rules sit behind the guard hooks, which fire first and deny
+the same commands (t13: raw `gh api` was denied by `guard-bash.mjs`). Their presence is asserted by the
+G13 self-test (t16).
+
+**Finding:** a heredoc that merely *names* a denied command (this section's first draft) was itself
+denied by `guard-bash.mjs`. Trail text with such strings is written with the Edit tool, not through Bash.
+
 **Settled by David (t13):** G7 is gated on the `main-locked` marker like G8 (no settings deny for pushes
 to `main`), and the stub grammar is testing C7's.
