@@ -93,7 +93,9 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 - Dispatch. Gate: the full `dotnet test --solution Uinsure.Policies.slnx` passes, and the diff ⊆ `src/**`.
 
 **`builder / write`** (evidence or docs nodes)
-- Dispatch with the task title. Gate: the node's acceptance commands from the DAG exit 0.
+- Dispatch with the task title. Gate: the node's acceptance commands from the DAG exit 0, and the diff ⊆
+  the node kind's paths (`infrastructure/**` for evidence; `README.md`, `docs/readme-checklist.md`,
+  `docs/pitch-deck/**` for docs).
 
 **`orchestrator / gates`**: run each, recording `gate.<name>`. All must exit 0:
 - `dotnet build Uinsure.Policies.slnx -warnaserror`
@@ -121,7 +123,8 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 **`git / integrate`**
 - Dispatch with `op: integrate`. Re-run the full suite yourself on the post-rebase HEAD and record
   `gate.integrate {head_sha, passed, failed}`.
-- A conflict → stop and show David the `conflict_files`. **Any later commit invalidates this receipt.**
+- A conflict → stop and show David the `conflict_files`. **Any later commit invalidates this receipt**, except
+  `chore(trace)` (diff ⊆ `docs/trace/**`) and plan-status commits (diff ⊆ `docs/plans/**`).
 
 **`orchestrator / trace`**
 - `node .claude/scripts/render-trace.mjs render <plan> <node>`, then `… check <plan> <node>`. Record

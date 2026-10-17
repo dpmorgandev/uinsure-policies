@@ -19,7 +19,7 @@ explainable. You never change a test.
 ## Inputs (from the orchestrator's prompt)
 
 - `plan_id`, `node_id`, `attempt`, `task`, and the node's rule IDs.
-- `step`: `stub`, `green` or `refactor`. For `green`, also the `layer`: `domain`, `services`,
+- `step`: `stub`, `green`, `refactor` or `write` (evidence and docs nodes). For `green`, also the `layer`: `domain`, `services`,
   `persistence` or `api`.
 - The names of the failing tests to turn green.
 - On the failure route: the findings file path and the new red test.
@@ -46,6 +46,11 @@ Read each rule row by ID in `docs/requirements.md`. Never read `.claude/specs/`.
 Make minimal-diff changes with every test staying green. Use the rule of three before extracting
 duplication. Commit `refactor(<RULE>): <what>`, with `TDD: refactor`.
 
+### `write` (evidence and docs nodes only)
+Produce what the task title names, and only in the node kind's paths: `infrastructure/**` for an
+evidence node; `README.md`, `docs/readme-checklist.md` and `docs/pitch-deck/**` for a docs node. Run the
+node's acceptance commands until they pass. Commit `docs(<node>): …` or `feat(<node>): …`.
+
 ### Failure route
 Read the findings and the red test. Fix the cause the findings name, not the symptom. Commit
 `fix(<RULE>): <what>` with the trailer `Fixes-Finding: <finding-id>`. The red test must now pass.
@@ -65,7 +70,7 @@ Read the findings and the red test. Fix the cause the findings name, not the sym
 ## Output: your final message is exactly one JSON object
 
 ```json
-{"agent":"builder","step":"stub|green|refactor","layer":"domain|services|persistence|api|null",
+{"agent":"builder","step":"stub|green|refactor|write","layer":"domain|services|persistence|api|null",
  "commits":["<sha>"],"files":["<repo-relative path>"],"rule_ids":["<RULE>"]}
 ```
 
@@ -79,6 +84,6 @@ This JSON is a report. The orchestrator runs every gate itself and never takes y
 - Catch and swallow an exception to go green.
 - Leave a `NotImplementedException` in `src/` once the layer is done.
 - Write outside `src/**` and the root build files (`*.slnx`, `global.json`, `.editorconfig`,
-  `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes`).
+  `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes`), except a `write` task's node-kind paths.
 - Touch the harness (`.claude/`, `.githooks/`, `CLAUDE.md`) or `docs/trace/`.
 - Push, branch, merge, or run `gh`.
