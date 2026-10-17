@@ -323,7 +323,7 @@ Closed after analysis (2026-10-17). Nothing is open:
    - Subagents load the project and user-level `CLAUDE.md`.
    - Ask rules prompt in bypass mode.
 
-   One finding changes the design: the main checkout's settings, hooks, agents and `CLAUDE.md` govern inside a worktree, fixed at session start. David ruled on its corrections, which are recorded as "F0a spike rulings" in guardrails, orchestration, agents-skills and traceability.
+   One finding changes the design: the main checkout's settings, hooks, agents and `CLAUDE.md` govern inside a worktree. Settings and agents reload live from its working tree, and `CLAUDE.md` is read at session start. David ruled on its corrections, which are recorded as "F0a spike rulings" in guardrails, orchestration, agents-skills and traceability.
 2. ~~Contracts.~~ **Resolved (2026-10-17):** every spec's Contract is final, including the architecture Contract for the four projects (`6abcf9c`).
 3. ~~App Insights wiring.~~ **Resolved:** F0b owns the app-side OpenTelemetry setup; F5 only supplies the connection string (`planning.spec.md`).
 4. ~~OWASP for the harness.~~ **Resolved (David, 2026-10-17):** mapped to the OWASP LLM Top 10 2026 plus the OWASP Top 10 for Agentic Applications for 2026, both verified from OWASP's own PDFs (`guardrails.spec.md`).

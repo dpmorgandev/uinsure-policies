@@ -212,7 +212,7 @@ A is one file and one test suite, visible in `settings.json`. B co-locates the r
   - OQ7: the OWASP mapping is re-keyed to the OWASP LLM Top 10 2026 plus the Top 10 for Agentic Applications for 2026; the 2025 list stays in Research as history.
   - Accepted as proposed: hooks block `--no-verify` and hook-path overrides for everyone (G11).
 - [x] **F0a spike rulings (David, 2026-10-17).** Receipts are in `docs/trace/build/F0a/spikes.md`.
-  - **Harness in force.** Inside a worktree, the main checkout's `settings.json`, hook scripts (via `CLAUDE_PROJECT_DIR`), agents and `CLAUDE.md` govern. All are fixed at session start, and the worktree copies are inert. A harness change therefore takes effect only once it's merged to `main` **and** a new session starts. G4's lock on worktree copies stays, as belt-and-braces.
+  - **Harness in force.** Inside a worktree, the main checkout's `settings.json`, hook scripts (via `CLAUDE_PROJECT_DIR`), agents and `CLAUDE.md` govern, and the worktree copies are inert. Settings and agents reload live from the main checkout's working tree; `CLAUDE.md` is read at session start (corrected 2026-10-17 after agents appeared and disappeared mid-session). A branch's harness change therefore takes effect once it's in the main checkout's files; a `CLAUDE.md` change also needs a new session. An uncommitted edit in the main checkout changes a running loop at once, which is why the main session's harness edits prompt (G4). G4's lock on worktree copies stays, as belt-and-braces.
   - **Identity, split rule.**
     - A call with `agent_id` is a subagent; no `agent_id` means the main session.
     - The role is `agent_type`, which is the agent file's `name:`.
@@ -232,7 +232,7 @@ These rules bind every hook. Each hook reads its stdin JSON, **catches every err
 - A subagent PreToolUse whose `agent_type` is empty or not in the role table is denied.
 - A SubagentStart or SubagentStop with an empty `agent_type` passes and is logged.
 
-**Harness in force:** the main checkout's settings, hook scripts, agents and `CLAUDE.md`, as read at session start. Worktree copies are inert.
+**Harness in force:** the main checkout's settings, hook scripts, agents and `CLAUDE.md`. Settings and agents reload live from the main checkout's working tree; `CLAUDE.md` is read at session start. Worktree copies are inert.
 
 **Stop gates:** a SubagentStop block reason always asks for the complete final message to be restated.
 

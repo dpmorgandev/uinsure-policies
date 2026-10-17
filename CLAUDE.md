@@ -9,8 +9,8 @@ Read rule rows there by ID. Every line must be something David can explain and d
 - `/orient` before any work. It ends with `/load-context-chain`, which waits for David's confirmation.
 - `/save-context` at node boundaries, at a hand-off to David, and when David asks.
 - `/feature` runs from a session launched in the main checkout. The harness in force (settings, hooks,
-  agents, this file) is the main checkout's, read at session start. A harness change needs a merge to
-  `main` and a new session.
+  agents, this file) is the main checkout's. Settings and agents reload live from its working tree;
+  this file is read at session start.
 
 ## Plan and loop skills
 
