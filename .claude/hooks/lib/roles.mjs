@@ -7,7 +7,7 @@ import { currentBranch, planNodeFromBranch } from './trace.mjs';
 
 export const ROLES = ['tester', 'builder', 'reviewer', 'security', 'investigator', 'git'];
 
-const BUILD_FILES = ['*.slnx', 'global.json', '.editorconfig', 'Directory.Build.props', 'Directory.Packages.props', '.gitattributes'];
+const BUILD_FILES = ['*.slnx', 'global.json', '.editorconfig', 'Directory.Build.props', 'Directory.Packages.props', 'BannedSymbols.txt', '.gitattributes'];
 const BY_KIND = {
   evidence: ['infrastructure/**'],
   docs: ['README.md', 'docs/readme-checklist.md', 'docs/pitch-deck/**'],

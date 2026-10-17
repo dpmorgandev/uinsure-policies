@@ -60,7 +60,9 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 
 **`builder / scaffold`** (optional, before red: only a node that adds a project)
 - Dispatch. Then `gate.scaffold`:
-  - Each new `src/` project builds: `dotnet build <csproj> -warnaserror` exits 0.
+  - Each new `src/` project builds: `dotnet build <csproj> -warnaserror` exits 0, built from the committed
+    tree alone (`git archive HEAD` into a scratch directory), not the working tree. An exe project (the Api)
+    may fail with CS5001 only, because red's `Program` stub supplies `Main`.
   - The diff ⊆ the root build files plus `src/*/*.csproj`, and `git diff --name-only <task_start>..HEAD -- '*.cs'`
     is empty: no behaviour before red.
   - The `.slnx` lists every `src/` and `tests/` project the node creates.
@@ -95,7 +97,9 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 **`builder / green`, per layer**
 - Dispatch with `layer`. Then `gate.green`:
   - The build passes.
-  - `domain` / `services`: the task's rule filters pass in that layer's test project.
+  - `domain` / `services`: the task's rule filters pass in that layer's test project, and each run reports
+    at least one test (exit code 8 is ignored, so a mistyped id would pass with zero). A node with no
+    rules: that layer's whole test project passes.
   - `persistence`: the build plus all unit tests pass.
   - `api`: **the whole Api.Tests acceptance suite passes**.
   - The diff ⊆ `src/**` plus the root build files.
@@ -175,7 +179,8 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
    one-line history of previous attempts from `loop.jsonl`. The hook renders `findings/<round>.md`.
    Record `findings(…)`.
 2. Dispatch the `tester` with `step: finding-red` and the findings path. Gate: each new test **fails** on
-   the current HEAD. An untestable finding needs its stated reason.
+   the current HEAD. An untestable finding needs its stated reason; when every finding is untestable, the
+   tester isn't dispatched and the reason is recorded in the `findings(…)` event.
 3. Dispatch the `builder` with the findings path and the red tests. Gate: those tests now pass, and the
    build passes.
 4. Return to `orchestrator / gates`, then `review / review`. The route runs inside the current task; it
@@ -195,7 +200,11 @@ Tests:    dotnet test --solution Uinsure.Policies.slnx
 Reply:    go  |  change: <what>
 ```
 - `go` → commit `paused_acceptance → in_progress`, mark the task done, and continue.
-- `change: …` → steer `D<n>` (`source: david`), then the failure route.
+- `change: …` → steer `D<n>` (`source: david`). Commit `paused_acceptance → in_progress`, run route steps
+  1–3, re-run `gate.stub` (the suite is red by design here, so step 4's gates and review don't apply),
+  then commit `in_progress → paused_acceptance`, record `pause1` and re-print the block.
+- While the loop runs, the app must not be running from the worktree: a running Api locks its `.exe` and
+  every build fails (MSB3027). David stops it before replying.
 
 **Pause 2** (`david / pause2`):
 1. **Postman receipt first.** Start the API from the worktree on port 5080 (delete the worktree's `*.db`

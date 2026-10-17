@@ -64,6 +64,12 @@ test('G1: tester → tests/T/T.csproj allow, Directory.Packages.props deny', () 
   assert.match(w(root, 'tester', 'Directory.Packages.props'), /^G1/);
 }));
 
+test('G1: the builder may write the root BannedSymbols.txt; the tester may not', () => withRepo('feature/build/F1', (root) => {
+  assert.equal(w(root, 'builder', 'BannedSymbols.txt'), null);
+  assert.match(w(root, 'tester', 'BannedSymbols.txt'), /^G1/);
+  assert.match(w(root, 'builder', 'docs/BannedSymbols.txt'), /^G1/);
+}));
+
 test('G1: a worktree path is resolved relative to the worktree root', () => withRepo('feature/build/F1', (root) => {
   assert.match(w(root, 'builder', join(root, '.claude', 'worktrees', 'build-F1', 'tests', 'X.cs')), /^G1/);
 }));

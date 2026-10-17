@@ -205,7 +205,7 @@ A is one file and one test suite, visible in `settings.json`. B co-locates the r
   - **LLM02 sensitive information disclosure:** the privacy check before snapshots or docs reach a public repo.
   - **Supply chain:** no third-party skills or plugins.
 - [x] **Final rulings (David, 2026-10-17):**
-  - OQ3: the builder may create the root build files (`global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes`, the `.slnx`); the tester creates the `tests/*.csproj` files (G1).
+  - OQ3: the builder may create the root build files (`global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `BannedSymbols.txt`, `.gitattributes`, the `.slnx`); the tester creates the `tests/*.csproj` files (G1).
   - OQ4: `Bash(gh pr merge *)` is denied for everyone. David always merges in the GitHub UI (G5).
   - OQ5: PR gate yes. `guard-bash.mjs` denies `gh pr create` unless the node's latest reviewer and security verdicts are PASS with `head_sha` = HEAD (G14).
   - OQ6: two privacy denylists: the committed `.claude/hooks/privacy-denylist.txt` (generic patterns only) and an optional, gitignored `.githooks/privacy-denylist.local.txt` (private terms). Both consumers read both (G10).
@@ -348,7 +348,7 @@ Resolved:
 Still open:
 1. **(open)** Does `agent_type` arrive for workflow `agent({agentType})` as well as for project subagents (G1 F0a probe)? If it doesn't, G1/G2's first leg falls back to frontmatter `hooks:` (O1-B). G3 is unaffected.
 2. **(open)** Which `settings.json` governs after `EnterWorktree`: the main checkout's copy or the worktree's? Probe in F0a. G4 locks the worktree copies either way.
-3. Resolved (David, 2026-10-17): the builder may create `global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `.gitattributes` and the `.slnx`; the tester creates the `tests/*.csproj` files under `tests/**` (G1).
+3. Resolved (David, 2026-10-17): the builder may create `global.json`, `.editorconfig`, `Directory.Build.props`, `Directory.Packages.props`, `BannedSymbols.txt`, `.gitattributes` and the `.slnx`; the tester creates the `tests/*.csproj` files under `tests/**` (G1).
 4. Resolved (David, 2026-10-17): `Bash(gh pr merge *)` is added to the deny list for everyone, in both the settings draft and G5. David always merges in the GitHub UI.
 5. Resolved (David, 2026-10-17): yes. `guard-bash.mjs` denies `gh pr create` unless the latest reviewer and security verdicts for the current node are PASS and their `head_sha` equals HEAD (G14, with fixtures).
 6. Resolved (David, 2026-10-17): two files. The committed `.claude/hooks/privacy-denylist.txt` holds generic patterns only; a gitignored, optional `.githooks/privacy-denylist.local.txt` holds private terms; the `/save-context` check and the pre-commit hook read both (G10, context C6).
