@@ -87,7 +87,7 @@ nodes:
       - "The commit-on-main deny hook is active from F0b start"
       - "The loop ran end to end: both pauses, walkthrough.md, signed QA script, PR merged, trace complete"
     tasks:
-      - {id: t1, role: builder, step: scaffold, layer: null, rules: [], title: "Uinsure.Policies.slnx listing the four src and four test projects; global.json; Directory.Build.props (test projects ignore exit code 8); Directory.Packages.props with verified versions; the four src csproj files with the architecture references; no .cs", status: pending}
+      - {id: t1, role: builder, step: scaffold, layer: null, rules: [], title: "Uinsure.Policies.slnx listing the four src and four test projects; global.json; Directory.Build.props (test projects ignore exit code 8); Directory.Packages.props with verified versions; the four src csproj files with the architecture references; no .cs", status: done}
       - {id: t2, role: tester, step: red, layer: acceptance, rules: [], title: "Four test projects; architecture tests with a deliberate breach shown failing; health integration test on SQLite + FakeTimeProvider; UkCalendar BST/GMT tests; 500 problem-body and startup-without-App-Insights tests; RuleCoverageTests with every id pending; Postman health requests; throwing stubs", status: pending}
       - {id: t3, role: builder, step: stub, layer: api, rules: [], title: "Health routes in src/Uinsure.Policies.Api answering with canned responses (callable; the health tests may stay red until persistence)", status: pending}
       - {id: t4, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the health stub in Postman, read the tests; go or change", status: pending}
