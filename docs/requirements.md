@@ -147,7 +147,7 @@ Routes, payloads and the full body shape are in `api-contract.spec.md`.
 1. An **orchestrator**, the `/feature` skill in the main session, picks up the next node from the plan DAG. It dispatches the named subagents, runs the gates itself via Bash, and stops for David's two pauses.
 2. The **git agent** creates the branch (`feature/<plan>/<node>`, or `bug/<plan>/<node>`) and its **worktree** at `.claude/worktrees/<plan>-<node>`, which the session enters with `EnterWorktree`. All agents for the feature work only inside that worktree. `main` and David's own checkout are never touched by agents.
 3. **tester** (red) → **builder** (stub, green, refactor) → **reviewer** (rules and acceptance met, code quality, no slop) + **security** (OWASP API Top 10 2023 on the diff). Reviewer and security produce verdicts only.
-4. **Failure route.** On a FAIL, the **investigator** diagnoses the root cause into `findings.md` → the tester writes a red test from the findings (skipped only if the finding is untestable, with a reason) → the builder fixes it → reviewer and security re-run. **Retry ladder:** attempts 1–2 take that route, attempt 3 escalates to `/plan-investigation`, and attempt 5 stops and asks David. A repeated finding escalates early. Only reviewer, security or gate FAILs count as attempts; David's steers (pause 1, pause 2, PR comments) take the same route without counting.
+4. **Failure route.** On a FAIL, the **investigator** diagnoses the root cause into `findings.md` → the tester writes a red test from the findings (skipped only if the finding is untestable, with a reason) → the builder fixes it → reviewer and security re-run. **Retry ladder:** attempts 1–2 take that route, attempt 3 escalates to `/plan-investigation`, attempt 4 takes the route again briefed by the investigation's accepted `amend-node`, and attempt 5 stops and asks David. A repeated finding escalates early. Only reviewer, security or gate FAILs count as attempts; David's steers (pause 1, pause 2, PR comments) take the same route without counting.
 5. **Integration (git agent):**
    - rebase the feature branch onto the latest `origin/main`
    - run the full test suite inside the worktree (unit, integration and architecture)
@@ -170,15 +170,15 @@ Every plan that changes code is a **DAG** in one shared format. The orchestrator
 /plan-dag            the initial full build     ─┐
 /plan-feature        a change to a live system  ─┼─► DAG (same schema) ─► orchestrator ─► loop ─► HITL ─► PR
 /plan-bug            an escaped defect          ─┘
-/plan-investigation  read-only reasoning ─► findings + recommended plans ─► David approves ─► /plan-feature or /plan-bug
+/plan-investigation  read-only reasoning ─► findings + recommendations ─► David approves ─► /plan-feature, /plan-bug or amend-node
 ```
 
 - **`/plan-dag`:** the build plan, F0a to F7. It runs once, and closes when the system exists.
 - **`/plan-feature`:** a change to the live system. It produces a small DAG (usually one feature node with tasks) that goes through the same loop, HITL and PR. If the change introduces a new rule, a **new rule ID is added to this file first**, so every change still traces back to a requirement.
 - **`/plan-bug`:** an escaped defect, meaning one found *after* merge. Its **first node is always a failing test that reproduces the bug.** It links to the broken rule ID and to the plan and node that introduced the faulty code (found through the activity trail). A defect David finds during HITL *before* merge isn't a plan-bug: it goes back into that feature's loop.
-- **`/plan-investigation`:** never changes code and never produces a DAG. Its output is findings, evidence, and **recommended plans** (feature or bug, each with a one-line reason). David chooses which to open, which keeps "decide what to do" apart from "do it". It is also the **attempt-3 escalation** in the retry ladder (see *Feature loop*, step 4).
+- **`/plan-investigation`:** never changes code and never produces a DAG. Its output is findings, evidence, and **recommendations** of three kinds, each with a one-line reason: `feature`, `bug`, or `amend-node` (a revised approach for the parent node's attempt 4). David accepts or rejects each, which keeps "decide what to do" apart from "do it". It is also the **attempt-3 escalation** in the retry ladder (see *Feature loop*, step 4). A standalone investigation is committed on a `chore/inv-NNN` branch via PR.
 - **Plan format:** two files per plan in `docs/plans/active/`. `<plan-id>.dag.yaml` is the only state: plan status and approval, nodes, and each node's explicit ordered tasks (per layer, each naming its rule ids), which the orchestrator loops through. `<plan-id>.plan.md` holds the reasoning (why, approach, rejected alternatives). One node per feature. Node and task status live in the YAML and change only through feature-branch commits; attempts are counted per node. Plan IDs: `build`, `feat-NNN`, `bug-NNN`, `inv-NNN`, with no slugs.
-- **Archive:** after David merges, the git agent moves the plan to `docs/plans/archive/` on a `chore/archive-<id>` branch, with a completion record built from git facts. A lesson is required at attempt 3 or more, on escalation, or when a node is cut, and is appended to `docs/lessons.md`.
+- **Archive:** a git-agent procedure, not a skill (there is no `/plan-archive`). After David merges, the git agent moves the plan to `docs/plans/archive/` on a `chore/archive-<id>` branch, with a completion record built from git facts. A lesson is required at attempt 3 or more, on escalation, or when a node is cut, and is appended to `docs/lessons.md`.
 - **Prior work:** before a new plan is written, `docs/plans/` is searched. This replaces agentflow's separate `check-existing-work`, `capture-lesson` and `consult-lessons` skills, which aren't worth separate skills at this volume.
 - **When the skills get built:** `/plan-dag` is built for the build. `/plan-feature`, `/plan-bug` and `/plan-investigation` are **specified now but built only when first needed**: the first escaped defect, change request or stuck loop.
 - *Prior art:* agentflow_phase3's `plan-feature` (120 lines), `plan-bug` (114), `plan-investigation` (139) and `plan-archive` (152) skills.
@@ -201,7 +201,7 @@ The mapping of each rule to its hook or permission is in `guardrails.spec.md`.
 ### Pipeline and environments
 
 - **No CI.** The task doesn't require it. Local git hooks: **pre-commit builds**, so red commits stay committable; **pre-push builds, runs the tests and generates the idempotent migration script**, which must succeed.
-- **Postman is in no git hook** and runs via the Postman CLI (Newman can't run the v3 collection format). David steps through it manually at both pauses. Before pause 2, the orchestrator also runs the feature's real-time-runnable Postman folder against the worktree API (port 5080) and records pass/fail in `loop.jsonl`, provided an F0a check shows the CLI runs a local collection without login; otherwise Postman is David's only.
+- **Postman is in no git hook** and runs via the Postman CLI (Newman can't run the v3 collection format). David steps through it manually at both pauses. Before pause 2, the orchestrator also runs the feature's real-time-runnable Postman folder against the worktree API (port 5080) and records pass/fail in `loop.jsonl`, F0a confirmed that the CLI runs a local collection without login, with a non-zero exit on a failing assertion (`docs/trace/build/F0a/tools.md`).
 - **Infrastructure as code and deployment are evidence, not deployed.**
   - Bicep for **dev, test and prod**, plus an Azure DevOps multi-stage pipeline with an approval gate before prod.
   - Both are validated locally and never connected to Azure; `az` is never run.
@@ -244,7 +244,7 @@ Nothing in `src/` or `tests/` may reference `.claude/`. Project responsibilities
 
 Each spec has four sections: **Research → Options → Decision → Contract**. Decisions are recorded inside the spec. Agents never read the specs; they act on the Contracts, distilled into contract-only skills.
 
-**Status (2026-10-17): every spec's Decision is DECIDED by David. The Contracts are still drafts, to be rewritten to match.**
+**Status (2026-10-17): every spec's Decision is DECIDED by David, and every Contract is final (`6abcf9c`).**
 
 | # | Spec (`.claude/specs/`) | Must settle |
 |---|---|---|
@@ -265,7 +265,7 @@ Analysis also produces the **`/plan-dag` skill**. The feature list for the build
 - **F0b** walking skeleton (the first loop run)
 - **F1** Sell, plus a bare GET (SELL-1..7; every Sell test is a POST → GET round trip)
 - **F2** Retrieve (GET-1, status, the current-term view, the full response shape)
-- **F3** Cancel, with the quote and claims (CANCEL-1..4, 6, 7, COULD-1, COULD-2a–c)
+- **F3** Cancel, with the quote and claims (CANCEL-1..4, 6, 7, COULD-1, COULD-2, COULD-2a–c)
 - **F4** Renew, with the cheque rule and CANCEL-5 (RENEW-1..6, COULD-3)
 - **F5** infrastructure and deployment evidence (cuttable, 3h budget, depends on F0b)
 - **F6** README (must; built from a checklist of every "README states…" in the specs)
@@ -309,14 +309,21 @@ Closed during analysis (2026-10-17):
 1. ~~Postman in the pre-push hook.~~ **No.** Postman is manual only, via the Postman CLI.
 2. ~~GitHub remote for PRs.~~ **A private repo under `dpmorgandev`**, made public at submission by David.
 3. ~~Workflow vs. skill for orchestration.~~ **The `/feature` skill** in the main session, dispatching named subagents.
-4. ~~Bicep CLI / `az`.~~ **The Bicep CLI, installed via winget**, validates locally. `az` is never run.
+4. ~~Bicep CLI / `az`.~~ **The Bicep CLI, installed via winget**, validates locally. `az` is never run. Installed in F0a: Bicep 0.48.1 and Postman CLI 1.75.0 (`docs/trace/build/F0a/tools.md`).
 5. ~~Worktrees.~~ **`EnterWorktree`** into `.claude/worktrees/<plan>-<node>`, shared by every agent on the node; HITL on port 5080 with a SQLite file per worktree and the `.slnx` in VS 2026. Inheritance is confirmed by a spike in F0a.
-6. ~~Agent identity in hooks.~~ **`agent_type`** in hook input drives the per-agent path guard and the activity trail. Confirmed by a spike in F0a.
+6. ~~Agent identity in hooks.~~ **`agent_type`** in hook input (the agent file's `name:`) drives the per-agent path guard and the activity trail. The F0a spike refined it: `agent_type` is sometimes empty on a subagent event, so a subagent is detected by `agent_id` and an empty role fails closed.
 7. ~~Integration.~~ **The git agent's rebase plus the full suite** before the PR, with `main` as the integration branch. No separate integration agent.
 
-Still open:
+Closed after analysis (2026-10-17). Nothing is open:
 
-1. **F0a spikes** (the first F0a task): subagents inherit the `EnterWorktree` cwd; the exact `agent_type` value for project agents, and hook `cwd`, after `EnterWorktree` on Windows; which `settings.json` governs inside a worktree; whether SubagentStop exit 2 re-prompts the agent; whether a dispatched subagent has `CLAUDE.md` loaded. If the worktree spike fails, orchestration falls back as its spec describes.
+1. ~~F0a spikes.~~ **Done (t3–t5, 2026-10-17)**, with receipts in `docs/trace/build/F0a/spikes.md`.
+   - Subagents inherit the `EnterWorktree` cwd, and hook `cwd` is the worktree.
+   - `agent_type` is the agent's name.
+   - SubagentStop exit 2 re-prompts.
+   - Subagents load the project and user-level `CLAUDE.md`.
+   - Ask rules prompt in bypass mode.
+
+   One finding changes the design: the main checkout's settings, hooks, agents and `CLAUDE.md` govern inside a worktree, fixed at session start. Its corrections to orchestration and guardrails are recorded there as open decisions for David.
 2. ~~Contracts.~~ **Resolved (2026-10-17):** every spec's Contract is final, including the architecture Contract for the four projects (`6abcf9c`).
 3. ~~App Insights wiring.~~ **Resolved:** F0b owns the app-side OpenTelemetry setup; F5 only supplies the connection string (`planning.spec.md`).
 4. ~~OWASP for the harness.~~ **Resolved (David, 2026-10-17):** mapped to the OWASP LLM Top 10 2026 plus the OWASP Top 10 for Agentic Applications for 2026, both verified from OWASP's own PDFs (`guardrails.spec.md`).
