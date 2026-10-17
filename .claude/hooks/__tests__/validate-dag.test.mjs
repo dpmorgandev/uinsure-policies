@@ -1,4 +1,5 @@
 // Fixtures for the DAG validator's scaffold step (planning.spec amendment, F0b t1). Run: node --test .claude/hooks/__tests__
+import './clean-git-env.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

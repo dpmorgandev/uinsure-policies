@@ -1,5 +1,6 @@
 // Fixtures for the guard hooks (guardrails.spec manifest G1–G5, G7–G9, G11, G14; identity; spec reads;
 // verdict and findings checks). Run: node --test ".claude/hooks/__tests__/*.test.mjs"
+import './clean-git-env.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync, readdirSync } from 'node:fs';
