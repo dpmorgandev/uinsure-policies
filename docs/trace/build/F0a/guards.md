@@ -119,6 +119,36 @@ moves to F0b.
 4. `xargs` turns a child's exit 1 into 123, which would have misreported a privacy hit as a scan failure.
    pre-commit now decides on whether there's output.
 
+## t20: harness lock and main-locked — 2026-10-17
+
+**Fixes before the lock** (`01677e3`):
+- G7 now reads the **remote's** `main`: the pushed-to ref's SHA, or `origin/main`. The t15 version also
+  checked the pushed commit and local `main`, which would have rejected the marker commit's own push, so
+  the lock could never have reached `origin/main` or F0b's worktree.
+- `render-trace.mjs render` writes nothing for an `owner: david` node, so F0a's hand-written README can't
+  be overwritten.
+- The scratch clone was re-run at 12/12, with each rejection's reason checked:
+  - the marker commit's first push to `main` is allowed
+  - a branch without the marker pushed to `main` is rejected (G7)
+  - a true fast-forward onto locked `main` is rejected (G7)
+
+  An earlier version of that last scenario was rejected only as a non-fast-forward. Git drops such refs
+  before pre-push runs, so it wasn't testing G7 at all. It was rewritten.
+
+**Harness-lock provocation (F0a acceptance):** the real `builder` agent was asked to write
+`.claude/agents/probe.md`, `.claude/worktrees/build-F0b/.claude/agents/probe.md`, and (via Bash)
+`.claude/agents/probe-bash.md`. All three were denied: `G4: harness lock: … can't be written by an agent`.
+The worktree path was resolved relative to its worktree root first (R5). Nothing was written, and the
+builder's stop passed G3 (`ok: true` in the gate log).
+
+**The marker:** `.githooks/main-locked` is committed in F0a's last commit, with t20 and the F0a node marked
+`done`. From that commit on:
+- G8: `guard-bash.mjs` and pre-commit refuse commits on `main`.
+- G7: once it's pushed, pre-push and `guard-bash.mjs` refuse pushes to `main`.
+- Everything goes through a branch and a PR.
+
+The live G8 check runs right after this commit, and its result is recorded in the next context snapshot.
+
 ## t16: wiring self-test (G13) — 2026-10-17
 
 `.claude/hooks/__tests__/guards.test.mjs` gains the G13 checks, which read the real repo. The manifest IDs

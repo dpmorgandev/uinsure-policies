@@ -36,7 +36,7 @@ Re-verify: `git log --oneline --grep='(build/F0a)'`
 | G5 | `gh repo edit` in bypass is denied | **Pass.** `gh repo edit --help` was denied by `guard-bash.mjs` (t19), as was raw `gh api` (t13). The settings deny sits behind the hook | this README; guards t13 |
 | G6 | The git agent pushes a feature branch; David is prompted and denies, and the prompt names the agent | **Pass, with a stand-in agent.** Push, PR create and PR comment each prompted in bypass and were denied. A subagent's push prompt read "from the general-purpose agent". The `git` agent itself is first exercised in F0b. **Open:** whether a push inside a compound command prompts | spikes t5 |
 | G7 | In a scratch clone, a hand-run push to `main` is rejected by pre-push | **Pass.** Marker-gated, as David ruled in t13. A push to locked `main`, and `HEAD:refs/heads/main` from a branch without the marker, were both rejected | guards t15 |
-| G8 | After the marker commit, a test commit on `main` is refused | **Pass in a scratch clone** (t15). The live check on this repo runs in t20, after the marker commit | guards t15; t20 |
+| G8 | After the marker commit, a test commit on `main` is refused | **Pass in a scratch clone** (t15, re-run in t20). The live check runs right after this README's commit, the marker commit, so its result is in the next context snapshot, carried to F0b's branch | guards t15, t20 |
 | G9 | A loop commit is accepted, and `git log` shows its trailers | **Partly.** commit-msg accepted matching trailers and rejected missing or wrong ones in a scratch clone. The first real loop commit **moves to F0b** | guards t15 |
 | G10 | The privacy scan blocks private content | **Pass, twice live.** It blocked this repo's own commit of a test fixture that held a literal user path (t16), and it refused a `/save-context` draft with a planted path (S6) | guards t16; context S6 |
 | G11 | A compile error, a red test and a broken migration are each rejected at commit or push | **Moves to F0b.** It needs the solution. Hook bypass (`--no-verify`, `-n`, hooks-path overrides) was denied live | guards t13, t15 |
@@ -55,7 +55,7 @@ Re-verify: `git log --oneline --grep='(build/F0a)'`
 | Spike: ask rules prompt in bypass | Pass (t5) |
 | Spike: a subagent has CLAUDE.md loaded | Pass, read at session start (t4, corroborated in t13) |
 | A failed spike is fixed or recorded as a design change | Every finding was ruled on by David (spike rulings, t13 rulings) |
-| Harness lock live: a provoked subagent write to `.claude/agents/**` is denied, incl. inside a worktree | Fixture for the worktree copy, and a live denial for `CLAUDE.md` and `.githooks/`. The agents-path live provocation runs in t20 |
+| Harness lock live: a provoked subagent write to `.claude/agents/**` is denied, incl. inside a worktree | **Pass (t20).** The `builder` agent's Write to `.claude/agents/probe.md`, its Write to `.claude/worktrees/build-F0b/.claude/agents/probe.md`, and a Bash redirect into `.claude/agents/` were all denied under G4. Nothing was written, and its stop passed G3 |
 | Postman CLI and Bicep CLI installed, versions recorded, local collection without login | Done (t6) |
 | requirements.md updated | Done (t7) |
 | docs/readme-checklist.md | Done (t17) |

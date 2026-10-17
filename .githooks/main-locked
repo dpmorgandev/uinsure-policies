@@ -1,0 +1,2 @@
+# main is locked (guardrails G7, G8). Committed as F0a's last commit: from here, no commits on main
+# and no pushes to main. Every change goes through a feature or bug branch and a PR that David merges.
