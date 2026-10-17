@@ -203,7 +203,7 @@ Only reviewer, security or gate FAILs count. David's steers (`D<n>`: PAUSE 1, PA
 | 3 | stop the loop; open `/plan-investigation` (`inv-NNN`). David approves its outcome (continue, `amend-node`, or cut); attempt 4 follows the investigation's approach |
 | 4 | step 8 with the investigation's findings |
 | 5 | **ESCALATED**: stop and ask David. No further automatic attempt |
-| any | a FAIL finding fingerprint `(rule_id, file, sha1(title))` equal to one from the previous attempt jumps straight to attempt 3 |
+| any | a FAIL finding fingerprint `(rule_id, file, sha1(what))` equal to one from the previous attempt jumps straight to attempt 3 |
 
 ### Verdict JSON schema v1 (reviewer and security, final message)
 The SubagentStop hook blocks the agent from stopping until its final message validates. Its block reason names the errors and asks for the **complete** verdict JSON to be restated, because after a re-prompt only the agent's last message reaches the orchestrator (F0a spike). Aligned with agents-skills' field list, with two changes: `verdict` is `PASS|FAIL` (not `NEEDS_WORK`), and reviewer/security run no commands, so evidence is the orchestrator's gate receipts (`gate_refs`), not their own.
