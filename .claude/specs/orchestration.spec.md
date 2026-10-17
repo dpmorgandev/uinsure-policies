@@ -30,7 +30,7 @@ Scope: the feature loop as a state machine. It runs from picking a node to archi
   - From inside a worktree session, `EnterWorktree` can only switch to paths **under `.claude/worktrees/`**. To move between features elsewhere, `ExitWorktree` first.
   - **PowerShell gets only the cwd check**, and **no check tracks what a shell command writes**: `cp`/redirects into the main checkout aren't refused. Guardrails needs a hook for this, and it matters on this Windows box, where PowerShell is the primary shell.
   - **`${CLAUDE_PROJECT_DIR}` stays at the main checkout.** Hook *commands* run main's scripts, while the hook's input `cwd` is the worktree. Hooks must write trail files under `cwd`'s repo root, never under `CLAUDE_PROJECT_DIR`.
-  - Entering "takes … project configuration such as `CLAUDE.md` and settings to that location". So the harness in force is the **branch's** copy, but the hook *scripts* resolve via `CLAUDE_PROJECT_DIR` to main's copy.
+  - Entering "takes … project configuration such as `CLAUDE.md` and settings to that location". So the harness in force is the **branch's** copy, but the hook *scripts* resolve via `CLAUDE_PROJECT_DIR` to main's copy. **Corrected by the F0a spikes (t3, t4):** the opposite holds. The main checkout's settings, hook scripts, agents and `CLAUDE.md` govern inside the worktree, fixed at session start, and the worktree copies are inert. The bootstrap hazard below therefore doesn't arise: a hook added on a branch isn't registered at all until it's merged and a new session starts.
   - **F0 bootstrap hazard:** a hook added on the F0 branch is registered in the worktree settings, but its script doesn't exist in main yet. The command then fails as a non-blocking error, and the trail **silently stays empty**. That is exactly agentkinOS's Task→Agent rename failure (see `trace-agent-activity.mjs` comments). Mitigation: in hook commands, resolve script paths from the input `cwd`, or accept that F0 is witnessed by git only.
 - **Unverified, so a spike is required** (15 min, first task of F0):
   - (a) whether **workflow** agents launched after `EnterWorktree` also start in the worktree and inherit the checks
@@ -154,6 +154,11 @@ Our own pre-PR rebase already makes the branch linear on top of `origin/main`. A
   - OQ7: a Postman receipt before PAUSE 2. The orchestrator runs the node's real-time-runnable Postman folder with the Postman CLI against the worktree API on port 5080 and records pass/fail in `loop.jsonl`. David still steps through manually, and Postman stays out of every git hook. It depends on an F0a check that the CLI runs a local collection without login; if that fails, Postman is David-only.
   - OQ8: only reviewer, security or gate FAILs count as attempts. David's steers at PAUSE 1, PAUSE 2 and in PR comments don't increment the attempt; they still go investigate → red → fix, as findings `D1`, `D2`… in `findings/D<n>.md`.
   - Accepted as proposed: the stub-controller commit carries `TDD: stub`, and the PR isn't raised while David's paragraph is empty.
+- [x] **F0a spike rulings (David, 2026-10-17)**, recorded in full in guardrails' Decision:
+  - B1 + C1 stand, and `EnterWorktree` carries subagents (t3).
+  - The harness in force is the main checkout's, fixed at session start, so `/feature` runs from a session launched in the main checkout.
+  - The verdict gate's block reason asks for the complete verdict JSON to be restated.
+  - The Postman receipt is viable: the CLI runs a local collection without login, and exits non-zero on a failing assertion (t6).
 
 ## Contract
 
@@ -163,6 +168,7 @@ Binding for `/feature`. The skill (`.claude/skills/feature/SKILL.md`) restates t
 - `/feature <plan-id> <node-id>`, e.g. `/feature build F1`. It runs in the **main session** (the orchestrator, not an agent). The node must be `ready` in `docs/plans/active/<plan-id>.dag.yaml` (all `depends_on` merged), else it refuses. The orchestrator walks the node's explicit `tasks` in order (planning.spec read algorithm), and each state below maps to one or more of those tasks.
 - Branch `feature/<plan-id>/<node-id>` (or `bug/<plan-id>/<node-id>` for a `bug-NNN` plan). Worktree `.claude/worktrees/<plan-id>-<node-id>`. Trail dir `docs/trace/<plan-id>/<node-id>/` (layout owned by traceability).
 - F0a is built by David in-session and does **not** run this loop; F0b is the first `/feature` run.
+- `/feature` runs in a session **launched in the main checkout**, because the harness in force is the main checkout's, read at session start (F0a spike rulings). A harness change needs a merge to `main` and a new session before a loop sees it.
 
 ### State machine (one node)
 Every step ends in its gate. The orchestrator runs each gate itself via Bash and appends the result to `loop.jsonl`. **A gate with no receipt is BLOCKED, never PASS.** A failed gate on steps 2–6 goes to step 8 (FAIL route).
@@ -200,7 +206,7 @@ Only reviewer, security or gate FAILs count. David's steers (`D<n>`: PAUSE 1, PA
 | any | a FAIL finding fingerprint `(rule_id, file, sha1(title))` equal to one from the previous attempt jumps straight to attempt 3 |
 
 ### Verdict JSON schema v1 (reviewer and security, final message)
-The SubagentStop hook blocks the agent from stopping until its final message validates. Aligned with agents-skills' field list, with two changes: `verdict` is `PASS|FAIL` (not `NEEDS_WORK`), and reviewer/security run no commands, so evidence is the orchestrator's gate receipts (`gate_refs`), not their own.
+The SubagentStop hook blocks the agent from stopping until its final message validates. Its block reason names the errors and asks for the **complete** verdict JSON to be restated, because after a re-prompt only the agent's last message reaches the orchestrator (F0a spike). Aligned with agents-skills' field list, with two changes: `verdict` is `PASS|FAIL` (not `NEEDS_WORK`), and reviewer/security run no commands, so evidence is the orchestrator's gate receipts (`gate_refs`), not their own.
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -283,7 +289,7 @@ _Generated from the trace by /feature; the paragraph above is David's._
 1. ~~Push vs PR contradiction~~ **Resolved** (Decision E): the git agent runs push and `gh pr create --draft` under `ask`.
 2. ~~PR before HITL~~ **Resolved**: draft PR before PAUSE 2, ready after sign-off; any later commit re-runs INTEGRATE.
 3. ~~Worktree and branch names~~ **Resolved**: `.claude/worktrees/<plan>-<node>`, `feature/<plan>/<node>`; requirements.md updated in the requirements pass.
-4. **(open)** Spike R1a–c in F0a. If `EnterWorktree` does not carry subagents, fall back to B2 (one `claude` session started in the worktree per feature).
+4. ~~Spike R1a–c in F0a.~~ **Resolved (F0a t3/t4):** `EnterWorktree` carries subagents, so there's no B2 fallback. (a) Workflow agents weren't tested, because workflows aren't used. (b) `EnterWorktree` doesn't reload agents or settings, which come from the main checkout at session start. (c) `agent_type` is the project agent's name.
 5. ~~F0 bootstrap~~ **Resolved**: F0a is built in-session with no loop, witnessed by git and trailers; F0b is the first loop run with hook receipts.
 6. ~~Git agent worth it~~ **Resolved** (agents-skills D1): yes, six agents.
 7. Resolved (David, 2026-10-17): before PAUSE 2 the orchestrator runs the node's real-time-runnable Postman folder via the Postman CLI against the worktree API (port 5080) and records `gate.postman` in `loop.jsonl`. David still steps through manually; Postman is in no git hook. It depends on an F0a check that the CLI runs a local collection without login, else David-only (step 14, HITL environment).

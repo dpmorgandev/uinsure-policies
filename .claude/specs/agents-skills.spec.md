@@ -34,7 +34,7 @@ Researched: 2026-10-17 · Settles: requirements.md §4 row 5 (roster, skills, wh
 
 > "When a subagent calls a tool, tool events such as `PreToolUse` and `PostToolUse` fire the same configured hooks as in the main conversation, and the input carries the `agent_id` and `agent_type` … that identify the subagent."
 
-`agent_type` = the agent's name (e.g. `builder`). Absent for main-thread calls. Settings-file hooks apply inside subagents. Deny = exit 2 (stderr to Claude; overrides even an "allow" JSON) or `permissionDecision: "deny"`. Frontmatter `hooks:` also work (scoped to that agent's lifetime; project ones need workspace trust; `Stop` → `SubagentStop`). `cwd` in hook input follows the worktree; `${CLAUDE_PROJECT_DIR}` does **not** (stays at the launch checkout) — hook scripts must resolve paths against `cwd`.
+`agent_type` = the agent's name (e.g. `builder`). Absent for main-thread calls. *(The F0a spike confirmed `agent_type` = `name`, and found it sometimes empty on subagent events, so a subagent is identified by `agent_id`; see guardrails' F0a spike rulings.)* Settings-file hooks apply inside subagents. Deny = exit 2 (stderr to Claude; overrides even an "allow" JSON) or `permissionDecision: "deny"`. Frontmatter `hooks:` also work (scoped to that agent's lifetime; project ones need workspace trust; `Stop` → `SubagentStop`). `cwd` in hook input follows the worktree; `${CLAUDE_PROJECT_DIR}` does **not** (stays at the launch checkout) — hook scripts must resolve paths against `cwd`.
 
 **Answers requirements.md §6 item 6: yes — the activity trail can be mechanical.**
 
@@ -161,10 +161,10 @@ Binding. The six agents live in `.claude/agents/<name>.md` (project scope); `nam
 ### Universal rules (every agent)
 
 - **No agent spawns agents** and **no agent loads skills at runtime**: `Agent` and `Skill` are absent from every `tools` list and repeated in `disallowedTools`. An agent's knowledge is its body plus its preloaded `skills:`.
-- **Agents never read `*.spec.md`** (or anything under `.claude/specs/`). The specs hold rejected options; agents get the contract only, via skills. Enforced by guardrails: PreToolUse denies Read/Grep/Glob on those paths and Bash commands naming them, for any call with `agent_type` set; a repo-root `.ignore` excludes `.claude/specs/` from Grep/Glob results (spike in F0a that the Grep tool honours it).
+- **Agents never read `*.spec.md`** (or anything under `.claude/specs/`). The specs hold rejected options; agents get the contract only, via skills. Enforced by guardrails: PreToolUse denies Read/Grep/Glob on those paths and Bash commands naming them, for any call with `agent_id` set (a subagent). The deny matches explicit `path` arguments and Glob patterns. A repo-root `.ignore` hides `.claude/specs/` from path-less Grep only (F0a spike), so it is a convenience, not a guard.
 - **Harness lock** (guardrails): no agent writes `**/.claude/{agents,skills,hooks,specs,workflows}/**`, `**/.claude/settings*.json`, `**/.githooks/**`, `.git/**` (by file tool) or `CLAUDE.md`.
 - Agents read `docs/requirements.md` rule rows by ID; the orchestrator's prompt gives plan id, node id, attempt, task and rule IDs, never spec text.
-- Every agent's **final message is one JSON object** (schemas below). Producer JSON (tester, builder, git) is a report only: gates are run by the orchestrator, never taken from it. Reviewer, security and investigator JSON is schema-checked by a SubagentStop hook, which blocks the stop until it conforms.
+- Every agent's **final message is one JSON object** (schemas below). Producer JSON (tester, builder, git) is a report only: gates are run by the orchestrator, never taken from it. Reviewer, security and investigator JSON is schema-checked by a SubagentStop hook, which blocks the stop until it conforms. The block reason asks for the complete JSON to be restated, because only the last message survives a re-prompt.
 - Commits carry the trailers `Agent`, `Plan`, `Node`, `Rule`, `TDD` (+ `Fixes-Finding`) per orchestration; explicit `git add <paths>` only.
 
 ### Roster
@@ -273,7 +273,7 @@ Rules: every `source_ids` entry is covered by at least one cause; `testable=fals
 | tester `src/` stubs only | the diff check rejects any added `src/` member body other than `throw new NotImplementedException()` |
 | reviewer / security / investigator read-only | no write or shell tools (allowlist) + PreToolUse deny on any write by those `agent_type`s |
 | no spawning, no runtime skills | `Agent`, `Skill` absent from `tools` |
-| agents never read specs | PreToolUse deny + `.ignore` (Universal rules) |
+| agents never read specs | PreToolUse deny, matching `path` arguments and Glob patterns; `.ignore` is a convenience only (Universal rules) |
 | no merge, no push to `main`, no force | permissions deny (incl. `gh pr merge *`) + PreToolUse; `ask` on push / `gh pr create` / `gh pr comment` |
 | no PR without receipts | PreToolUse on `gh pr create` (guardrails G14) denies unless the latest reviewer and security verdicts are PASS with `head_sha` = HEAD |
 | comments from `dpmorgandev` only | filter inside the `read-comments` command (git-workflow) + the orchestrator drops any returned comment by another author |
@@ -285,7 +285,13 @@ Rules: every `source_ids` entry is covered by at least one cause; `testable=fals
 2. ~~Worktree path~~ **Resolved:** `.claude/worktrees/<plan>-<node>` (orchestration C1).
 3. ~~Remove `Skill` from reviewer/security~~ **Resolved:** removed from all six.
 4. ~~Per-rule tester ↔ builder cycles vs batching per node.~~ **Resolved (David, 2026-10-17, planning.spec amendment):** batched per layer. Each node's explicit tasks run a tester red then a builder green per layer, and each task names the rule ids it covers.
-5. Spike in F0a: (a) workflow `agent()` inherits an `EnterWorktree`'d cwd (moot unless workflows are used); (b) `agent_type` = `name` exactly; (c) SubagentStop exit 2 re-prompts the agent with stderr; (d) diff-scope check on Windows paths; (e) the Grep tool honours `.ignore`; (f) a dispatched subagent has `CLAUDE.md` loaded. **(open)**
+5. Spike in F0a: (a) workflow `agent()` inherits an `EnterWorktree`'d cwd (moot unless workflows are used); (b) `agent_type` = `name` exactly; (c) SubagentStop exit 2 re-prompts the agent with stderr; (d) diff-scope check on Windows paths; (e) the Grep tool honours `.ignore`; (f) a dispatched subagent has `CLAUDE.md` loaded. **Resolved (F0a t3–t5)**, with receipts in `docs/trace/build/F0a/spikes.md`.
+   - (a) Not run: workflows aren't used.
+   - (b) Yes.
+   - (c) Yes, but only the last message survives.
+   - (d) Deferred to the G3 fixtures (t13/t16).
+   - (e) Only for path-less Grep.
+   - (f) Yes: the main checkout's project `CLAUDE.md` plus the user-level one, even after `EnterWorktree`.
 6. ~~Who records `start_sha`~~ **Resolved:** a SubagentStart hook (guardrails O2-A).
 7. ~~`fable`~~ **Resolved (moot):** no role uses it.
 8. ~~Security sees the reviewer's verdict~~ **Resolved:** neither sees the other's; both run in parallel.

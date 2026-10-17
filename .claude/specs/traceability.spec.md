@@ -14,7 +14,7 @@ The scope also covers the cross-links (investigation → plans, bug → broken r
 | Spec | Assumption (not decided there yet) | If it breaks |
 |---|---|---|
 | `orchestration` | Skill-driven loop (its A2). The main session runs inside the worktree via `EnterWorktree`. Loop events go to `loop.jsonl`. Branch `feature/<plan>/<node>`. Merge commit, so SHAs survive. Verdict JSON schema v1. The git agent posts verdicts as PR comments | Under squash merge the commit-level trail dies (it lives only in the PR). Under rebase-merge, SHAs in the trail go stale: key on trailers, not SHAs |
-| `agents-skills` | Every agent is a named file in `.claude/agents/`, so `agent_type` = `tester`/`builder`/`reviewer`/`security`/`investigator`/`git` (six agents). The orchestrator is the main session (no `agent_type`) | Unnamed agents arrive as `general-purpose`, and identity becomes ambiguous |
+| `agents-skills` | Every agent is a named file in `.claude/agents/`, so `agent_type` = `tester`/`builder`/`reviewer`/`security`/`investigator`/`git` (six agents). The orchestrator is the main session (no `agent_id`; F0a spike rulings) | Unnamed agents arrive as `general-purpose`, and identity becomes ambiguous |
 | `testing` | xUnit tests carry a rule marker: `[Trait("Rule","SELL-2")]`, or a custom `[Rule("SELL-2")]` trait attribute. QA script steps are tagged with rule ids. Rule filter command exists | The rule → test link falls back to test-name conventions (weaker) |
 | `planning` | Plan YAML lists rule ids per node and task. Investigation output lists recommended plans. Bug plans carry `breaks:` and `introduced_by:` | Cross-links lose their anchors |
 | `guardrails` | Denies agent Edit/Write to `docs/trace/**` (the investigator stays read-only; a hook files its findings) and `git add -A`. Implements the commit-trailer check | Trail files become editable by producers, so they would be self-report again |
@@ -154,7 +154,7 @@ Every record has `v` (schema version, `1`), `ts` (ISO-8601 UTC, from the hook/sc
 {"v":1,"ts":"2026-10-18T09:12:03Z","plan":"build","node":"F1","attempt":1,
  "agent":"builder","agent_id":"a1b2c3","tool":"Edit","tool_use_id":"toolu_01…",
  "file":"src/Uinsure.Policies.Domain/Policy.cs","command":null}
-// agent = hook agent_type, or "main" when absent. attempt = the last loop.jsonl event's attempt.
+// agent = hook agent_type when agent_id is present ("unknown" if agent_type is empty), or "main" when agent_id is absent (F0a spike rulings). attempt = the last loop.jsonl event's attempt.
 // Bash/PowerShell: "file":null, "command":"<first 200 chars, repo-relative paths>".
 // Read: "file" = the path read. Grep: "file" = the search path (or null), "command" = the pattern (first 200 chars).
 // A successful `git commit` also records "commit":{"sha":"<40 hex>","subject":"<subject>","tdd":"red|stub|green|refactor|null"}.
@@ -287,7 +287,7 @@ Completeness: OK | TRAIL INCOMPLETE: <reasons>
 
 ## Open questions
 1. ~~requirements.md §6.6~~ **Resolved:** hook input identifies the subagent, so the activity trail is mechanical (A3). The requirements update pass rewords §4 row 6b.
-2. **(open)** Spike in F0a: confirm `agent_type` after `EnterWorktree` on Windows with both `PowerShell` and `Bash` present, and that hook `cwd` is the worktree for subagent calls.
+2. ~~Spike in F0a~~ **Resolved (F0a t3/t4):** `agent_type` arrives after `EnterWorktree` on Windows and equals the agent's name, and hook `cwd` is the worktree for subagent calls. `agent_type` is sometimes empty on subagent events, so the activity record keys a subagent on `agent_id` (schema comment above).
 3. ~~F0's own trail~~ **Resolved:** F0a is git-only and labelled (see the F0a exception). F0b is the first fully witnessed node.
 4. Resolved (David, 2026-10-17): yes. `activity.jsonl` logs `Read`/`Grep` for `reviewer`, `security` and `investigator` only (Layout, Record schemas).
 5. **(open)** Is the `Rule` trait carried into the TRX under xUnit v3 + MTP (testing)? If not, rule → result joins on test names.
