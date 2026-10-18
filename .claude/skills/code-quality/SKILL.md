@@ -16,7 +16,7 @@ The code must be explainable line by line by David. Simple and correct beats cle
 - **Dependency injection at the layer seams:** `IPolicyService` (Api → Services), `IPolicyRepository`
   (Services → Persistence), `IReferenceGenerator` and the clock (`TimeProvider`). Anything else is concrete.
 - **Interfaces at layer seams only** (David, 2026-10-18), never inside the Domain. No generic repository,
-  no Unit of Work, no mediator, no mapper library. A model per layer, mapped by hand.
+  no Unit of Work, no mediator. A model per layer, mapped with Mapperly (compile-time); never AutoMapper.
 - **Open/closed** isn't a licence for extension points nobody asked for. Add one when the second case
   exists, not before.
 
