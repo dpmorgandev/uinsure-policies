@@ -83,6 +83,21 @@ public sealed class SellAmountShapeTests : IClassFixture<PoliciesApiFactory>
         await client.AssertNotStored("AMOUNT-1M-01");
     }
 
+    // The 1,000,000.00 cap bounds positive amounts only: a negative beyond it is still the 422 SELL-7, not a 400.
+    [Fact]
+    [Trait("Rule", "SELL-7")]
+    public async Task Amount_of_minus_1_000_000_01_is_rejected_with_422_SELL_7()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SELL7-NEG-1M-01").WithAmount(-1_000_000.01m).Build();
+
+        using var response = await client.PostPolicy(body);
+
+        var problem = await ProblemAssert.SingleRuleViolation(response, "SELL-7", Sell7Title);
+        Assert.Equal(-1_000_000.01m, problem.Member("amount").GetDecimal());
+        await client.AssertNotStored("SELL7-NEG-1M-01");
+    }
+
     // Below decimal.MinValue / 100, amount * 100 cannot be represented; the shape check must still answer.
     [Fact]
     [Trait("Rule", "SELL-7")]
@@ -96,5 +111,20 @@ public sealed class SellAmountShapeTests : IClassFixture<PoliciesApiFactory>
         var problem = await ProblemAssert.SingleRuleViolation(response, "SELL-7", Sell7Title);
         Assert.Equal(-1_000_000_000_000_000_000_000_000_000m, problem.Member("amount").GetDecimal());
         await client.AssertNotStored("SELL7-NEG-E27");
+    }
+
+    // The most negative amount that binds.
+    [Fact]
+    [Trait("Rule", "SELL-7")]
+    public async Task Amount_of_decimal_MinValue_is_rejected_with_422_SELL_7()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SELL7-NEG-MIN").WithAmount(decimal.MinValue).Build();
+
+        using var response = await client.PostPolicy(body);
+
+        var problem = await ProblemAssert.SingleRuleViolation(response, "SELL-7", Sell7Title);
+        Assert.Equal(decimal.MinValue, problem.Member("amount").GetDecimal());
+        await client.AssertNotStored("SELL7-NEG-MIN");
     }
 }
