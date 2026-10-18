@@ -28,9 +28,22 @@ internal static class ProblemAssert
         return problem;
     }
 
+    // GET-1: a 404 for a reference with no policy. It short-circuits before every rule, so it carries no
+    // violations[]; the detail and the reference extension name the normalised reference.
+    public static async Task<JsonElement> NotFound(HttpResponseMessage response, string instance, string normalisedReference)
+    {
+        var problem = await RuleProblem(response, HttpStatusCode.NotFound, "GET-1", "Policy not found", instance);
+
+        Assert.Equal($"No policy with reference '{normalisedReference}'.", problem.Member("detail").GetString());
+        Assert.Equal(normalisedReference, problem.Member("reference").GetString());
+        Assert.False(problem.TryGetProperty("violations", out _));
+        return problem;
+    }
+
     // The members every rule problem carries: type /problems/{rule-id lower-case}, title, status, detail,
-    // instance (the request path), ruleId and traceId.
-    public static async Task<JsonElement> RuleProblem(HttpResponseMessage response, HttpStatusCode status, string ruleId, string title)
+    // instance (the request path: /policies for a sale, /policies/{reference} as sent for a GET), ruleId
+    // and traceId.
+    public static async Task<JsonElement> RuleProblem(HttpResponseMessage response, HttpStatusCode status, string ruleId, string title, string instance = "/policies")
     {
         Assert.Equal(status, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
@@ -40,7 +53,7 @@ internal static class ProblemAssert
         Assert.Equal(title, problem.GetProperty("title").GetString());
         Assert.Equal((int)status, problem.GetProperty("status").GetInt32());
         Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("detail").GetString()));
-        Assert.Equal("/policies", problem.GetProperty("instance").GetString());
+        Assert.Equal(instance, problem.GetProperty("instance").GetString());
         Assert.Equal(ruleId, problem.GetProperty("ruleId").GetString());
         Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
         return problem;
@@ -71,7 +84,7 @@ internal static class ProblemAssert
 
     // A 400 shape error: ValidationProblemDetails with a non-empty errors map and a traceId, no ruleId.
     // Returns the errors map.
-    public static async Task<JsonElement> ValidationErrors(HttpResponseMessage response)
+    public static async Task<JsonElement> ValidationErrors(HttpResponseMessage response, string instance = "/policies")
     {
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
@@ -79,7 +92,7 @@ internal static class ProblemAssert
         var problem = await response.ReadJson();
         Assert.Equal(400, problem.GetProperty("status").GetInt32());
         Assert.Equal("One or more validation errors occurred.", problem.GetProperty("title").GetString());
-        Assert.Equal("/policies", problem.GetProperty("instance").GetString());
+        Assert.Equal(instance, problem.GetProperty("instance").GetString());
         Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
         Assert.False(problem.TryGetProperty("ruleId", out _));
 

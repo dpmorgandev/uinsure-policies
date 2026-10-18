@@ -2655,6 +2655,873 @@
           ]
         }
       ]
+    },
+    {
+      "name": "F2 Retrieve",
+      "description": "GET-1: retrieve a policy by reference. Each GET sells its own policy first (pre-request) and reads it back whole: the full PolicyResponse members, status Pending (future start) or Active (start today), term 1 as the current term, and no claims, refunds or cancellation. Unknown references are 404 /problems/get-1. Money is written with exactly 2 decimal places in the 201 body and the read-back (raw text checked). Status Expired and the current term of a two-term policy need a fake clock or a renewal: integration-test only. Also: the extreme negative amounts (-1e27, decimal.MinValue) are the 422 SELL-7.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// F2: dates from the real UK today (Postman can't fake time) and a fresh reference per request.",
+              "const pad = n => String(n).padStart(2, '0');",
+              "const ukToday = (() => {",
+              "    try {",
+              "        const text = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });",
+              "        if (/^\\d{4}-\\d{2}-\\d{2}$/.test(text)) { return text; }",
+              "    } catch (e) { /* no time-zone data: fall back to the machine's local date */ }",
+              "    const now = new Date();",
+              "    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());",
+              "})();",
+              "const parts = iso => iso.split('-').map(Number);",
+              "const utcIso = (y, m, d) => new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);",
+              "const addDays = (iso, n) => { const [y, m, d] = parts(iso); return utcIso(y, m, d + n); };",
+              "const addYears = (iso, n) => { const [y, m, d] = parts(iso); return utcIso(y + n, m, d); };",
+              "// SELL-3: start + 1 year - 1 day; a 29 Feb start ends on 28 Feb of the next year.",
+              "const endFor = iso => { const [y, m, d] = parts(iso); return m === 2 && d === 29 ? utcIso(y + 1, 2, 28) : addDays(addYears(iso, 1), -1); };",
+              "pm.variables.set('today', ukToday);",
+              "pm.variables.set('todayEnd', endFor(ukToday));",
+              "// The default body matches the integration builders' defaults (start today + 22, Katherine Johnson",
+              "// born 1981-08-26, 48 Quay St, Unit 5, M3 4LZ, 527.18).",
+              "const start = addDays(ukToday, 22);",
+              "pm.variables.set('start', start);",
+              "pm.variables.set('startEnd', endFor(start));",
+              "// A non-default start (today + 30) for the sale whose every value is read back.",
+              "const start30 = addDays(ukToday, 30);",
+              "pm.variables.set('start30', start30);",
+              "pm.variables.set('start30End', endFor(start30));",
+              "const reference = 'F2-' + Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 1296).toString(36).toUpperCase().padStart(2, '0');",
+              "pm.variables.set('reference', reference);",
+              "pm.variables.set('referenceLower', reference.toLowerCase());",
+              "// The sales a GET request makes in its own pre-request script before it reads the policy back.",
+              "const holder = { firstName: 'Katherine', lastName: 'Johnson', dateOfBirth: '1981-08-26' };",
+              "const property = { addressLine1: '48 Quay St', addressLine2: 'Unit 5', addressLine3: null, postcode: 'M3 4LZ' };",
+              "const sale = startDate => JSON.stringify({ reference, type: 'Household', startDate, amount: 527.18, autoRenew: true, paymentMethod: 'DirectDebit', policyholders: [holder], property });",
+              "pm.variables.set('defaultSale', sale(start));",
+              "pm.variables.set('todaySale', sale(ukToday));",
+              "// Every value differs from the builder defaults and the api.md example, so only a stored sale reads back as it.",
+              "pm.variables.set('distinctiveSale', JSON.stringify({",
+              "    reference, type: 'BuyToLet', startDate: start30, amount: 412.34, autoRenew: false, paymentMethod: 'Card',",
+              "    policyholders: [",
+              "        { firstName: 'Grace', lastName: 'Hopper', dateOfBirth: '1990-04-12' },",
+              "        { firstName: 'Alan', lastName: 'Turing', dateOfBirth: '1992-06-23' }",
+              "    ],",
+              "    property: { addressLine1: '7 Canal St', addressLine2: 'Flat 3', addressLine3: 'Ancoats', postcode: 'M4 6BX' }",
+              "}));"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "happy path",
+          "item": [
+            {
+              "name": "GET-1 · sold policy reads back in full → 200",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
+                      "pm.sendRequest({",
+                      "    url: pm.variables.get('baseUrl') + '/policies',",
+                      "    method: 'POST',",
+                      "    header: { 'Content-Type': 'application/json' },",
+                      "    body: { mode: 'raw', raw: pm.variables.get('distinctiveSale') }",
+                      "}, function (err, res) {",
+                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const sameMembers = (object, expected) => pm.expect(Object.keys(object).sort()).to.eql(expected.slice().sort());",
+                      "const assertContractShape = policy => {",
+                      "    sameMembers(policy, [\"reference\", \"type\", \"status\", \"currentTermNumber\", \"startDate\", \"endDate\", \"amount\", \"hasClaims\", \"autoRenew\", \"policyholders\", \"property\", \"terms\", \"payments\", \"refunds\", \"claims\", \"cancellation\"]);",
+                      "    sameMembers(policy.property, [\"addressLine1\", \"addressLine2\", \"addressLine3\", \"postcode\"]);",
+                      "    policy.policyholders.forEach(holder => sameMembers(holder, [\"firstName\", \"lastName\", \"dateOfBirth\"]));",
+                      "    policy.terms.forEach(term => sameMembers(term, [\"termNumber\", \"startDate\", \"endDate\", \"amount\", \"paymentReference\"]));",
+                      "    policy.payments.forEach(payment => sameMembers(payment, [\"reference\", \"type\", \"amount\"]));",
+                      "};",
+                      "// Every value sold, read back, with the one term as the current term and no claims, refunds or cancellation.",
+                      "const assertReadsBackAsSold = (policy, sold, end, status) => {",
+                      "    pm.expect(policy.reference).to.eql(sold.reference);",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.status).to.eql(status);",
+                      "    pm.expect(policy.currentTermNumber).to.eql(1);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.hasClaims).to.eql(false);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "    pm.expect(policy.refunds).to.eql([]);",
+                      "    pm.expect(policy.claims).to.eql([]);",
+                      "    pm.expect(policy.cancellation).to.eql(null);",
+                      "};",
+                      "pm.test(\"GET-1 · the policy was sold first (POST → 201)\", function () {",
+                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
+                      "});",
+                      "pm.test(\"GET-1 · sold policy answers 200 with exactly the contract's members\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    assertContractShape(pm.response.json());",
+                      "});",
+                      "pm.test(\"GET-1 · reads back every value sold, Pending before its start, with term 1 current\", function () {",
+                      "    const sold = JSON.parse(pm.variables.get(\"distinctiveSale\"));",
+                      "    assertReadsBackAsSold(pm.response.json(), sold, pm.variables.get(\"start30End\"), \"Pending\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/policies/{{reference}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies", "{{reference}}"]
+                }
+              }
+            },
+            {
+              "name": "GET-1 · start today reads back Active → 200",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
+                      "pm.sendRequest({",
+                      "    url: pm.variables.get('baseUrl') + '/policies',",
+                      "    method: 'POST',",
+                      "    header: { 'Content-Type': 'application/json' },",
+                      "    body: { mode: 'raw', raw: pm.variables.get('todaySale') }",
+                      "}, function (err, res) {",
+                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const sameMembers = (object, expected) => pm.expect(Object.keys(object).sort()).to.eql(expected.slice().sort());",
+                      "const assertContractShape = policy => {",
+                      "    sameMembers(policy, [\"reference\", \"type\", \"status\", \"currentTermNumber\", \"startDate\", \"endDate\", \"amount\", \"hasClaims\", \"autoRenew\", \"policyholders\", \"property\", \"terms\", \"payments\", \"refunds\", \"claims\", \"cancellation\"]);",
+                      "    sameMembers(policy.property, [\"addressLine1\", \"addressLine2\", \"addressLine3\", \"postcode\"]);",
+                      "    policy.policyholders.forEach(holder => sameMembers(holder, [\"firstName\", \"lastName\", \"dateOfBirth\"]));",
+                      "    policy.terms.forEach(term => sameMembers(term, [\"termNumber\", \"startDate\", \"endDate\", \"amount\", \"paymentReference\"]));",
+                      "    policy.payments.forEach(payment => sameMembers(payment, [\"reference\", \"type\", \"amount\"]));",
+                      "};",
+                      "// Every value sold, read back, with the one term as the current term and no claims, refunds or cancellation.",
+                      "const assertReadsBackAsSold = (policy, sold, end, status) => {",
+                      "    pm.expect(policy.reference).to.eql(sold.reference);",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.status).to.eql(status);",
+                      "    pm.expect(policy.currentTermNumber).to.eql(1);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.hasClaims).to.eql(false);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "    pm.expect(policy.refunds).to.eql([]);",
+                      "    pm.expect(policy.claims).to.eql([]);",
+                      "    pm.expect(policy.cancellation).to.eql(null);",
+                      "};",
+                      "pm.test(\"GET-1 · the policy was sold first (POST → 201)\", function () {",
+                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
+                      "});",
+                      "pm.test(\"GET-1 · a policy starting today answers 200 Active, with term 1 current\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const policy = pm.response.json();",
+                      "    assertContractShape(policy);",
+                      "    assertReadsBackAsSold(policy, JSON.parse(pm.variables.get(\"todaySale\")), pm.variables.get(\"todayEnd\"), \"Active\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/policies/{{reference}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies", "{{reference}}"]
+                }
+              }
+            },
+            {
+              "name": "GET-1 · start today+22 reads back Pending → 200",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
+                      "pm.sendRequest({",
+                      "    url: pm.variables.get('baseUrl') + '/policies',",
+                      "    method: 'POST',",
+                      "    header: { 'Content-Type': 'application/json' },",
+                      "    body: { mode: 'raw', raw: pm.variables.get('defaultSale') }",
+                      "}, function (err, res) {",
+                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const sameMembers = (object, expected) => pm.expect(Object.keys(object).sort()).to.eql(expected.slice().sort());",
+                      "const assertContractShape = policy => {",
+                      "    sameMembers(policy, [\"reference\", \"type\", \"status\", \"currentTermNumber\", \"startDate\", \"endDate\", \"amount\", \"hasClaims\", \"autoRenew\", \"policyholders\", \"property\", \"terms\", \"payments\", \"refunds\", \"claims\", \"cancellation\"]);",
+                      "    sameMembers(policy.property, [\"addressLine1\", \"addressLine2\", \"addressLine3\", \"postcode\"]);",
+                      "    policy.policyholders.forEach(holder => sameMembers(holder, [\"firstName\", \"lastName\", \"dateOfBirth\"]));",
+                      "    policy.terms.forEach(term => sameMembers(term, [\"termNumber\", \"startDate\", \"endDate\", \"amount\", \"paymentReference\"]));",
+                      "    policy.payments.forEach(payment => sameMembers(payment, [\"reference\", \"type\", \"amount\"]));",
+                      "};",
+                      "// Every value sold, read back, with the one term as the current term and no claims, refunds or cancellation.",
+                      "const assertReadsBackAsSold = (policy, sold, end, status) => {",
+                      "    pm.expect(policy.reference).to.eql(sold.reference);",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.status).to.eql(status);",
+                      "    pm.expect(policy.currentTermNumber).to.eql(1);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.hasClaims).to.eql(false);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "    pm.expect(policy.refunds).to.eql([]);",
+                      "    pm.expect(policy.claims).to.eql([]);",
+                      "    pm.expect(policy.cancellation).to.eql(null);",
+                      "};",
+                      "pm.test(\"GET-1 · the policy was sold first (POST → 201)\", function () {",
+                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
+                      "});",
+                      "pm.test(\"GET-1 · a policy starting today+22 answers 200 Pending, with term 1 current\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const policy = pm.response.json();",
+                      "    assertContractShape(policy);",
+                      "    assertReadsBackAsSold(policy, JSON.parse(pm.variables.get(\"defaultSale\")), pm.variables.get(\"startEnd\"), \"Pending\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/policies/{{reference}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies", "{{reference}}"]
+                }
+              }
+            },
+            {
+              "name": "GET-1 · lower-case reference finds the policy → 200",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
+                      "pm.sendRequest({",
+                      "    url: pm.variables.get('baseUrl') + '/policies',",
+                      "    method: 'POST',",
+                      "    header: { 'Content-Type': 'application/json' },",
+                      "    body: { mode: 'raw', raw: pm.variables.get('defaultSale') }",
+                      "}, function (err, res) {",
+                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const sameMembers = (object, expected) => pm.expect(Object.keys(object).sort()).to.eql(expected.slice().sort());",
+                      "const assertContractShape = policy => {",
+                      "    sameMembers(policy, [\"reference\", \"type\", \"status\", \"currentTermNumber\", \"startDate\", \"endDate\", \"amount\", \"hasClaims\", \"autoRenew\", \"policyholders\", \"property\", \"terms\", \"payments\", \"refunds\", \"claims\", \"cancellation\"]);",
+                      "    sameMembers(policy.property, [\"addressLine1\", \"addressLine2\", \"addressLine3\", \"postcode\"]);",
+                      "    policy.policyholders.forEach(holder => sameMembers(holder, [\"firstName\", \"lastName\", \"dateOfBirth\"]));",
+                      "    policy.terms.forEach(term => sameMembers(term, [\"termNumber\", \"startDate\", \"endDate\", \"amount\", \"paymentReference\"]));",
+                      "    policy.payments.forEach(payment => sameMembers(payment, [\"reference\", \"type\", \"amount\"]));",
+                      "};",
+                      "// Every value sold, read back, with the one term as the current term and no claims, refunds or cancellation.",
+                      "const assertReadsBackAsSold = (policy, sold, end, status) => {",
+                      "    pm.expect(policy.reference).to.eql(sold.reference);",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.status).to.eql(status);",
+                      "    pm.expect(policy.currentTermNumber).to.eql(1);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.hasClaims).to.eql(false);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "    pm.expect(policy.refunds).to.eql([]);",
+                      "    pm.expect(policy.claims).to.eql([]);",
+                      "    pm.expect(policy.cancellation).to.eql(null);",
+                      "};",
+                      "pm.test(\"GET-1 · the policy was sold first (POST → 201)\", function () {",
+                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
+                      "});",
+                      "pm.test(\"GET-1 · the route reference is upper-cased before the lookup: 200 for the sold policy\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    const policy = pm.response.json();",
+                      "    pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "    assertContractShape(policy);",
+                      "    assertReadsBackAsSold(policy, JSON.parse(pm.variables.get(\"defaultSale\")), pm.variables.get(\"startEnd\"), \"Pending\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/policies/{{referenceLower}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies", "{{referenceLower}}"]
+                }
+              }
+            },
+            {
+              "name": "GET-1 · amount 1000000.00 is written 1000000.00 → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "const amounts = text => (text.match(/\"amount\":\\s*-?[0-9][0-9.eE+-]*/g) || []).map(match => match.replace(/\"amount\":\\s*/, \"\"));",
+                      "pm.test(\"GET-1 · amount 1000000.00 is written 1000000.00 in the 201 body\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
+                      "    pm.expect(amounts(pm.response.text())).to.eql([\"1000000.00\", \"1000000.00\", \"1000000.00\"]);",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
+                      "    pm.test(\"GET-1 · amount 1000000.00 is written 1000000.00 in the read-back\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        pm.expect(amounts(res.text())).to.eql([\"1000000.00\", \"1000000.00\", \"1000000.00\"]);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 1000000.00,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "GET-1 · amount 803.40 is written 803.40 → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "const amounts = text => (text.match(/\"amount\":\\s*-?[0-9][0-9.eE+-]*/g) || []).map(match => match.replace(/\"amount\":\\s*/, \"\"));",
+                      "pm.test(\"GET-1 · amount 803.40 is written 803.40 in the 201 body\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
+                      "    pm.expect(amounts(pm.response.text())).to.eql([\"803.40\", \"803.40\", \"803.40\"]);",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
+                      "    pm.test(\"GET-1 · amount 803.40 is written 803.40 in the read-back\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        pm.expect(amounts(res.text())).to.eql([\"803.40\", \"803.40\", \"803.40\"]);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 803.40,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "GET-1 · amount 100 is written 100.00 → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "const amounts = text => (text.match(/\"amount\":\\s*-?[0-9][0-9.eE+-]*/g) || []).map(match => match.replace(/\"amount\":\\s*/, \"\"));",
+                      "pm.test(\"GET-1 · amount 100 is written 100.00 in the 201 body\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
+                      "    pm.expect(amounts(pm.response.text())).to.eql([\"100.00\", \"100.00\", \"100.00\"]);",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
+                      "    pm.test(\"GET-1 · amount 100 is written 100.00 in the read-back\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        pm.expect(amounts(res.text())).to.eql([\"100.00\", \"100.00\", \"100.00\"]);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 100,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "GET-1 · amount 527.180 is written 527.18 → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "const amounts = text => (text.match(/\"amount\":\\s*-?[0-9][0-9.eE+-]*/g) || []).map(match => match.replace(/\"amount\":\\s*/, \"\"));",
+                      "pm.test(\"GET-1 · amount 527.180 is written 527.18 in the 201 body\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
+                      "    pm.expect(amounts(pm.response.text())).to.eql([\"527.18\", \"527.18\", \"527.18\"]);",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
+                      "    pm.test(\"GET-1 · amount 527.180 is written 527.18 in the read-back\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        pm.expect(amounts(res.text())).to.eql([\"527.18\", \"527.18\", \"527.18\"]);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.180,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "rule violations",
+          "item": [
+            {
+              "name": "GET-1 · unknown reference → 404",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"GET-1 · an unknown reference answers 404 /problems/get-1\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    const reference = pm.variables.get(\"reference\");",
+                      "    pm.expect(problem.type).to.eql(\"/problems/get-1\");",
+                      "    pm.expect(problem.title).to.eql(\"Policy not found\");",
+                      "    pm.expect(problem.status).to.eql(404);",
+                      "    pm.expect(problem.detail).to.eql(\"No policy with reference '\" + reference + \"'.\");",
+                      "    pm.expect(problem.instance).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
+                      "    pm.expect(problem.ruleId).to.eql(\"GET-1\");",
+                      "    pm.expect(problem.reference).to.eql(reference);",
+                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(problem).to.not.have.property(\"violations\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/policies/{{reference}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies", "{{reference}}"]
+                }
+              }
+            },
+            {
+              "name": "GET-1 · unknown lower-case reference is named upper-cased → 404",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"GET-1 · an unknown lower-case reference answers 404 /problems/get-1\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    const reference = pm.variables.get(\"reference\");",
+                      "    pm.expect(problem.type).to.eql(\"/problems/get-1\");",
+                      "    pm.expect(problem.title).to.eql(\"Policy not found\");",
+                      "    pm.expect(problem.status).to.eql(404);",
+                      "    pm.expect(problem.detail).to.eql(\"No policy with reference '\" + reference + \"'.\");",
+                      "    pm.expect(problem.instance).to.eql(\"/policies/\" + pm.variables.get(\"referenceLower\"));",
+                      "    pm.expect(problem.ruleId).to.eql(\"GET-1\");",
+                      "    pm.expect(problem.reference).to.eql(reference);",
+                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(problem).to.not.have.property(\"violations\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/policies/{{referenceLower}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies", "{{referenceLower}}"]
+                }
+              }
+            },
+            {
+              "name": "GET-1 · reference failing the SELL-1 pattern → 404",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"GET-1 · a reference with an underscore answers 404 /problems/get-1\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    const reference = pm.variables.get(\"reference\") + \"_X\";",
+                      "    pm.expect(problem.type).to.eql(\"/problems/get-1\");",
+                      "    pm.expect(problem.title).to.eql(\"Policy not found\");",
+                      "    pm.expect(problem.status).to.eql(404);",
+                      "    pm.expect(problem.detail).to.eql(\"No policy with reference '\" + reference + \"'.\");",
+                      "    pm.expect(problem.instance).to.eql(\"/policies/\" + pm.variables.get(\"reference\") + \"_X\");",
+                      "    pm.expect(problem.ruleId).to.eql(\"GET-1\");",
+                      "    pm.expect(problem.reference).to.eql(reference);",
+                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(problem).to.not.have.property(\"violations\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/policies/{{reference}}_X",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies", "{{reference}}_X"]
+                }
+              }
+            },
+            {
+              "name": "SHAPE · unknown query parameter on GET → 400",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
+                      "pm.sendRequest({",
+                      "    url: pm.variables.get('baseUrl') + '/policies',",
+                      "    method: 'POST',",
+                      "    header: { 'Content-Type': 'application/json' },",
+                      "    body: { mode: 'raw', raw: pm.variables.get('defaultSale') }",
+                      "}, function (err, res) {",
+                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SHAPE · the policy was sold first (POST → 201)\", function () {",
+                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
+                      "});",
+                      "pm.test(\"SHAPE · unknown query parameter answers 400 with errors.colour and no ruleId\", function () {",
+                      "    pm.response.to.have.status(400);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    pm.expect(problem.title).to.eql(\"One or more validation errors occurred.\");",
+                      "    pm.expect(problem.instance).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
+                      "    pm.expect(problem).to.not.have.property(\"ruleId\");",
+                      "    pm.expect(problem.errors).to.have.property(\"colour\");",
+                      "    pm.expect(problem.errors.colour).to.eql([\"Unknown query parameter.\"]);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/policies/{{reference}}?colour=red",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies", "{{reference}}"],
+                  "query": [
+                    {
+                      "key": "colour",
+                      "value": "red"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "SELL-7 · amount -1e27 → 422",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SELL-7 · amount -1e27 answers 422 /problems/sell-7\", function () {",
+                      "    pm.response.to.have.status(422);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    pm.expect(problem.type).to.eql(\"/problems/sell-7\");",
+                      "    pm.expect(problem.title).to.eql(\"Policy amount must be greater than zero\");",
+                      "    pm.expect(problem.ruleId).to.eql(\"SELL-7\");",
+                      "    pm.expect(problem.instance).to.eql(\"/policies\");",
+                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(problem.violations.map(v => v.ruleId)).to.eql([\"SELL-7\"]);",
+                      "    pm.expect(problem.amount).to.eql(-1e27);",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(pm.variables.get(\"reference\")), function (err, res) {",
+                      "    pm.test(\"SELL-7 · nothing was stored (GET → 404)\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(404);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": -1000000000000000000000000000,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "SELL-7 · amount decimal.MinValue → 422",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SELL-7 · amount decimal.MinValue answers 422 /problems/sell-7\", function () {",
+                      "    pm.response.to.have.status(422);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    pm.expect(problem.type).to.eql(\"/problems/sell-7\");",
+                      "    pm.expect(problem.title).to.eql(\"Policy amount must be greater than zero\");",
+                      "    pm.expect(problem.ruleId).to.eql(\"SELL-7\");",
+                      "    pm.expect(problem.instance).to.eql(\"/policies\");",
+                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(problem.violations.map(v => v.ruleId)).to.eql([\"SELL-7\"]);",
+                      "    pm.expect(pm.response.text()).to.include('\"amount\":-79228162514264337593543950335');",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(pm.variables.get(\"reference\")), function (err, res) {",
+                      "    pm.test(\"SELL-7 · nothing was stored (GET → 404)\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(404);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": -79228162514264337593543950335,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
