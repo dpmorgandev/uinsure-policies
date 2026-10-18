@@ -1,5 +1,8 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Uinsure.Policies.Api.Tests.Builders;
 using Uinsure.Policies.Api.Tests.Support;
 using Xunit;
@@ -49,6 +52,24 @@ public sealed class PolicyMoneyFormatTests : IClassFixture<PoliciesApiFactory>
         await AssertWrittenWithTwoDecimalPlaces("GET1-MONEY-527-180", 527.180m, "527.18");
     }
 
+    // The writer pads and never rounds (finding A2/I3): a value with more than 2 decimal places is written
+    // exactly, so a missing Money.Round upstream shows in a test instead of being hidden here. No request can
+    // store such an amount (the 400 shape check), so the app's own configured serializer options, the ones
+    // every controller response is written with, are asked directly.
+    [Fact]
+    [Trait("Rule", "GET-1")]
+    public void Value_0_125_is_written_0_125_by_the_app_json_options_and_never_rounded()
+    {
+        Assert.Equal("0.125", JsonSerializer.Serialize(0.125m, AppJsonOptions()));
+    }
+
+    [Fact]
+    [Trait("Rule", "GET-1")]
+    public void Value_803_4_is_padded_to_803_40_by_the_app_json_options()
+    {
+        Assert.Equal("803.40", JsonSerializer.Serialize(803.4m, AppJsonOptions()));
+    }
+
     // The request carries the amount at the scale given (100 → "100", 527.180 → "527.180").
     private async Task AssertWrittenWithTwoDecimalPlaces(string reference, decimal amount, string expectedText)
     {
@@ -66,6 +87,9 @@ public sealed class PolicyMoneyFormatTests : IClassFixture<PoliciesApiFactory>
         AssertMoneyText(readBody, expectedText, "read-back");
         PolicyResponseAssert.ReadsBackAsSold(readBody, sold, reference, new DateOnly(2027, 11, 7), "Pending");
     }
+
+    private JsonSerializerOptions AppJsonOptions() =>
+        _factory.Services.GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
 
     private static void AssertMoneyText(JsonElement policy, string expectedText, string where)
     {
