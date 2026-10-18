@@ -20,7 +20,7 @@ internal static partial class PolicyMappings
         new Property(request.Property!.AddressLine1!, request.Property.AddressLine2, request.Property.AddressLine3, request.Property.Postcode!),
         ToDomain(request.PaymentMethod!.Value));
 
-    // hasClaims, refunds, claims and cancellation are canned until F3 supplies the data.
+    // Still canned until a later node supplies the data: refunds, claims and cancellation (empty, empty, null).
     // The policy-level dates and amount are the current term's (GET-1).
     public static PolicyResponse ToResponse(this PolicyDetails details)
     {
@@ -34,7 +34,7 @@ internal static partial class PolicyMappings
             term.Start,
             term.End,
             term.Amount,
-            false,
+            policy.HasClaims,
             policy.AutoRenew,
             [.. policy.Policyholders.Select(ToDto)],
             ToDto(policy.Property),

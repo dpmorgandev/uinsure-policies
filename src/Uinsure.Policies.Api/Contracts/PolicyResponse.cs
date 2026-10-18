@@ -1,7 +1,7 @@
 namespace Uinsure.Policies.Api.Contracts;
 
-// The full PolicyResponse of the API contract (GET-1). Status, currentTermNumber, hasClaims, refunds, claims
-// and cancellation are canned for now (stub step); the rest is what a sale reads back.
+// The full PolicyResponse of the API contract (GET-1). PolicyMappings fills it from the stored policy and
+// lists there which members are still canned.
 public sealed record PolicyResponse(
     string Reference,
     PolicyType Type,
