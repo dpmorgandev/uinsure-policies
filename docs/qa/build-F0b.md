@@ -2,7 +2,7 @@
 
 Rule IDs: none (F0b has no rule IDs; each step is tagged with the acceptance item it checks, `[AC-n]`, numbered as in `docs/plans/active/build.dag.yaml`)
 Branch: feature/build/F0b   Worktree: .claude/worktrees/build-F0b
-Commit under test: c2d9902 (the QA-script commit after it adds only this file)
+Commit under test: the HEAD of feature/build/F0b when you run it (it moves with each bookkeeping commit; record the SHA in the sign-off)
 API URL: http://localhost:5080   Environment: local (`tests/postman/local.postman_environment.json`)
 
 Commands are for PowerShell (the VS 2026 Developer PowerShell or a terminal), run from the worktree root.
@@ -60,18 +60,17 @@ worktree and is gitignored.
 | 14 | [AC-4] | covered by tests | `dotnet test --project tests/Uinsure.Policies.Services.Tests` | 10 passed. These are `UkCalendar` across BST and GMT, including `2027-06-30T23:30:00Z` → `2027-07-01` (BST) and `2027-01-15T23:30:00Z` → `2027-01-15` (GMT), and both clock-change days. | | |
 | 15 | [AC-4] | — | Banned API, by hand: `Set-Content src/Uinsure.Policies.Services/QaScratch.cs "namespace Uinsure.Policies.Services; internal static class QaScratch { internal static DateTime Stamp() => DateTime.Now; }"`, then `dotnet build Uinsure.Policies.slnx -warnaserror` | The build **fails** with `error RS0030` on `QaScratch.cs`: the symbol `DateTime.Now` is banned, "Use UkCalendar.Today(TimeProvider) instead." (VS also underlines it in red.) | | |
 | 16 | [AC-4] | — | Remove the scratch file: `Remove-Item src/Uinsure.Policies.Services/QaScratch.cs`. Then run `git status --short` and `dotnet build Uinsure.Policies.slnx -warnaserror`. | `git status` shows nothing under `src/`, and the build succeeds with 0 warnings and 0 errors. | | |
-| 17 | [AC-1] | covered by tests + red commit | Run `dotnet test --project tests/Uinsure.Policies.Architecture.Tests`. Then run `git show --stat 19c67f6`. | All Architecture tests pass at HEAD. In `19c67f6` (red), `DeliberateLayeringBreach.cs` in Domain uses `System.TimeProvider`, and the message records A1 failing on it. The breach is gone at HEAD (`src/Uinsure.Policies.Domain` has no `.cs` files). | | |
+| 17 | [AC-1] | covered by tests + red commit | Run `dotnet test --project tests/Uinsure.Policies.Architecture.Tests`. Then run `git show --stat 5f7f229`. | All Architecture tests pass at HEAD. In `5f7f229` (red), `DeliberateLayeringBreach.cs` in Domain uses `System.TimeProvider`, and the message records A1 failing on it. The breach is gone at HEAD (`src/Uinsure.Policies.Domain` has no source `.cs` files; `obj/` holds generated ones). | | |
 | 18 | [AC-3] | — | `dotnet ef migrations script --idempotent --project src/Uinsure.Policies.Persistence --startup-project src/Uinsure.Policies.Api -o $env:TEMP\uinsure-migrate.sql` | It succeeds, and the file starts with `IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL`. (On this machine `dotnet-ef` is a **global** 9.0.9 tool and warns that it is older than the 10.0.13 runtime. There's no tool manifest in the repo, so pre-push's `dotnet tool restore` installs nothing. See the notes.) | | |
 | 19 | [AC-10] | covered by tests | Run `dotnet test --project tests/Uinsure.Policies.Architecture.Tests -- --filter-class "Uinsure.Policies.Architecture.Tests.RuleCoverageTests"`. Open `tests/rule-coverage.pending.txt`. | 11 passed, and the file lists all 30 rule IDs. | | |
 | 20 | [AC-9] | — | **At Pause 2** (the record isn't written yet): read the "verify in F0" receipts that t13 renders into `docs/trace/build/F0b/` and `walkthrough.md`. Finding A1/I5 deferred them to t13, and the reviewer accepted that in `verdicts/A1-reviewer.json`. | The receipts record xunit.v3 on Microsoft.Testing.Platform without Microsoft.NET.Test.Sdk; the Mvc.Testing, EF Core Sqlite and NetArchTest.eNhancedEdition versions; TrxReport recorded as out of scope; the BannedApi doc-IDs; and that Program needs `public partial class` (`Program.cs` ends with `public partial class Program;`). If any receipt is missing, AC-9 fails. | | |
-| 21 | [AC-11] | harness self-test | `node --test ".claude/hooks/__tests__/*.test.mjs"` | `ok … G8: commit on main with the marker deny; without allow; on a feature branch allow`, and `.githooks/main-locked` exists. **Known:** at this commit the run gives 52 passed and 2 failed (`validate-dag: a leading builder scaffold before red is accepted` and `validate-dag: red stays mandatory after a scaffold`). pre-push runs this self-test, so a push will fail until the harness fixes them. | | |
+| 21 | [AC-11] | harness self-test | `node --test ".claude/hooks/__tests__/*.test.mjs"` | `ok … G8: commit on main with the marker deny; without allow; on a feature branch allow`, and `.githooks/main-locked` exists. The summary shows `# tests 60`, `# pass 60`, `# fail 0`. | | |
 | 22 | [AC-12] | — | Check the loop record: Pause 1 (t4) is done, `walkthrough.md` is rendered (t13), this script is signed below, and the PR is merged by you (t16). | Every item is present. Steps t13–t16 come after this script, so tick them at Pause 2. | | |
 
 ## Exploratory notes / defects
 
 Each defect becomes a finding on this node's failure route, not a /plan-bug.
 
-- Found while preparing this script: the harness self-test fails 2 of 54 (step 21). This is harness scope, not F0b `src/`.
 - Found while preparing this script: `dotnet-ef` isn't pinned in a repo tool manifest, so the version depends on the machine (step 18).
 - 
 - 
