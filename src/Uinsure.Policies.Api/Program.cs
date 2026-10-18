@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Uinsure.Policies.Api.Errors;
 using Scalar.AspNetCore;
@@ -5,7 +6,13 @@ using Uinsure.Policies.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// Strict input: unknown members, integer enums and string numbers are 400s.
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
+    options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+});
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddOpenApi();
