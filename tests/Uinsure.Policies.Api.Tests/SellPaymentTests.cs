@@ -25,6 +25,7 @@ public sealed class SellPaymentTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL6-PAYMENT");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL6-PAYMENT", new DateOnly(2027, 11, 7));
         var payment = Assert.Single(policy.GetProperty("payments").EnumerateArray());
         Assert.Equal("DirectDebit", payment.GetProperty("type").GetString());
         Assert.Equal(389.50m, payment.GetProperty("amount").GetDecimal());
@@ -75,9 +76,14 @@ public sealed class SellPaymentTests : IClassFixture<PoliciesApiFactory>
     {
         using var client = _factory.CreateClient();
 
-        var first = await client.SellAndReadBack(new SellPolicyRequestBuilder("SELL6-REF-ONE").Build(), "SELL6-REF-ONE");
-        var second = await client.SellAndReadBack(new SellPolicyRequestBuilder("SELL6-REF-TWO").Build(), "SELL6-REF-TWO");
+        var firstBody = new SellPolicyRequestBuilder("SELL6-REF-ONE").Build();
+        var secondBody = new SellPolicyRequestBuilder("SELL6-REF-TWO").Build();
 
+        var first = await client.SellAndReadBack(firstBody, "SELL6-REF-ONE");
+        var second = await client.SellAndReadBack(secondBody, "SELL6-REF-TWO");
+
+        SoldPolicyAssert.ReadsBackAsSold(first, firstBody, "SELL6-REF-ONE", new DateOnly(2027, 11, 7));
+        SoldPolicyAssert.ReadsBackAsSold(second, secondBody, "SELL6-REF-TWO", new DateOnly(2027, 11, 7));
         var firstReference = Assert.Single(first.GetProperty("payments").EnumerateArray()).GetProperty("reference").GetString();
         var secondReference = Assert.Single(second.GetProperty("payments").EnumerateArray()).GetProperty("reference").GetString();
         Assert.NotEqual(firstReference, secondReference);
