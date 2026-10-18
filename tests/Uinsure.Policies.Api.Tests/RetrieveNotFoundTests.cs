@@ -78,4 +78,33 @@ public sealed class RetrieveNotFoundTests : IClassFixture<PoliciesApiFactory>
         ProblemAssert.HasError(errors, "colour");
         Assert.Equal("Unknown query parameter.", errors.Member("colour")[0].GetString());
     }
+
+    // An action parameter bound from somewhere other than the query string is not a known query key (finding
+    // A2/I4): the reference comes from the route, so ?reference= is unbound and is the same 400.
+    [Fact]
+    public async Task Query_key_named_like_the_route_reference_on_a_get_is_rejected_with_400()
+    {
+        using var client = _factory.CreateClient();
+        await client.SellAndReadBack(new SellPolicyRequestBuilder("GET-QUERY-REF").Build(), "GET-QUERY-REF");
+
+        using var response = await client.GetAsync("/policies/GET-QUERY-REF?reference=X", TestContext.Current.CancellationToken);
+
+        var errors = await ProblemAssert.ValidationErrors(response, "/policies/GET-QUERY-REF");
+        ProblemAssert.HasError(errors, "reference");
+        Assert.Equal("Unknown query parameter.", errors.Member("reference")[0].GetString());
+    }
+
+    // The CancellationToken is a special parameter, never bound from the query, so ?cancellationToken= is unbound.
+    [Fact]
+    public async Task Query_key_named_like_the_cancellation_token_on_a_get_is_rejected_with_400()
+    {
+        using var client = _factory.CreateClient();
+        await client.SellAndReadBack(new SellPolicyRequestBuilder("GET-QUERY-CT").Build(), "GET-QUERY-CT");
+
+        using var response = await client.GetAsync("/policies/GET-QUERY-CT?cancellationToken=1", TestContext.Current.CancellationToken);
+
+        var errors = await ProblemAssert.ValidationErrors(response, "/policies/GET-QUERY-CT");
+        ProblemAssert.HasError(errors, "cancellationToken");
+        Assert.Equal("Unknown query parameter.", errors.Member("cancellationToken")[0].GetString());
+    }
 }
