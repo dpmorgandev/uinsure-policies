@@ -9,7 +9,7 @@ namespace Uinsure.Policies.Api.Controllers;
 
 [ApiController]
 [Route("policies")]
-public sealed class PoliciesController(PolicyService service) : ControllerBase
+public sealed class PoliciesController(IPolicyService service) : ControllerBase
 {
     [HttpPost]
     [EnableRateLimiting("writes")]

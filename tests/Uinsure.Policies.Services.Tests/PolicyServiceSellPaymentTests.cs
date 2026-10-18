@@ -17,7 +17,7 @@ public sealed class PolicyServiceSellPaymentTests
 
     public PolicyServiceSellPaymentTests()
     {
-        _service = new PolicyService(_repository, new FakeTimeProvider(TestClock.Now));
+        _service = new PolicyService(_repository, new ReferenceGenerator(), new FakeTimeProvider(TestClock.Now));
     }
 
     [Fact]

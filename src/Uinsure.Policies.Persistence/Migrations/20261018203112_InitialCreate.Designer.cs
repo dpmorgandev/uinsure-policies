@@ -12,7 +12,7 @@ using Uinsure.Policies.Persistence;
 namespace Uinsure.Policies.Persistence.Migrations
 {
     [DbContext(typeof(PoliciesDbContext))]
-    [Migration("20261018165247_InitialCreate")]
+    [Migration("20261018203112_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -25,7 +25,7 @@ namespace Uinsure.Policies.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Payment", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PaymentRecord", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -56,10 +56,10 @@ namespace Uinsure.Policies.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("[TermId] IS NOT NULL");
 
-                    b.ToTable("Payment");
+                    b.ToTable("Payment", (string)null);
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policy", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyRecord", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -92,10 +92,10 @@ namespace Uinsure.Policies.Persistence.Migrations
                     b.HasIndex("Reference")
                         .IsUnique();
 
-                    b.ToTable("Policies");
+                    b.ToTable("Policies", (string)null);
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policyholder", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyholderRecord", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -123,10 +123,10 @@ namespace Uinsure.Policies.Persistence.Migrations
 
                     b.HasIndex("PolicyId");
 
-                    b.ToTable("Policyholder");
+                    b.ToTable("Policyholder", (string)null);
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Property", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PropertyRecord", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -160,10 +160,10 @@ namespace Uinsure.Policies.Persistence.Migrations
                     b.HasIndex("PolicyId")
                         .IsUnique();
 
-                    b.ToTable("Property");
+                    b.ToTable("Property", (string)null);
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Term", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -188,44 +188,44 @@ namespace Uinsure.Policies.Persistence.Migrations
 
                     b.HasIndex("PolicyId");
 
-                    b.ToTable("Term");
+                    b.ToTable("Term", (string)null);
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Payment", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PaymentRecord", b =>
                 {
-                    b.HasOne("Uinsure.Policies.Domain.Policies.Term", null)
+                    b.HasOne("Uinsure.Policies.Persistence.Records.TermRecord", null)
                         .WithOne("Payment")
-                        .HasForeignKey("Uinsure.Policies.Domain.Policies.Payment", "TermId");
+                        .HasForeignKey("Uinsure.Policies.Persistence.Records.PaymentRecord", "TermId");
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policyholder", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyholderRecord", b =>
                 {
-                    b.HasOne("Uinsure.Policies.Domain.Policies.Policy", null)
+                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
                         .WithMany("Policyholders")
                         .HasForeignKey("PolicyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Property", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PropertyRecord", b =>
                 {
-                    b.HasOne("Uinsure.Policies.Domain.Policies.Policy", null)
+                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
                         .WithOne("Property")
-                        .HasForeignKey("Uinsure.Policies.Domain.Policies.Property", "PolicyId")
+                        .HasForeignKey("Uinsure.Policies.Persistence.Records.PropertyRecord", "PolicyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Term", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
                 {
-                    b.HasOne("Uinsure.Policies.Domain.Policies.Policy", null)
+                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
                         .WithMany("Terms")
                         .HasForeignKey("PolicyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policy", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyRecord", b =>
                 {
                     b.Navigation("Policyholders");
 
@@ -235,7 +235,7 @@ namespace Uinsure.Policies.Persistence.Migrations
                     b.Navigation("Terms");
                 });
 
-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Term", b =>
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
                 {
                     b.Navigation("Payment");
                 });

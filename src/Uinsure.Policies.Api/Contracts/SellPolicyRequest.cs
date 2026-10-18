@@ -21,6 +21,8 @@ public sealed class SellPolicyRequest : IValidatableObject
 {
     private static readonly Regex ReferencePattern = new("^[A-Z0-9-]{3,20}$", RegexOptions.None, TimeSpan.FromSeconds(1));
 
+    private const decimal MaxAmount = 1_000_000.00m;
+
     [Required]
     public string? Reference { get; init; }
 
@@ -53,6 +55,16 @@ public sealed class SellPolicyRequest : IValidatableObject
             yield return new ValidationResult(
                 "The reference must be 3 to 20 characters: letters, digits or hyphens.",
                 [nameof(Reference)]);
+        }
+
+        // Shape, not SELL-7: the value must be a whole number of pence and at most 1,000,000.00. A zero or
+        // negative amount within that scale is the 422 SELL-7. The remainder test cannot overflow for any
+        // decimal, however negative, which a multiplication by 100 would.
+        if (Amount is { } amount && (amount > MaxAmount || amount % 0.01m != 0))
+        {
+            yield return new ValidationResult(
+                "The amount must be at most 1,000,000.00 with no more than 2 decimal places.",
+                [nameof(Amount)]);
         }
     }
 }

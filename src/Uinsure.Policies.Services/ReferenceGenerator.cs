@@ -1,6 +1,6 @@
 namespace Uinsure.Policies.Services;
 
-public static class ReferenceGenerator
+public sealed class ReferenceGenerator : IReferenceGenerator
 {
-    public static string Payment() => $"PAY-{Guid.NewGuid():N}";
+    public string Payment() => $"PAY-{Guid.NewGuid():N}";
 }

@@ -75,4 +75,15 @@ public sealed class PolicyBuilder
         Assert.True(result.IsSuccess, "The builder's sale was expected to succeed.");
         return result.Value;
     }
+
+    // A policy with the given terms, in order, rebuilt through Policy.Restore: no sale can make more than
+    // one term until F4 adds renewal, so this is how a test gets a policy whose first and latest terms differ.
+    public Policy RestoreWithTerms(params Term[] terms) => Policy.Restore(
+        _reference,
+        _type,
+        _autoRenew,
+        false,
+        [.. _policyholders.Select(holder => holder.Build())],
+        _property,
+        terms);
 }

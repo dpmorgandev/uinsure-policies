@@ -105,7 +105,7 @@ public sealed class PolicyServiceSellStartDateTests
     public async Task Sell_reads_the_clock_once()
     {
         var clock = new CountingTimeProvider(TestClock.Now);
-        var service = new PolicyService(_repository, clock);
+        var service = new PolicyService(_repository, new ReferenceGenerator(), clock);
 
         var result = await service.Sell(new SellPolicyBuilder("SELL2-SVC-ONCE").Build(), TestContext.Current.CancellationToken);
 
@@ -114,7 +114,7 @@ public sealed class PolicyServiceSellStartDateTests
     }
 
     private Task<Result<PolicyDetails>> SellAt(DateTimeOffset utcNow, SellPolicy command) =>
-        new PolicyService(_repository, new FakeTimeProvider(utcNow)).Sell(command, TestContext.Current.CancellationToken);
+        new PolicyService(_repository, new ReferenceGenerator(), new FakeTimeProvider(utcNow)).Sell(command, TestContext.Current.CancellationToken);
 
     private void AssertSoldAndSaved(Result<PolicyDetails> result, DateOnly expectedStart)
     {

@@ -1,0 +1,59 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T20:54:38Z",
+  "plan": "build",
+  "node": "F1b",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "a358bcbc536d49561",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F1b",
+    "attempt": 2,
+    "base_sha": "e048cf53fb96a911b5e587f7d315230cdd353575",
+    "head_sha": "8b13192e4cd7fc9a5e75500e0977a6a529473335",
+    "diff_fingerprint": "ee877150d5e2ac99d98c1791129e05c78ae45784",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.finding-red",
+      "gate.green",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.vulnerable"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET:sql",
+      "NET:money",
+      "NET:packages",
+      "NET:secrets",
+      "NET:logging"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "API1:2023 n/a: Out of scope, no auth or tenancy; the reference is the only key.",
+      "API2:2023 n/a: Out of scope, authentication is not built.",
+      "API5:2023 n/a: Out of scope, no roles.",
+      "API7:2023 n/a: Out of scope; grep for HttpClient and WebRequest in src finds nothing.",
+      "API10:2023 n/a: Out of scope, no upstream APIs.",
+      "A1/S1 (amount * 100 overflow) is fixed at SellPolicyRequest.cs. The shape check is now `amount > MaxAmount || amount % 0.01m != 0`. A decimal remainder cannot overflow, and a negative amount within 2 decimal places goes on to the SELL-7 422. SellAmountOverflowTests and SellAmountShapeTests cover -1e27 and decimal.MinValue. gate.green shows 339/339 at head.",
+      "API3: Request DTOs are separate from the entities. The EF model is now internal Persistence records and nothing binds to Domain or EF types. PolicyResponse is built by hand and has no Version, HasClaims or internal Id. PolicyRecord.Version is internal and is not in Contracts/. The client cannot set EndDate, HasClaims, payment references or Version.",
+      "API4: Kestrel MaxRequestBodySize is 64 KB, with a 413 via BadHttpRequestException. The global and `writes` rate limits are partitioned on the remote IP, forwarded headers are trusted from private ranges only with KnownProxies and KnownIPNetworks cleared, and /health/* is exempt. String max lengths are on the DTO and the EF column (postcode 8, address lines 200, names 100, reference 20). There is no list endpoint. Amount is capped at 1,000,000.00 and 2 decimal places.",
+      "API6: This node adds no cancel, refund, claim or quote path. Concurrency is on PolicyRecord.Version (IsConcurrencyToken). UpdateTrackedRecords sets a new Version for every Modified loaded record, and PersistenceConflictException maps to 409 /problems/concurrency. The record map is per request (scoped repository, not static). SELL-1 duplicates are still caught by the unique index, with the race path converted to the SELL-1 result.",
+      "API8: The 500 body is generic, with no Exception.Message or StackTrace in any response. BadHttpRequestException keeps its 4xx status with fixed text. There is no UseDeveloperExceptionPage. HSTS and the 400 /problems/https-required rejection are on outside Development, and OpenAPI and Scalar are mapped in Development only. The ClientAbortLoggingMiddleware logs only method and path at Information, with no body, client IP or personal data, and rethrows to the framework handler. Abort handling relies on ExceptionHandlerMiddleware's own 499/Debug path, and ClientAbortedRequestTests pin the no-500 and never-Error behaviour.",
+      "API9: The only routes are POST /policies and GET /policies/{reference}, plus /health/*. There is no canned or stub value left in src: gate.stubs found no NotImplementedException, and PolicyStatus and CurrentTerm come from the Domain.",
+      "NET: There is no FromSqlRaw, ExecuteSqlRaw or SqlQueryRaw (EF LINQ only). There is no double or float in src. There are no secrets or connection strings with credentials in the diff. gate.vulnerable reports none across 8 projects. The only new package is Riok.Mapperly 4.3.1, approved in the contract, as a compile-time analyzer with PrivateAssets=all and ExcludeAssets=runtime, so it adds nothing at runtime. Logging arguments are method, path, status, reason and exception only.",
+      "P2 hygiene, not a finding: the rate limits are per instance, and the README is where that should be stated."
+    ]
+  }
+}

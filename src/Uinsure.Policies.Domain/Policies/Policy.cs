@@ -9,39 +9,58 @@ public sealed class Policy
     private const int MaxPolicyholders = 3;
     private const int MinimumAge = 16;
 
-    // For EF Core to materialise a stored policy; the navigations are filled in after construction.
-    private Policy()
-    {
-        Property = null!;
-        Policyholders = new List<Policyholder>();
-        Terms = new List<Term>();
-    }
-
     private Policy(
         PolicyReference reference,
         PolicyType type,
         bool autoRenew,
+        bool hasClaims,
         IReadOnlyList<Policyholder> policyholders,
         Property property,
-        Term term)
+        IReadOnlyList<Term> terms)
     {
         Reference = reference;
         Type = type;
         AutoRenew = autoRenew;
+        HasClaims = hasClaims;
         Policyholders = policyholders;
         Property = property;
-        Terms = [term];
-        Version = Guid.NewGuid();
+        Terms = terms;
     }
 
     public PolicyReference Reference { get; }
     public PolicyType Type { get; }
     public bool AutoRenew { get; }
     public bool HasClaims { get; }
-    public Guid Version { get; }
     public IReadOnlyList<Policyholder> Policyholders { get; }
     public Property Property { get; }
     public IReadOnlyList<Term> Terms { get; }
+
+    public Term LatestTerm => Terms[^1];
+
+    // The term covering today, else the latest (before the first start or after the last end).
+    public Term CurrentTerm(DateOnly today) => Terms.FirstOrDefault(t => t.Covers(today)) ?? LatestTerm;
+
+    // Derived, never stored. Cancelled joins when Cancellation exists (F3).
+    public PolicyStatus StatusOn(DateOnly today)
+    {
+        if (today < Terms[0].Start)
+        {
+            return PolicyStatus.Pending;
+        }
+
+        return today > LatestTerm.End ? PolicyStatus.Expired : PolicyStatus.Active;
+    }
+
+    // Persistence only: rebuilds stored state and runs no rule.
+    public static Policy Restore(
+        PolicyReference reference,
+        PolicyType type,
+        bool autoRenew,
+        bool hasClaims,
+        IReadOnlyList<Policyholder> holders,
+        Property property,
+        IReadOnlyList<Term> terms) =>
+        new(reference, type, autoRenew, hasClaims, holders, property, terms);
 
     // SELL-2, 4, 5 and 7 are all checked; none returns early.
     public static Result<Policy> Sell(
@@ -101,7 +120,7 @@ public sealed class Policy
         // SELL-6: the payment is for the full amount, by the method sold with.
         var payment = new Payment(paymentReference, method, amount);
         var term = new Term(start, amount, payment);
-        return Result<Policy>.Success(new Policy(reference, type, autoRenew, holders, property, term));
+        return Result<Policy>.Success(new Policy(reference, type, autoRenew, false, holders, property, [term]));
     }
 
     // SELL-5: 16 or older on the start date, so the 16th birthday itself passes. The years are compared first

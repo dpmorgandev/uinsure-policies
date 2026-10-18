@@ -1,0 +1,3302 @@
+diff --git a/Directory.Packages.props b/Directory.Packages.props
+index 731bdf2..2dd33d5 100644
+--- a/Directory.Packages.props
++++ b/Directory.Packages.props
+@@ -14,6 +14,7 @@
+     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+     <PackageVersion Include="Scalar.AspNetCore" Version="2.18.0" />
+     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
++    <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
+     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
+     <PackageVersion Include="xunit.v3" Version="4.0.2" />
+     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
+diff --git a/docs/context/20261018-185330-f1-done-merged.md b/docs/context/20261018-185330-f1-done-merged.md
+new file mode 100644
+index 0000000..7c28ac4
+--- /dev/null
++++ b/docs/context/20261018-185330-f1-done-merged.md
+@@ -0,0 +1,71 @@
++---
++timestamp: 2026-10-18T18:53:30Z
++previous-context: 20261018-021755-f0b-done-merged.md
++checkpoint: true
++status: in-progress
++plan: build
++node: F2
++phase: merge
++step: null
++attempt: null
++branch: main
++worktree: null
++head: c16703b
++tests: 277/277
++next-action: Fresh session in the main checkout: /orient, then /feature build F2 (Retrieve); SETUP turns the carry-overs into tasks
++open-decisions: 0
++---
++
++## Summary
++F1 (Sell + bare GET) is done and merged: PR #10, merge commit c16703b, signed off by David at Pause 2
++(QA 64/64 PASS, Postman 75/0 requests and 73/0 assertions, integrate 277/0). It took 2 attempts: the first
++review failed on both reviewer and security (A1). Steers D1 (transport hardening) and D2 (stub-proof tests)
++came at Pause 1. Its run produced three harness PRs: #7, #8 and #9.
++
++## Completed since last snapshot
++- Harness PR #7: transport rulings H1–H5 (e287848)
++- Harness PR #8: strict stub gate, distinct test data, full read-back, carry-overs as tasks (4cf3d0e)
++- Harness PR #9: trail integrity II, covering reconciled activity and fixes, findings rounds, Fixes-Finding format, PostToolUseFailure (41a2373)
++- F1 run:
++  - Pause 1: red → stub, then steers D1 and D2
++  - Domain, services (with an amended services stub task), persistence and api green, then refactor
++  - Review A1 FAIL → fixes → A2 PASS
++  - QA, integrate, trace (13 reconciliations, plus restored D2 and A1 findings), PR #10
++  - QA run 64/64 → sign-off (0d39041) → done (977998e) → merged (c16703b)
++- Cleanup: the F1 worktree and branch removed (local and origin); remote harness branches #7–#9 deleted
++
++## Current state
++main at c16703b. Tests 277/277 (harness self-test 68/68). There are 2 uncommitted files: the F1 trail tail
++(docs/trace/build/F1/loop.jsonl, activity.jsonl), which carries merged(c16703b). Like this snapshot, they ride
++in F2's first commit (context C8). No worktrees and no blockers.
++
++## Next action
++Start a fresh session in the main checkout, so every agent loads the current harness. Run /orient, then
++/feature build F2. In SETUP, each carry-over below becomes an amended F2 task, or David cuts it, before t1.
++
++## Carry-overs
++- Status and current term: Policy.StatusOn(today) and CurrentTerm(today) in the Domain, with red tests and the GET-1 trait. David deferred this to F2. — findings/A1.md I1, reviewer A1 R1
++- PolicyStatus is unused until F2; use it there. — reviewer A2 R2
++- A Services.Tests unit test for PolicyService's race-path conversion (PersistenceConflictException → SELL-1). — reviewer A2 R1
++- Money: amount has no rounding or scale bound (stored as sent on SQLite, rounded on SQL Server). Settle it before F3's refunds. — security A1/A2 notes
++- Trailer b99e310 (the A1/I6 fix; pre-rebase 9aed9be) carries Rule: SELL-5 on a rule-less 400 row. Trace accuracy only; record it, don't rewrite it. — reviewer A2 R3
++- Harness: rename the gate.postman(pass) event to fit the grammar, which rejects the parenthesised name. F1 recorded gate.postman. — F1 Pause 2
++- Harness: the dotnet-ef tool manifest is 9.0.9 against runtime 10.0.13. — F1 pre-push warning; F5
++- Harness: the git.md no-escape rule; the /feature integrate-receipt exception for docs/qa; rendering reconciled events in the README. — F0b snapshot, still open
++- QA script intro (docs/qa/build-F1.md) was fixed in 3781be1. Reconciled ids are tied to SHAs, so F1 history must not be rewritten. — F1 trace
++
++## Open decisions
++(none)
++
++## Decisions made
++- .claude/specs/api-contract.spec.md#rulings-david-2026-10-18-transport-hardening-f1-steer-d1
++- .claude/specs/testing.spec.md#c3-conventions
++- .claude/specs/traceability.spec.md#decision
++- .claude/specs/orchestration.spec.md#decision
++- docs/trace/build/F1/findings/A1.md (David's rulings: I1 deferred to F2; I6 caps 100/200)
++
++## Pointers
++- docs/plans/active/build.dag.yaml (F0a, F0b, F1 done; F2 pending, next)
++- docs/trace/build/F1/ (README.md, walkthrough.md, findings D1/D2/A1, verdicts A1/A2, reconciled events in loop.jsonl)
++- docs/qa/build-F1.md (signed, 64/64)
++- PR #10 (F1); harness PRs #7, #8, #9
+diff --git a/docs/context/20261018-194306-f1b-ready.md b/docs/context/20261018-194306-f1b-ready.md
+new file mode 100644
+index 0000000..0413a53
+--- /dev/null
++++ b/docs/context/20261018-194306-f1b-ready.md
+@@ -0,0 +1,66 @@
++---
++timestamp: 2026-10-18T19:43:06Z
++previous-context: 20261018-185330-f1-done-merged.md
++checkpoint: false
++status: in-progress
++plan: build
++node: F1b
++phase: plan
++step: null
++attempt: null
++branch: main
++worktree: null
++head: 93af3ac
++tests: not-run
++next-action: /feature build F1b (Layered models and interfaces); SETUP turns the F1 carry-overs into tasks or David cuts them
++open-decisions: 0
++---
++
++## Summary
++After F1 merged, David reviewed the code and asked for the layering he normally builds:
++- a model per layer: Api DTOs ↔ Domain ↔ internal Persistence records
++- interfaces at the layer seams
++- Mapperly instead of hand mapping, and never AutoMapper
++
++Three PRs set the contract and the plan. It is built as a new node, F1b, before F2. A GC and async review added one fix to F1b: a client-aborted request must not be a 500 logged at Error.
++
++## Completed since last snapshot
++- Harness PR #11: a model per layer, `Version` on `PolicyRecord`, `Policy.Restore`, interfaces at the seams, the aborted-request row, architecture tests A12–A15 (c8d306c)
++- Harness PR #12: Mapperly 4.3.1 approved, the AutoMapper ruling re-checked with sources (2bd2ef6). It carries the commit pushed after #11 merged.
++- Plan PR #13 (David's): node F1b before F2, F2 depends on F1b, F1b names Mapperly and the aborted-request fix (93af3ac)
++- GC review: no change needed, and the scoped record-map rule added to the contract. Async review: the cancellation finding, which went into F1b.
++- Harness worktrees and branches for #11–#13 removed locally.
++
++## Current state
++main at 93af3ac. 3 uncommitted: the F1 trail tail (docs/trace/build/F1/loop.jsonl, activity.jsonl) and the F1 done snapshot (20261018-185330), plus this one. All go into F1b's first commit (context C8). No worktree, no blockers. The last suite run was 277/277 at F1's merge; F1b has no runs yet.
++
++## Next action
++Run /feature build F1b. In SETUP, each carry-over below becomes an amended F1b task, or David cuts it or defers it to F2. Then t1 is the red: architecture tests A12–A15, the concurrency round trip, the aborted request.
++
++## Carry-overs
++- Status and current term: Policy.StatusOn and CurrentTerm with red tests and the GET-1 trait. David deferred them to F2, so defer again in F1b's SETUP. (findings/A1.md I1)
++- PolicyStatus is unused until F2. (reviewer A2 R2)
++- A Services.Tests unit test for the race-path conversion (PersistenceConflictException → SELL-1). F1b changes PolicyService, so this is a natural fit. (reviewer A2 R1)
++- Money: amount has no rounding or scale bound. Settle it before F3's refunds. (security A1/A2)
++- Trailer b99e310 carries Rule: SELL-5 on a rule-less row. Record it, never rewrite it. (reviewer A2 R3)
++- Harness items:
++  - gate.postman(pass) vs the event grammar (F1 Pause 2)
++  - the dotnet-ef tool manifest is 9.0.9 vs runtime 10.0.13 (F5)
++  - the git.md no-escape rule
++  - the integrate-receipt exception for docs/qa
++  - reconciled events in the README
++  (F0b/F1 snapshots)
++- Schedule: F1b now precedes F2–F4 and F6. F7 is cut if not started by 12:00 Monday 2026-10-19, and F5 by 14:00. (build.plan.md)
++
++## Open decisions
++(none)
++
++## Decisions made
++- .claude/specs/architecture.spec.md#decision (D1 amendment 2026-10-18: layering, Version, Restore, interfaces; the AutoMapper re-check and Mapperly)
++- .claude/specs/api-contract.spec.md#rulings-david-2026-10-18-transport-hardening-f1-steer-d1
++- docs/plans/active/build.plan.md (Approach: the F1b amendment)
++
++## Pointers
++- docs/plans/active/build.dag.yaml (F1 done; F1b pending, next; F2 depends on F1b)
++- docs/trace/build/F1/ (F1's trail)
++- PRs #11, #12 (harness), #13 (plan); PR #10 (F1)
+diff --git a/docs/plans/active/build.dag.yaml b/docs/plans/active/build.dag.yaml
+index 4abff26..c13bb25 100644
+--- a/docs/plans/active/build.dag.yaml
++++ b/docs/plans/active/build.dag.yaml
+@@ -152,10 +152,10 @@ nodes:
+     rules: []
+     cuttable: false
+     budget: null
+-    status: pending
+-    attempt: 0
+-    branch: null
+-    worktree: null
++    status: in_progress
++    attempt: 2
++    branch: feature/build/F1b
++    worktree: .claude/worktrees/build-F1b
+     pr: null
+     qa: docs/qa/build-F1b.md
+     trace: docs/trace/build/F1b/
+@@ -165,23 +165,29 @@ nodes:
+       - "A stale save still answers 409 /problems/concurrency, now through PolicyRecord.Version; a duplicate still answers SELL-1 409"
+       - "The repository's loaded-record map is scoped per request, never static"
+       - "A request the client aborts (OperationCanceledException with RequestAborted) is logged below Error and gets no 500 problem body"
++      - "Money (carry-over, David 2026-10-18): an amount with more than 2 decimal places, or above 1,000,000.00, is a 400 shape error; nothing ambiguous is stored"
++      - "Policy.LatestTerm, CurrentTerm(today) and StatusOn(today) live in the Domain with Domain.Tests (GET-1 traits come in F2), and PolicyService uses them"
++      - "A Services.Tests unit test covers the race-path conversion to the SELL-1 result (carry-over, reviewer A2 R1)"
+     tasks:
+-      - {id: t1, role: tester, step: red, layer: acceptance, rules: [], title: "Architecture tests A12-A15 failing on the F1 code; a concurrency round-trip test through the records; a client-aborted request test (not logged at Error, no 500); throwing stubs for the new types", status: pending}
++      - {id: t1, role: tester, step: red, layer: acceptance, rules: [], title: "Architecture tests A12-A15 failing on the F1 code; a concurrency round-trip test through the records; a client-aborted request test (not logged at Error, no 500); the money 400 rows (amount with more than 2 decimal places, amount above 1,000,000.00, and the at-limit 201s); throwing stubs for the new types", status: done}
+       - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "No new endpoint: skipped (David, 2026-10-18)", status: skipped}
+       - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Skipped: David reviews at Pause 2 (2026-10-18)", status: skipped}
+-      - {id: t4, role: builder, step: green, layer: domain, rules: [], title: "Domain: Policy.Restore, remove the EF-only constructors and Version; Domain.Tests green", status: pending}
+-      - {id: t5, role: builder, step: green, layer: services, rules: [], title: "Services: IPolicyService, IReferenceGenerator injected into PolicyService; Services.Tests green", status: pending}
+-      - {id: t6, role: builder, step: green, layer: persistence, rules: [], title: "Persistence: Records, configurations on the records, PolicyRecordMapper as a Mapperly [Mapper] (Restore, Version and the tracked-record update hand-written), per-request record map, Version on PolicyRecord; migration regenerated", status: pending}
+-      - {id: t7, role: builder, step: green, layer: api, rules: [], title: "Api: PolicyMappings as a Mapperly [Mapper]; the controller and DI depend on IPolicyService and IReferenceGenerator; UnexpectedExceptionHandler treats a client-aborted request as cancelled, not a 500; whole suite green", status: pending}
+-      - {id: t8, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
+-      - {id: t9, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
+-      - {id: t10, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+-      - {id: t11, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F1b.md: the F1 Postman folder unchanged and green, plus the layering checks", status: pending}
+-      - {id: t12, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
+-      - {id: t13, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
+-      - {id: t14, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
+-      - {id: t15, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: pending}
+-      - {id: t16, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
++      - {id: t4, role: tester, step: red, layer: domain, rules: [], title: "Domain.Tests for Policy.LatestTerm, CurrentTerm(today) and StatusOn(today) (Pending, Active, Expired at each boundary), untraited: F2 adds the GET-1 traits (carry-over, David 2026-10-18)", status: done}
++      - {id: t5, role: builder, step: green, layer: domain, rules: [], title: "Domain: Policy.Restore, LatestTerm, CurrentTerm, StatusOn; remove the EF-only constructors and Version; Domain.Tests green", status: done}
++      - {id: t6, role: builder, step: stub, layer: services, rules: [], title: "Services signatures, no behaviour change: 3-arg PolicyService(IPolicyRepository, IReferenceGenerator, TimeProvider) implementing IPolicyService, with a temporary 2-arg constructor chaining to it so the existing tests compile; ReferenceGenerator implements IReferenceGenerator (static calls kept); PolicyDetails gains Status as a canned placeholder (David, 2026-10-18)", status: done}
++      - {id: t7, role: tester, step: red, layer: services, rules: [], title: "Services.Tests: the race-path conversion (PersistenceConflictException DuplicateReference to the SELL-1 result), carry-over reviewer A2 R1; PolicyService takes IReferenceGenerator and returns the domain's current term and status", status: done}
++      - {id: t8, role: builder, step: green, layer: services, rules: [], title: "Services: IPolicyService, IReferenceGenerator injected into PolicyService, PolicyDetails from the domain's CurrentTerm and StatusOn; Services.Tests green", status: done}
++      - {id: t9, role: builder, step: green, layer: persistence, rules: [], title: "Persistence: Records, configurations on the records, PolicyRecordMapper as a Mapperly [Mapper] (Restore, Version and the tracked-record update hand-written), per-request record map, Version on PolicyRecord; migration regenerated", status: done}
++      - {id: t10, role: builder, step: green, layer: api, rules: [], title: "Api: PolicyMappings as a Mapperly [Mapper]; the controller and DI depend on IPolicyService and IReferenceGenerator; UnexpectedExceptionHandler treats a client-aborted request as cancelled, not a 500; amount at most 2 decimal places and at most 1,000,000.00 (400 shape); whole suite green", status: done}
++      - {id: t11, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: done}
++      - {id: t12, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: done}
++      - {id: t13, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
++      - {id: t14, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F1b.md: the F1 Postman folder unchanged and green, plus the layering checks and the money 400 rows", status: pending}
++      - {id: t15, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
++      - {id: t16, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
++      - {id: t17, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
++      - {id: t18, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: pending}
++      - {id: t19, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
+   - id: F2
+     title: Retrieve
+     kind: feature
+diff --git a/docs/trace/build/F1/activity.jsonl b/docs/trace/build/F1/activity.jsonl
+index 32a08d7..7b8638d 100644
+--- a/docs/trace/build/F1/activity.jsonl
++++ b/docs/trace/build/F1/activity.jsonl
+@@ -1244,3 +1244,10 @@
+ {"v":1,"ts":"2026-10-18T18:40:54Z","plan":"build","node":"F1","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01Qb43HJPmnaBbniHAVN2VDR","file":null,"command":"node .claude/scripts/render-trace.mjs render build F1; node .claude/scripts/render-trace.mjs check build F1; git status -s"}
+ {"v":1,"ts":"2026-10-18T18:40:55Z","plan":"build","node":"F1","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01PLrTyr1Wt9iDETBSufeT6z","file":null,"command":"node .claude/scripts/render-trace.mjs event '{\"plan\":\"build\",\"node\":\"F1\",\"attempt\":2,\"source\":\"orchestrator\",\"event\":\"trace.rendered(ok)\",\"head\":\"977998ed1199b50fa9de9eeabc76f3b8f002b1a6\",\"detail\":\"re"}
+ {"v":1,"ts":"2026-10-18T18:41:05Z","plan":"build","node":"F1","attempt":2,"agent":"git","agent_id":"a644d519076397ad1","tool":"Bash","tool_use_id":"toolu_01CGaVouJR5u7ovt95hKt14K","file":null,"command":"cd \".\" && git status --porcelain && git branch --show-current && git log --oneline -3"}
++{"v":1,"ts":"2026-10-18T18:41:11Z","plan":"build","node":"F1","attempt":2,"agent":"git","agent_id":"a644d519076397ad1","tool":"Bash","tool_use_id":"toolu_01N17ZvBc8M5sjUjhzaSWvqZ","file":null,"command":"cd \".\" && git add docs/trace/build/F1/README.md docs/trace/build/F1/activity.jsonl docs/trace/build/F1/loop.jsonl docs/trace/build/F1/walkthrough.md docs/trace/requirements-matrix.md && git diff --cac"}
++{"v":1,"ts":"2026-10-18T18:41:19Z","plan":"build","node":"F1","attempt":2,"agent":"git","agent_id":"a644d519076397ad1","tool":"Bash","tool_use_id":"toolu_01M6Xd1orcv7Qc2sGh6inpA4","file":null,"command":"cd \".\" && git commit -m \"chore(trace): F1 trail (sign-off and done)\" -m \"Agent: git\nPlan: build\nNode: F1\n\nCo-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>\""}
++{"v":1,"ts":"2026-10-18T18:41:26Z","plan":"build","node":"F1","attempt":2,"agent":"git","agent_id":"a644d519076397ad1","tool":"Bash","tool_use_id":"toolu_012Ag74tRr4AZ831Bzdtxn7e","file":null,"command":"cd \".\" && git commit -m \"chore(trace): F1 trail (sign-off and done)\" -m \"Agent: git\nPlan: build\nNode: F1\nCo-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>\"","commit":{"sha":"a5ca84d298666825402353da0949d3ef7f22ce8d","subject":"chore(trace): F1 trail (sign-off and done)","tdd":null}}
++{"v":1,"ts":"2026-10-18T18:42:05Z","plan":"build","node":"F1","attempt":2,"agent":"git","agent_id":"a644d519076397ad1","tool":"Bash","tool_use_id":"toolu_01NAwAZ1PdtGLq9ELD48GZZn","file":null,"command":"cd \".\" && git push -u origin feature/build/F1"}
++{"v":1,"ts":"2026-10-18T18:42:16Z","plan":"build","node":"F1","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01Liou4omGajao1TxmFHQNdS","file":null,"command":"gh pr view 10 --json state,isDraft,headRefOid,mergeable -q '\"\\(.state) draft=\\(.isDraft) head=\\(.headRefOid[0:7]) mergeable=\\(.mergeable)\"'; git rev-parse --short HEAD"}
++{"v":1,"ts":"2026-10-18T18:51:19Z","plan":"build","node":"F1","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01Gf9BcUNDqYKXgvaDpDRJ2K","file":null,"command":"gh pr view 10 --json state,mergeCommit,mergedAt -q '\"\\(.state) \\(.mergeCommit.oid) \\(.mergedAt)\"'"}
++{"v":1,"ts":"2026-10-18T18:51:25Z","plan":"build","node":"F1","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01NAjPAZmi3e68PnizEUdyi6","file":null,"command":"node .claude/scripts/render-trace.mjs event '{\"plan\":\"build\",\"node\":\"F1\",\"attempt\":2,\"source\":\"orchestrator\",\"event\":\"merged(c16703b46bbabc3e259496650f8f18cffb88f500)\",\"head\":\"a5ca84d\",\"detail\":\"David"}
+diff --git a/docs/trace/build/F1/loop.jsonl b/docs/trace/build/F1/loop.jsonl
+index f250614..d2aa640 100644
+--- a/docs/trace/build/F1/loop.jsonl
++++ b/docs/trace/build/F1/loop.jsonl
+@@ -81,3 +81,4 @@
+ {"v":1,"ts":"2026-10-18T18:40:27Z","plan":"build","node":"F1","attempt":2,"source":"orchestrator","event":"gate.integrate","cmd":"git fetch origin; git merge-base --is-ancestor origin/main HEAD (no rebase needed: origin/main 41a2373 unchanged); dotnet test --solution Uinsure.Policies.slnx","exit":0,"expect":"pass","ok":true,"head":"0d39041ba87187ae285adf18817bf77efe67ecf5","head_sha":"0d39041ba87187ae285adf18817bf77efe67ecf5","passed":277,"failed":0,"detail":"re-run on the sign-off head after the two docs/qa commits (QA results 3781be1, sign-off 0d39041) followed the 793f8fc receipt"}
+ {"v":1,"ts":"2026-10-18T18:40:27Z","plan":"build","node":"F1","attempt":2,"source":"orchestrator","event":"signoff(0d39041ba87187ae285adf18817bf77efe67ecf5)","head":"0d39041ba87187ae285adf18817bf77efe67ecf5","detail":"David: sign off. docs/qa/build-F1.md signed by David Morgan 2026-10-18, Verdict Accept F1; 64/64 steps PASS at 774706e (code unchanged since); Postman 75/0, 73/0; integrate 277/0 on this head"}
+ {"v":1,"ts":"2026-10-18T18:40:54Z","plan":"build","node":"F1","attempt":2,"source":"orchestrator","event":"trace.rendered(ok)","head":"977998ed1199b50fa9de9eeabc76f3b8f002b1a6","detail":"re-rendered after sign-off and hitl->done; check OK"}
++{"v":1,"ts":"2026-10-18T18:51:24Z","plan":"build","node":"F1","attempt":2,"source":"orchestrator","event":"merged(c16703b46bbabc3e259496650f8f18cffb88f500)","head":"a5ca84d","detail":"David merged PR #10 in the GitHub UI with a merge commit at 2026-10-18T18:50:55Z"}
+diff --git a/src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs b/src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs
+index 49df507..19a7487 100644
+--- a/src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs
++++ b/src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs
+@@ -1,43 +1,52 @@
++using Riok.Mapperly.Abstractions;
+ using Uinsure.Policies.Domain.Policies;
+ using Uinsure.Policies.Services.Commands;
+ 
+ namespace Uinsure.Policies.Api.Contracts;
+ 
+-// Plain C# mapping between the contract DTOs and the domain. [Required] has already made the request's
+-// members non-null by the time these run.
+-internal static class PolicyMappings
++// Compile-time mapping between the contract DTOs and the domain. The enums and the domain-to-DTO copies are
++// generated; the request side is written by hand because [Required] has already made its nullable members
++// non-null by the time these run.
++[Mapper]
++internal static partial class PolicyMappings
+ {
+     public static SellPolicy ToCommand(this SellPolicyRequest request) => new(
+         PolicyReference.Normalise(request.Reference!),
+-        Enum.Parse<Domain.Policies.PolicyType>(request.Type!.Value.ToString()),
++        ToDomain(request.Type!.Value),
+         request.StartDate!.Value,
+         request.Amount!.Value,
+         request.AutoRenew!.Value,
+         [.. request.Policyholders!.Select(holder => new Policyholder(holder.FirstName!, holder.LastName!, holder.DateOfBirth!.Value))],
+         new Property(request.Property!.AddressLine1!, request.Property.AddressLine2, request.Property.AddressLine3, request.Property.Postcode!),
+-        Enum.Parse<Domain.Policies.PaymentMethod>(request.PaymentMethod!.Value.ToString()));
++        ToDomain(request.PaymentMethod!.Value));
+ 
+     // The policy-level dates and amount are the current term's (GET-1).
+     public static PolicyResponse ToResponse(this PolicyDetails details)
+     {
+         var policy = details.Policy;
+-        var term = details.Term;
++        var term = details.CurrentTerm;
+         return new PolicyResponse(
+             policy.Reference.Value,
+-            Enum.Parse<PolicyType>(policy.Type.ToString()),
++            ToDto(policy.Type),
+             term.Start,
+             term.End,
+             term.Amount,
+             policy.AutoRenew,
+-            [.. policy.Policyholders.Select(holder => new PolicyholderDto { FirstName = holder.FirstName, LastName = holder.LastName, DateOfBirth = holder.DateOfBirth })],
+-            new PropertyDto
+-            {
+-                AddressLine1 = policy.Property.AddressLine1,
+-                AddressLine2 = policy.Property.AddressLine2,
+-                AddressLine3 = policy.Property.AddressLine3,
+-                Postcode = policy.Property.Postcode,
+-            },
++            [.. policy.Policyholders.Select(ToDto)],
++            ToDto(policy.Property),
+             [.. policy.Terms.Select((t, index) => new TermResponse(index + 1, t.Start, t.End, t.Amount, t.Payment?.Reference))],
+-            [.. policy.Terms.Where(t => t.Payment is not null).Select(t => new PaymentResponse(t.Payment!.Reference, Enum.Parse<PaymentMethod>(t.Payment.Method.ToString()), t.Payment.Amount))]);
++            [.. policy.Terms.Where(t => t.Payment is not null).Select(t => new PaymentResponse(t.Payment!.Reference, ToDto(t.Payment.Method), t.Payment.Amount))]);
+     }
++
++    private static partial Domain.Policies.PolicyType ToDomain(PolicyType type);
++
++    private static partial Domain.Policies.PaymentMethod ToDomain(PaymentMethod method);
++
++    private static partial PolicyType ToDto(Domain.Policies.PolicyType type);
++
++    private static partial PaymentMethod ToDto(Domain.Policies.PaymentMethod method);
++
++    private static partial PolicyholderDto ToDto(Policyholder holder);
++
++    private static partial PropertyDto ToDto(Property property);
+ }
+diff --git a/src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs b/src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs
+index 3f3395a..7200985 100644
+--- a/src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs
++++ b/src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs
+@@ -21,6 +21,8 @@ public sealed class SellPolicyRequest : IValidatableObject
+ {
+     private static readonly Regex ReferencePattern = new("^[A-Z0-9-]{3,20}$", RegexOptions.None, TimeSpan.FromSeconds(1));
+ 
++    private const decimal MaxAmount = 1_000_000.00m;
++
+     [Required]
+     public string? Reference { get; init; }
+ 
+@@ -54,6 +56,16 @@ public sealed class SellPolicyRequest : IValidatableObject
+                 "The reference must be 3 to 20 characters: letters, digits or hyphens.",
+                 [nameof(Reference)]);
+         }
++
++        // Shape, not SELL-7: the value must be a whole number of pence and at most 1,000,000.00. A zero or
++        // negative amount within that scale is the 422 SELL-7. The remainder test cannot overflow for any
++        // decimal, however negative, which a multiplication by 100 would.
++        if (Amount is { } amount && (amount > MaxAmount || amount % 0.01m != 0))
++        {
++            yield return new ValidationResult(
++                "The amount must be at most 1,000,000.00 with no more than 2 decimal places.",
++                [nameof(Amount)]);
++        }
+     }
+ }
+ 
+diff --git a/src/Uinsure.Policies.Api/Controllers/PoliciesController.cs b/src/Uinsure.Policies.Api/Controllers/PoliciesController.cs
+index 5387629..a7e07a2 100644
+--- a/src/Uinsure.Policies.Api/Controllers/PoliciesController.cs
++++ b/src/Uinsure.Policies.Api/Controllers/PoliciesController.cs
+@@ -9,7 +9,7 @@ namespace Uinsure.Policies.Api.Controllers;
+ 
+ [ApiController]
+ [Route("policies")]
+-public sealed class PoliciesController(PolicyService service) : ControllerBase
++public sealed class PoliciesController(IPolicyService service) : ControllerBase
+ {
+     [HttpPost]
+     [EnableRateLimiting("writes")]
+diff --git a/src/Uinsure.Policies.Api/Errors/ClientAbortLoggingMiddleware.cs b/src/Uinsure.Policies.Api/Errors/ClientAbortLoggingMiddleware.cs
+new file mode 100644
+index 0000000..d26638b
+--- /dev/null
++++ b/src/Uinsure.Policies.Api/Errors/ClientAbortLoggingMiddleware.cs
+@@ -0,0 +1,20 @@
++namespace Uinsure.Policies.Api.Errors;
++
++// A client that goes away is not a server fault. ASP.NET Core's exception handler already answers it with
++// 499 and a Debug entry, so this notes it at Information (method and path only, never the body or client IP)
++// and lets the exception carry on to that handler.
++internal sealed class ClientAbortLoggingMiddleware(RequestDelegate next, ILogger<ClientAbortLoggingMiddleware> logger)
++{
++    public async Task InvokeAsync(HttpContext context)
++    {
++        try
++        {
++            await next(context);
++        }
++        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
++        {
++            logger.LogInformation("Client aborted {Method} {Path}", context.Request.Method, context.Request.Path);
++            throw;
++        }
++    }
++}
+diff --git a/src/Uinsure.Policies.Api/Program.cs b/src/Uinsure.Policies.Api/Program.cs
+index 2d1bded..e96852a 100644
+--- a/src/Uinsure.Policies.Api/Program.cs
++++ b/src/Uinsure.Policies.Api/Program.cs
+@@ -54,7 +54,8 @@ builder.Services.AddControllers()
+     .ConfigureApiBehaviorOptions(options => options.InvalidModelStateResponseFactory = ValidationProblems.FromModelState);
+ builder.Services.AddSingleton(TimeProvider.System);
+ builder.Services.AddPersistence(builder.Configuration);
+-builder.Services.AddScoped<PolicyService>();
++builder.Services.AddSingleton<IReferenceGenerator, ReferenceGenerator>();
++builder.Services.AddScoped<IPolicyService, PolicyService>();
+ builder.Services.AddOpenApi();
+ 
+ // RFC 9457 bodies: every problem response carries the request path and a traceId.
+@@ -80,6 +81,7 @@ app.UseForwardedHeaders();
+ 
+ // Logs the exception server-side and answers a generic 500 problem; no message or stack trace in the body.
+ app.UseExceptionHandler();
++app.UseMiddleware<ClientAbortLoggingMiddleware>();
+ 
+ // Outside Development an API rejects plain HTTP rather than redirecting it; /health/* is exempt.
+ if (!app.Environment.IsDevelopment())
+diff --git a/src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj b/src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj
+index 782fcc5..8ce2406 100644
+--- a/src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj
++++ b/src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj
+@@ -3,6 +3,7 @@
+   <ItemGroup>
+     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+     <PackageReference Include="Scalar.AspNetCore" />
++    <PackageReference Include="Riok.Mapperly" ExcludeAssets="runtime" PrivateAssets="all" />
+     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
+     <!-- The startup project of `dotnet ef` (pre-push) must reference the Design package itself. -->
+     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+diff --git a/src/Uinsure.Policies.Domain/Policies/Policy.cs b/src/Uinsure.Policies.Domain/Policies/Policy.cs
+index 04b1fba..1701a72 100644
+--- a/src/Uinsure.Policies.Domain/Policies/Policy.cs
++++ b/src/Uinsure.Policies.Domain/Policies/Policy.cs
+@@ -9,40 +9,59 @@ public sealed class Policy
+     private const int MaxPolicyholders = 3;
+     private const int MinimumAge = 16;
+ 
+-    // For EF Core to materialise a stored policy; the navigations are filled in after construction.
+-    private Policy()
+-    {
+-        Property = null!;
+-        Policyholders = new List<Policyholder>();
+-        Terms = new List<Term>();
+-    }
+-
+     private Policy(
+         PolicyReference reference,
+         PolicyType type,
+         bool autoRenew,
++        bool hasClaims,
+         IReadOnlyList<Policyholder> policyholders,
+         Property property,
+-        Term term)
++        IReadOnlyList<Term> terms)
+     {
+         Reference = reference;
+         Type = type;
+         AutoRenew = autoRenew;
++        HasClaims = hasClaims;
+         Policyholders = policyholders;
+         Property = property;
+-        Terms = [term];
+-        Version = Guid.NewGuid();
++        Terms = terms;
+     }
+ 
+     public PolicyReference Reference { get; }
+     public PolicyType Type { get; }
+     public bool AutoRenew { get; }
+     public bool HasClaims { get; }
+-    public Guid Version { get; }
+     public IReadOnlyList<Policyholder> Policyholders { get; }
+     public Property Property { get; }
+     public IReadOnlyList<Term> Terms { get; }
+ 
++    public Term LatestTerm => Terms[^1];
++
++    // The term covering today, else the latest (before the first start or after the last end).
++    public Term CurrentTerm(DateOnly today) => Terms.FirstOrDefault(t => t.Covers(today)) ?? LatestTerm;
++
++    // Derived, never stored. Cancelled joins when Cancellation exists (F3).
++    public PolicyStatus StatusOn(DateOnly today)
++    {
++        if (today < Terms[0].Start)
++        {
++            return PolicyStatus.Pending;
++        }
++
++        return today > LatestTerm.End ? PolicyStatus.Expired : PolicyStatus.Active;
++    }
++
++    // Persistence only: rebuilds stored state and runs no rule.
++    public static Policy Restore(
++        PolicyReference reference,
++        PolicyType type,
++        bool autoRenew,
++        bool hasClaims,
++        IReadOnlyList<Policyholder> holders,
++        Property property,
++        IReadOnlyList<Term> terms) =>
++        new(reference, type, autoRenew, hasClaims, holders, property, terms);
++
+     // SELL-2, 4, 5 and 7 are all checked; none returns early.
+     public static Result<Policy> Sell(
+         PolicyReference reference,
+@@ -101,7 +120,7 @@ public sealed class Policy
+         // SELL-6: the payment is for the full amount, by the method sold with.
+         var payment = new Payment(paymentReference, method, amount);
+         var term = new Term(start, amount, payment);
+-        return Result<Policy>.Success(new Policy(reference, type, autoRenew, holders, property, term));
++        return Result<Policy>.Success(new Policy(reference, type, autoRenew, false, holders, property, [term]));
+     }
+ 
+     // SELL-5: 16 or older on the start date, so the 16th birthday itself passes. The years are compared first
+diff --git a/src/Uinsure.Policies.Domain/Policies/Term.cs b/src/Uinsure.Policies.Domain/Policies/Term.cs
+index a930aee..493d7aa 100644
+--- a/src/Uinsure.Policies.Domain/Policies/Term.cs
++++ b/src/Uinsure.Policies.Domain/Policies/Term.cs
+@@ -2,12 +2,8 @@ namespace Uinsure.Policies.Domain.Policies;
+ 
+ public sealed class Term
+ {
+-    // For EF Core to materialise a stored term.
+-    private Term()
+-    {
+-    }
+-
+-    internal Term(DateOnly start, decimal amount, Payment? payment)
++    // Public so that Persistence can rebuild a stored term for Policy.Restore; End always follows from Start.
++    public Term(DateOnly start, decimal amount, Payment? payment)
+     {
+         Start = start;
+         End = EndFor(start);
+@@ -20,6 +16,8 @@ public sealed class Term
+     public decimal Amount { get; }
+     public Payment? Payment { get; }
+ 
++    public bool Covers(DateOnly date) => Start <= date && date <= End;
++
+     // SELL-3: start + 1 year - 1 day; a 29 Feb start has no anniversary, so it ends on 28 Feb.
+     public static DateOnly EndFor(DateOnly start) =>
+         start is { Month: 2, Day: 29 }
+diff --git a/src/Uinsure.Policies.Persistence/Configurations/PaymentConfiguration.cs b/src/Uinsure.Policies.Persistence/Configurations/PaymentConfiguration.cs
+index 57aed3a..36163e6 100644
+--- a/src/Uinsure.Policies.Persistence/Configurations/PaymentConfiguration.cs
++++ b/src/Uinsure.Policies.Persistence/Configurations/PaymentConfiguration.cs
+@@ -1,15 +1,15 @@
+ using Microsoft.EntityFrameworkCore;
+ using Microsoft.EntityFrameworkCore.Metadata.Builders;
+-using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Persistence.Records;
+ 
+ namespace Uinsure.Policies.Persistence.Configurations;
+ 
+-internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
++internal sealed class PaymentConfiguration : IEntityTypeConfiguration<PaymentRecord>
+ {
+-    public void Configure(EntityTypeBuilder<Payment> builder)
++    public void Configure(EntityTypeBuilder<PaymentRecord> builder)
+     {
+-        builder.Property<int>("Id");
+-        builder.HasKey("Id");
++        builder.ToTable("Payment");
++        builder.HasKey(p => p.Id);
+         builder.Property(p => p.Reference).HasMaxLength(40).IsRequired();
+         builder.Property(p => p.Method).HasConversion<string>().HasMaxLength(20);
+         builder.Property(p => p.Amount).HasPrecision(18, 2);
+diff --git a/src/Uinsure.Policies.Persistence/Configurations/PolicyConfiguration.cs b/src/Uinsure.Policies.Persistence/Configurations/PolicyConfiguration.cs
+index ffef3f3..04a400d 100644
+--- a/src/Uinsure.Policies.Persistence/Configurations/PolicyConfiguration.cs
++++ b/src/Uinsure.Policies.Persistence/Configurations/PolicyConfiguration.cs
+@@ -1,30 +1,25 @@
+ using Microsoft.EntityFrameworkCore;
+ using Microsoft.EntityFrameworkCore.Metadata.Builders;
+-using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Persistence.Records;
+ 
+ namespace Uinsure.Policies.Persistence.Configurations;
+ 
+-internal sealed class PolicyConfiguration : IEntityTypeConfiguration<Policy>
++internal sealed class PolicyConfiguration : IEntityTypeConfiguration<PolicyRecord>
+ {
+-    public void Configure(EntityTypeBuilder<Policy> builder)
++    public void Configure(EntityTypeBuilder<PolicyRecord> builder)
+     {
+-        builder.Property<int>("Id");
+-        builder.HasKey("Id");
++        builder.ToTable("Policies");
++        builder.HasKey(p => p.Id);
+ 
+         // SELL-1: the stored reference is already normalised, so a plain unique index is case-insensitive in effect.
+-        builder.Property(p => p.Reference)
+-            .HasConversion(reference => reference.Value, value => new PolicyReference(value))
+-            .HasMaxLength(20)
+-            .IsRequired();
++        builder.Property(p => p.Reference).HasMaxLength(20).IsRequired();
+         builder.HasIndex(p => p.Reference).IsUnique();
+ 
+         builder.Property(p => p.Type).HasConversion<string>().HasMaxLength(20);
+-        builder.Property(p => p.AutoRenew);
+-        builder.Property(p => p.HasClaims);
+         builder.Property(p => p.Version).IsConcurrencyToken();
+ 
+         builder.HasMany(p => p.Policyholders).WithOne().HasForeignKey("PolicyId").IsRequired();
+-        builder.HasOne(p => p.Property).WithOne().HasForeignKey<Property>("PolicyId").IsRequired();
++        builder.HasOne(p => p.Property).WithOne().HasForeignKey<PropertyRecord>("PolicyId").IsRequired();
+         builder.HasMany(p => p.Terms).WithOne().HasForeignKey("PolicyId").IsRequired();
+ 
+         // The aggregate is always loaded whole. The two collections are included, in order, by PolicyRepository.
+diff --git a/src/Uinsure.Policies.Persistence/Configurations/PolicyholderConfiguration.cs b/src/Uinsure.Policies.Persistence/Configurations/PolicyholderConfiguration.cs
+index 1856958..d13f4f6 100644
+--- a/src/Uinsure.Policies.Persistence/Configurations/PolicyholderConfiguration.cs
++++ b/src/Uinsure.Policies.Persistence/Configurations/PolicyholderConfiguration.cs
+@@ -1,15 +1,15 @@
+ using Microsoft.EntityFrameworkCore;
+ using Microsoft.EntityFrameworkCore.Metadata.Builders;
+-using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Persistence.Records;
+ 
+ namespace Uinsure.Policies.Persistence.Configurations;
+ 
+-internal sealed class PolicyholderConfiguration : IEntityTypeConfiguration<Policyholder>
++internal sealed class PolicyholderConfiguration : IEntityTypeConfiguration<PolicyholderRecord>
+ {
+-    public void Configure(EntityTypeBuilder<Policyholder> builder)
++    public void Configure(EntityTypeBuilder<PolicyholderRecord> builder)
+     {
+-        builder.Property<int>("Id");
+-        builder.HasKey("Id");
++        builder.ToTable("Policyholder");
++        builder.HasKey(h => h.Id);
+         builder.Property(h => h.FirstName).HasMaxLength(100).IsRequired();
+         builder.Property(h => h.LastName).HasMaxLength(100).IsRequired();
+     }
+diff --git a/src/Uinsure.Policies.Persistence/Configurations/PropertyConfiguration.cs b/src/Uinsure.Policies.Persistence/Configurations/PropertyConfiguration.cs
+index fa568be..fd7244d 100644
+--- a/src/Uinsure.Policies.Persistence/Configurations/PropertyConfiguration.cs
++++ b/src/Uinsure.Policies.Persistence/Configurations/PropertyConfiguration.cs
+@@ -1,15 +1,15 @@
+ using Microsoft.EntityFrameworkCore;
+ using Microsoft.EntityFrameworkCore.Metadata.Builders;
+-using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Persistence.Records;
+ 
+ namespace Uinsure.Policies.Persistence.Configurations;
+ 
+-internal sealed class PropertyConfiguration : IEntityTypeConfiguration<Property>
++internal sealed class PropertyConfiguration : IEntityTypeConfiguration<PropertyRecord>
+ {
+-    public void Configure(EntityTypeBuilder<Property> builder)
++    public void Configure(EntityTypeBuilder<PropertyRecord> builder)
+     {
+-        builder.Property<int>("Id");
+-        builder.HasKey("Id");
++        builder.ToTable("Property");
++        builder.HasKey(p => p.Id);
+         builder.Property(p => p.AddressLine1).HasMaxLength(200).IsRequired();
+         builder.Property(p => p.AddressLine2).HasMaxLength(200);
+         builder.Property(p => p.AddressLine3).HasMaxLength(200);
+diff --git a/src/Uinsure.Policies.Persistence/Configurations/TermConfiguration.cs b/src/Uinsure.Policies.Persistence/Configurations/TermConfiguration.cs
+index 9574f53..207a6a8 100644
+--- a/src/Uinsure.Policies.Persistence/Configurations/TermConfiguration.cs
++++ b/src/Uinsure.Policies.Persistence/Configurations/TermConfiguration.cs
+@@ -1,21 +1,19 @@
+ using Microsoft.EntityFrameworkCore;
+ using Microsoft.EntityFrameworkCore.Metadata.Builders;
+-using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Persistence.Records;
+ 
+ namespace Uinsure.Policies.Persistence.Configurations;
+ 
+-internal sealed class TermConfiguration : IEntityTypeConfiguration<Term>
++internal sealed class TermConfiguration : IEntityTypeConfiguration<TermRecord>
+ {
+-    public void Configure(EntityTypeBuilder<Term> builder)
++    public void Configure(EntityTypeBuilder<TermRecord> builder)
+     {
+-        builder.Property<int>("Id");
+-        builder.HasKey("Id");
+-        builder.Property(t => t.Start);
+-        builder.Property(t => t.End);
++        builder.ToTable("Term");
++        builder.HasKey(t => t.Id);
+         builder.Property(t => t.Amount).HasPrecision(18, 2);
+ 
+         // A term without a payment is unpaid, so it has no Payment row.
+-        builder.HasOne(t => t.Payment).WithOne().HasForeignKey<Payment>("TermId");
++        builder.HasOne(t => t.Payment).WithOne().HasForeignKey<PaymentRecord>("TermId");
+         builder.Navigation(t => t.Payment).AutoInclude();
+     }
+ }
+diff --git a/src/Uinsure.Policies.Persistence/Migrations/20261018165247_InitialCreate.Designer.cs b/src/Uinsure.Policies.Persistence/Migrations/20261018203112_InitialCreate.Designer.cs
+similarity index 78%
+rename from src/Uinsure.Policies.Persistence/Migrations/20261018165247_InitialCreate.Designer.cs
+rename to src/Uinsure.Policies.Persistence/Migrations/20261018203112_InitialCreate.Designer.cs
+index 626a954..450bf3f 100644
+--- a/src/Uinsure.Policies.Persistence/Migrations/20261018165247_InitialCreate.Designer.cs
++++ b/src/Uinsure.Policies.Persistence/Migrations/20261018203112_InitialCreate.Designer.cs
+@@ -12,7 +12,7 @@ using Uinsure.Policies.Persistence;
+ namespace Uinsure.Policies.Persistence.Migrations
+ {
+     [DbContext(typeof(PoliciesDbContext))]
+-    [Migration("20261018165247_InitialCreate")]
++    [Migration("20261018203112_InitialCreate")]
+     partial class InitialCreate
+     {
+         /// <inheritdoc />
+@@ -25,7 +25,7 @@ namespace Uinsure.Policies.Persistence.Migrations
+ 
+             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Payment", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PaymentRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -56,10 +56,10 @@ namespace Uinsure.Policies.Persistence.Migrations
+                         .IsUnique()
+                         .HasFilter("[TermId] IS NOT NULL");
+ 
+-                    b.ToTable("Payment");
++                    b.ToTable("Payment", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policy", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -92,10 +92,10 @@ namespace Uinsure.Policies.Persistence.Migrations
+                     b.HasIndex("Reference")
+                         .IsUnique();
+ 
+-                    b.ToTable("Policies");
++                    b.ToTable("Policies", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policyholder", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyholderRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -123,10 +123,10 @@ namespace Uinsure.Policies.Persistence.Migrations
+ 
+                     b.HasIndex("PolicyId");
+ 
+-                    b.ToTable("Policyholder");
++                    b.ToTable("Policyholder", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Property", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PropertyRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -160,10 +160,10 @@ namespace Uinsure.Policies.Persistence.Migrations
+                     b.HasIndex("PolicyId")
+                         .IsUnique();
+ 
+-                    b.ToTable("Property");
++                    b.ToTable("Property", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Term", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -188,44 +188,44 @@ namespace Uinsure.Policies.Persistence.Migrations
+ 
+                     b.HasIndex("PolicyId");
+ 
+-                    b.ToTable("Term");
++                    b.ToTable("Term", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Payment", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PaymentRecord", b =>
+                 {
+-                    b.HasOne("Uinsure.Policies.Domain.Policies.Term", null)
++                    b.HasOne("Uinsure.Policies.Persistence.Records.TermRecord", null)
+                         .WithOne("Payment")
+-                        .HasForeignKey("Uinsure.Policies.Domain.Policies.Payment", "TermId");
++                        .HasForeignKey("Uinsure.Policies.Persistence.Records.PaymentRecord", "TermId");
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policyholder", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyholderRecord", b =>
+                 {
+-                    b.HasOne("Uinsure.Policies.Domain.Policies.Policy", null)
++                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
+                         .WithMany("Policyholders")
+                         .HasForeignKey("PolicyId")
+                         .OnDelete(DeleteBehavior.Cascade)
+                         .IsRequired();
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Property", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PropertyRecord", b =>
+                 {
+-                    b.HasOne("Uinsure.Policies.Domain.Policies.Policy", null)
++                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
+                         .WithOne("Property")
+-                        .HasForeignKey("Uinsure.Policies.Domain.Policies.Property", "PolicyId")
++                        .HasForeignKey("Uinsure.Policies.Persistence.Records.PropertyRecord", "PolicyId")
+                         .OnDelete(DeleteBehavior.Cascade)
+                         .IsRequired();
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Term", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
+                 {
+-                    b.HasOne("Uinsure.Policies.Domain.Policies.Policy", null)
++                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
+                         .WithMany("Terms")
+                         .HasForeignKey("PolicyId")
+                         .OnDelete(DeleteBehavior.Cascade)
+                         .IsRequired();
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policy", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyRecord", b =>
+                 {
+                     b.Navigation("Policyholders");
+ 
+@@ -235,7 +235,7 @@ namespace Uinsure.Policies.Persistence.Migrations
+                     b.Navigation("Terms");
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Term", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
+                 {
+                     b.Navigation("Payment");
+                 });
+diff --git a/src/Uinsure.Policies.Persistence/Migrations/20261018165247_InitialCreate.cs b/src/Uinsure.Policies.Persistence/Migrations/20261018203112_InitialCreate.cs
+similarity index 100%
+rename from src/Uinsure.Policies.Persistence/Migrations/20261018165247_InitialCreate.cs
+rename to src/Uinsure.Policies.Persistence/Migrations/20261018203112_InitialCreate.cs
+diff --git a/src/Uinsure.Policies.Persistence/Migrations/PoliciesDbContextModelSnapshot.cs b/src/Uinsure.Policies.Persistence/Migrations/PoliciesDbContextModelSnapshot.cs
+index 13c59d3..3ac26b5 100644
+--- a/src/Uinsure.Policies.Persistence/Migrations/PoliciesDbContextModelSnapshot.cs
++++ b/src/Uinsure.Policies.Persistence/Migrations/PoliciesDbContextModelSnapshot.cs
+@@ -22,7 +22,7 @@ namespace Uinsure.Policies.Persistence.Migrations
+ 
+             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Payment", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PaymentRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -53,10 +53,10 @@ namespace Uinsure.Policies.Persistence.Migrations
+                         .IsUnique()
+                         .HasFilter("[TermId] IS NOT NULL");
+ 
+-                    b.ToTable("Payment");
++                    b.ToTable("Payment", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policy", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -89,10 +89,10 @@ namespace Uinsure.Policies.Persistence.Migrations
+                     b.HasIndex("Reference")
+                         .IsUnique();
+ 
+-                    b.ToTable("Policies");
++                    b.ToTable("Policies", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policyholder", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyholderRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -120,10 +120,10 @@ namespace Uinsure.Policies.Persistence.Migrations
+ 
+                     b.HasIndex("PolicyId");
+ 
+-                    b.ToTable("Policyholder");
++                    b.ToTable("Policyholder", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Property", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PropertyRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -157,10 +157,10 @@ namespace Uinsure.Policies.Persistence.Migrations
+                     b.HasIndex("PolicyId")
+                         .IsUnique();
+ 
+-                    b.ToTable("Property");
++                    b.ToTable("Property", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Term", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
+                 {
+                     b.Property<int>("Id")
+                         .ValueGeneratedOnAdd()
+@@ -185,44 +185,44 @@ namespace Uinsure.Policies.Persistence.Migrations
+ 
+                     b.HasIndex("PolicyId");
+ 
+-                    b.ToTable("Term");
++                    b.ToTable("Term", (string)null);
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Payment", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PaymentRecord", b =>
+                 {
+-                    b.HasOne("Uinsure.Policies.Domain.Policies.Term", null)
++                    b.HasOne("Uinsure.Policies.Persistence.Records.TermRecord", null)
+                         .WithOne("Payment")
+-                        .HasForeignKey("Uinsure.Policies.Domain.Policies.Payment", "TermId");
++                        .HasForeignKey("Uinsure.Policies.Persistence.Records.PaymentRecord", "TermId");
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policyholder", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyholderRecord", b =>
+                 {
+-                    b.HasOne("Uinsure.Policies.Domain.Policies.Policy", null)
++                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
+                         .WithMany("Policyholders")
+                         .HasForeignKey("PolicyId")
+                         .OnDelete(DeleteBehavior.Cascade)
+                         .IsRequired();
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Property", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PropertyRecord", b =>
+                 {
+-                    b.HasOne("Uinsure.Policies.Domain.Policies.Policy", null)
++                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
+                         .WithOne("Property")
+-                        .HasForeignKey("Uinsure.Policies.Domain.Policies.Property", "PolicyId")
++                        .HasForeignKey("Uinsure.Policies.Persistence.Records.PropertyRecord", "PolicyId")
+                         .OnDelete(DeleteBehavior.Cascade)
+                         .IsRequired();
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Term", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
+                 {
+-                    b.HasOne("Uinsure.Policies.Domain.Policies.Policy", null)
++                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
+                         .WithMany("Terms")
+                         .HasForeignKey("PolicyId")
+                         .OnDelete(DeleteBehavior.Cascade)
+                         .IsRequired();
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Policy", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyRecord", b =>
+                 {
+                     b.Navigation("Policyholders");
+ 
+@@ -232,7 +232,7 @@ namespace Uinsure.Policies.Persistence.Migrations
+                     b.Navigation("Terms");
+                 });
+ 
+-            modelBuilder.Entity("Uinsure.Policies.Domain.Policies.Term", b =>
++            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
+                 {
+                     b.Navigation("Payment");
+                 });
+diff --git a/src/Uinsure.Policies.Persistence/PoliciesDbContext.cs b/src/Uinsure.Policies.Persistence/PoliciesDbContext.cs
+index 3e8a869..a678a17 100644
+--- a/src/Uinsure.Policies.Persistence/PoliciesDbContext.cs
++++ b/src/Uinsure.Policies.Persistence/PoliciesDbContext.cs
+@@ -1,11 +1,11 @@
+ using Microsoft.EntityFrameworkCore;
+-using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Persistence.Records;
+ 
+ namespace Uinsure.Policies.Persistence;
+ 
+ public sealed class PoliciesDbContext(DbContextOptions<PoliciesDbContext> options) : DbContext(options)
+ {
+-    public DbSet<Policy> Policies => Set<Policy>();
++    internal DbSet<PolicyRecord> Policies => Set<PolicyRecord>();
+ 
+     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PoliciesDbContext).Assembly);
+diff --git a/src/Uinsure.Policies.Persistence/PolicyRecordMapper.cs b/src/Uinsure.Policies.Persistence/PolicyRecordMapper.cs
+new file mode 100644
+index 0000000..e070cce
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/PolicyRecordMapper.cs
+@@ -0,0 +1,47 @@
++using Riok.Mapperly.Abstractions;
++using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Persistence.Records;
++
++namespace Uinsure.Policies.Persistence;
++
++// Compile-time mapping between the Domain model and the stored records. Version and Restore are hand-written
++// because they are not field copies: Version is Persistence's own, and Restore must run no rule.
++[Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
++internal sealed partial class PolicyRecordMapper
++{
++    [MapperIgnoreTarget(nameof(PolicyRecord.Id))]
++    [MapperIgnoreTarget(nameof(PolicyRecord.Version))]
++    public partial PolicyRecord ToRecord(Policy policy);
++
++    public Policy Restore(PolicyRecord record) =>
++        Policy.Restore(
++            new PolicyReference(record.Reference),
++            record.Type,
++            record.AutoRenew,
++            record.HasClaims,
++            [.. record.Policyholders.Select(ToDomain)],
++            ToDomain(record.Property),
++            [.. record.Terms.Select(ToDomain)]);
++
++    private static string ToValue(PolicyReference reference) => reference.Value;
++
++    [MapperIgnoreTarget(nameof(PolicyholderRecord.Id))]
++    private partial PolicyholderRecord ToRecord(Policyholder policyholder);
++
++    [MapperIgnoreTarget(nameof(PropertyRecord.Id))]
++    private partial PropertyRecord ToRecord(Property property);
++
++    [MapperIgnoreTarget(nameof(TermRecord.Id))]
++    private partial TermRecord ToRecord(Term term);
++
++    [MapperIgnoreTarget(nameof(PaymentRecord.Id))]
++    private partial PaymentRecord ToRecord(Payment payment);
++
++    private partial Policyholder ToDomain(PolicyholderRecord record);
++
++    private partial Property ToDomain(PropertyRecord record);
++
++    private partial Term ToDomain(TermRecord record);
++
++    private partial Payment ToDomain(PaymentRecord record);
++}
+diff --git a/src/Uinsure.Policies.Persistence/PolicyRepository.cs b/src/Uinsure.Policies.Persistence/PolicyRepository.cs
+index 013537e..b6295e6 100644
+--- a/src/Uinsure.Policies.Persistence/PolicyRepository.cs
++++ b/src/Uinsure.Policies.Persistence/PolicyRepository.cs
+@@ -2,6 +2,7 @@ using Microsoft.Data.SqlClient;
+ using Microsoft.Data.Sqlite;
+ using Microsoft.EntityFrameworkCore;
+ using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Persistence.Records;
+ using Uinsure.Policies.Services;
+ 
+ namespace Uinsure.Policies.Persistence;
+@@ -12,17 +13,39 @@ internal sealed class PolicyRepository(PoliciesDbContext context) : IPolicyRepos
+     private const int SqlServerUniqueIndex = 2601;
+     private const int SqlServerUniqueConstraint = 2627;
+ 
++    private readonly PolicyRecordMapper _mapper = new();
++
++    // The record behind each policy handed out in this request. The repository is scoped, so the map is too.
++    private readonly Dictionary<Policy, PolicyRecord> _records = new(ReferenceEqualityComparer.Instance);
++
+     // SELL-4/SELL-5: holders and terms load in the order they were sold, which is their generated key order.
+-    public Task<Policy?> GetByReference(PolicyReference reference, CancellationToken ct) =>
+-        context.Policies
+-            .Include(p => p.Policyholders.OrderBy(h => EF.Property<int>(h, "Id")))
+-            .Include(p => p.Terms.OrderBy(t => EF.Property<int>(t, "Id")))
+-            .FirstOrDefaultAsync(p => p.Reference == reference, ct);
++    public async Task<Policy?> GetByReference(PolicyReference reference, CancellationToken ct)
++    {
++        var record = await context.Policies
++            .Include(p => p.Policyholders.OrderBy(h => h.Id))
++            .Include(p => p.Terms.OrderBy(t => t.Id))
++            .FirstOrDefaultAsync(p => p.Reference == reference.Value, ct);
++        if (record is null)
++        {
++            return null;
++        }
+ 
+-    public void Add(Policy policy) => context.Policies.Add(policy);
++        var policy = _mapper.Restore(record);
++        _records[policy] = record;
++        return policy;
++    }
++
++    public void Add(Policy policy)
++    {
++        var record = _mapper.ToRecord(policy);
++        record.Version = Guid.NewGuid();
++        context.Policies.Add(record);
++        _records[policy] = record;
++    }
+ 
+     public async Task SaveChanges(CancellationToken ct)
+     {
++        UpdateTrackedRecords();
+         try
+         {
+             await context.SaveChangesAsync(ct);
+@@ -38,6 +61,22 @@ internal sealed class PolicyRepository(PoliciesDbContext context) : IPolicyRepos
+         }
+     }
+ 
++    // Domain → tracked record, then a new Version for every loaded record that now differs from the database.
++    private void UpdateTrackedRecords()
++    {
++        foreach (var (policy, record) in _records)
++        {
++            record.AutoRenew = policy.AutoRenew;
++            record.HasClaims = policy.HasClaims;
++        }
++
++        context.ChangeTracker.DetectChanges();
++        foreach (var record in _records.Values.Where(r => context.Entry(r).State == EntityState.Modified))
++        {
++            record.Version = Guid.NewGuid();
++        }
++    }
++
+     private static bool IsUniqueViolation(DbUpdateException exception) => exception.InnerException switch
+     {
+         SqliteException sqlite => sqlite.SqliteExtendedErrorCode == SqliteConstraintUnique,
+diff --git a/src/Uinsure.Policies.Persistence/Records/PaymentRecord.cs b/src/Uinsure.Policies.Persistence/Records/PaymentRecord.cs
+new file mode 100644
+index 0000000..d90c987
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/Records/PaymentRecord.cs
+@@ -0,0 +1,11 @@
++using Uinsure.Policies.Domain.Policies;
++
++namespace Uinsure.Policies.Persistence.Records;
++
++internal sealed class PaymentRecord
++{
++    public int Id { get; set; }
++    public required string Reference { get; set; }
++    public PaymentMethod Method { get; set; }
++    public decimal Amount { get; set; }
++}
+diff --git a/src/Uinsure.Policies.Persistence/Records/PolicyRecord.cs b/src/Uinsure.Policies.Persistence/Records/PolicyRecord.cs
+new file mode 100644
+index 0000000..1f75099
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/Records/PolicyRecord.cs
+@@ -0,0 +1,19 @@
++using Uinsure.Policies.Domain.Policies;
++
++namespace Uinsure.Policies.Persistence.Records;
++
++internal sealed class PolicyRecord
++{
++    public int Id { get; set; }
++    public required string Reference { get; set; }
++    public PolicyType Type { get; set; }
++    public bool AutoRenew { get; set; }
++    public bool HasClaims { get; set; }
++
++    // The concurrency token: the repository sets a new value on every save of a changed policy.
++    public Guid Version { get; set; }
++
++    public required List<PolicyholderRecord> Policyholders { get; set; }
++    public required PropertyRecord Property { get; set; }
++    public required List<TermRecord> Terms { get; set; }
++}
+diff --git a/src/Uinsure.Policies.Persistence/Records/PolicyholderRecord.cs b/src/Uinsure.Policies.Persistence/Records/PolicyholderRecord.cs
+new file mode 100644
+index 0000000..e92df44
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/Records/PolicyholderRecord.cs
+@@ -0,0 +1,9 @@
++namespace Uinsure.Policies.Persistence.Records;
++
++internal sealed class PolicyholderRecord
++{
++    public int Id { get; set; }
++    public required string FirstName { get; set; }
++    public required string LastName { get; set; }
++    public DateOnly DateOfBirth { get; set; }
++}
+diff --git a/src/Uinsure.Policies.Persistence/Records/PropertyRecord.cs b/src/Uinsure.Policies.Persistence/Records/PropertyRecord.cs
+new file mode 100644
+index 0000000..3b47250
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/Records/PropertyRecord.cs
+@@ -0,0 +1,10 @@
++namespace Uinsure.Policies.Persistence.Records;
++
++internal sealed class PropertyRecord
++{
++    public int Id { get; set; }
++    public required string AddressLine1 { get; set; }
++    public string? AddressLine2 { get; set; }
++    public string? AddressLine3 { get; set; }
++    public required string Postcode { get; set; }
++}
+diff --git a/src/Uinsure.Policies.Persistence/Records/TermRecord.cs b/src/Uinsure.Policies.Persistence/Records/TermRecord.cs
+new file mode 100644
+index 0000000..68f1c26
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/Records/TermRecord.cs
+@@ -0,0 +1,12 @@
++namespace Uinsure.Policies.Persistence.Records;
++
++internal sealed class TermRecord
++{
++    public int Id { get; set; }
++    public DateOnly Start { get; set; }
++    public DateOnly End { get; set; }
++    public decimal Amount { get; set; }
++
++    // A term without a payment is unpaid.
++    public PaymentRecord? Payment { get; set; }
++}
+diff --git a/src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj b/src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj
+index 12102b0..74095cb 100644
+--- a/src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj
++++ b/src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj
+@@ -5,6 +5,7 @@
+     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
++    <PackageReference Include="Riok.Mapperly" ExcludeAssets="runtime" PrivateAssets="all" />
+   </ItemGroup>
+ 
+   <ItemGroup>
+diff --git a/src/Uinsure.Policies.Services/Commands/PolicyDetails.cs b/src/Uinsure.Policies.Services/Commands/PolicyDetails.cs
+index 7ed153d..7983fd6 100644
+--- a/src/Uinsure.Policies.Services/Commands/PolicyDetails.cs
++++ b/src/Uinsure.Policies.Services/Commands/PolicyDetails.cs
+@@ -2,4 +2,4 @@ using Uinsure.Policies.Domain.Policies;
+ 
+ namespace Uinsure.Policies.Services.Commands;
+ 
+-public sealed record PolicyDetails(Policy Policy, Term Term);
++public sealed record PolicyDetails(Policy Policy, Term CurrentTerm, PolicyStatus Status);
+diff --git a/src/Uinsure.Policies.Services/IPolicyService.cs b/src/Uinsure.Policies.Services/IPolicyService.cs
+new file mode 100644
+index 0000000..1f178b5
+--- /dev/null
++++ b/src/Uinsure.Policies.Services/IPolicyService.cs
+@@ -0,0 +1,12 @@
++using Uinsure.Policies.Domain.Common;
++using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Services.Commands;
++
++namespace Uinsure.Policies.Services;
++
++public interface IPolicyService
++{
++    Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct);
++
++    Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct);
++}
+diff --git a/src/Uinsure.Policies.Services/IReferenceGenerator.cs b/src/Uinsure.Policies.Services/IReferenceGenerator.cs
+new file mode 100644
+index 0000000..873a9bd
+--- /dev/null
++++ b/src/Uinsure.Policies.Services/IReferenceGenerator.cs
+@@ -0,0 +1,6 @@
++namespace Uinsure.Policies.Services;
++
++public interface IReferenceGenerator
++{
++    string Payment();
++}
+diff --git a/src/Uinsure.Policies.Services/PolicyService.cs b/src/Uinsure.Policies.Services/PolicyService.cs
+index 5120c1d..e0ee012 100644
+--- a/src/Uinsure.Policies.Services/PolicyService.cs
++++ b/src/Uinsure.Policies.Services/PolicyService.cs
+@@ -5,7 +5,7 @@ using Uinsure.Policies.Services.Commands;
+ 
+ namespace Uinsure.Policies.Services;
+ 
+-public sealed class PolicyService(IPolicyRepository repository, TimeProvider clock)
++public sealed class PolicyService(IPolicyRepository repository, IReferenceGenerator references, TimeProvider clock) : IPolicyService
+ {
+     public async Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct)
+     {
+@@ -26,7 +26,7 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
+             command.Policyholders,
+             command.Property,
+             command.PaymentMethod,
+-            ReferenceGenerator.Payment(),
++            references.Payment(),
+             today);
+ 
+         if (!sale.IsSuccess)
+@@ -47,11 +47,12 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
+             return Result<PolicyDetails>.Failure(DuplicateReference(command.Reference));
+         }
+ 
+-        return Result<PolicyDetails>.Success(Details(policy));
++        return Result<PolicyDetails>.Success(Details(policy, today));
+     }
+ 
+     public async Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct)
+     {
++        var today = UkCalendar.Today(clock);
+         var policy = await repository.GetByReference(reference, ct);
+         if (policy is null)
+         {
+@@ -62,12 +63,11 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
+                 reference));
+         }
+ 
+-        return Result<PolicyDetails>.Success(Details(policy));
++        return Result<PolicyDetails>.Success(Details(policy, today));
+     }
+ 
+-    // F1 sells one term and nothing changes it, so the policy's only term is its current term.
+-    // Status and the current term over several terms arrive with GET-1 in F2.
+-    private static PolicyDetails Details(Policy policy) => new(policy, policy.Terms[0]);
++    private static PolicyDetails Details(Policy policy, DateOnly today) =>
++        new(policy, policy.CurrentTerm(today), policy.StatusOn(today));
+ 
+     private static RuleViolation DuplicateReference(PolicyReference reference) => Violation(
+         RuleIds.Sell1,
+diff --git a/src/Uinsure.Policies.Services/ReferenceGenerator.cs b/src/Uinsure.Policies.Services/ReferenceGenerator.cs
+index 8f9f12c..ab01f26 100644
+--- a/src/Uinsure.Policies.Services/ReferenceGenerator.cs
++++ b/src/Uinsure.Policies.Services/ReferenceGenerator.cs
+@@ -1,6 +1,6 @@
+ namespace Uinsure.Policies.Services;
+ 
+-public static class ReferenceGenerator
++public sealed class ReferenceGenerator : IReferenceGenerator
+ {
+-    public static string Payment() => $"PAY-{Guid.NewGuid():N}";
++    public string Payment() => $"PAY-{Guid.NewGuid():N}";
+ }
+diff --git a/tests/Uinsure.Policies.Api.Tests/ClientAbortedRequestTests.cs b/tests/Uinsure.Policies.Api.Tests/ClientAbortedRequestTests.cs
+new file mode 100644
+index 0000000..41d0444
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/ClientAbortedRequestTests.cs
+@@ -0,0 +1,93 @@
++using System.Text;
++using Microsoft.Extensions.Logging;
++using Uinsure.Policies.Api.Tests.Builders;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// Transport row of the contract: a request the client aborts (an OperationCanceledException while
++// RequestAborted is cancelled) is not a server fault. Nobody is there to read a body, so no 500 problem body
++// is written, and it is logged at Information, never at Error. The sale goes through the real controller,
++// service and repository; only the repository's lookup is made to wait for the abort.
++// On the F1 code ASP.NET Core's ExceptionHandlerMiddleware already ends an aborted request with 499 and logs it
++// at Debug, before any IExceptionHandler runs: the no-500 and never-Error tests guard that, and the app's own
++// Information entry is the missing behaviour.
++// No Rule trait: transport hardening is not a numbered rule.
++public sealed class ClientAbortedRequestTests : IClassFixture<ClientAbortedApiFactory>
++{
++    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(10);
++
++    private readonly ClientAbortedApiFactory _factory;
++
++    public ClientAbortedRequestTests(ClientAbortedApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public async Task Sale_aborted_by_the_client_gets_no_500_problem_body()
++    {
++        var served = await SellAndAbort("ABORT-NO-500");
++
++        Assert.True(served.Aborted, "The request was expected to end aborted.");
++        Assert.NotEqual(500, served.Status);
++        Assert.False(
++            served.ContentType?.StartsWith("application/problem+json", StringComparison.Ordinal) == true,
++            $"A problem body was written for an aborted request: {served.Status} {served.ContentType}.");
++    }
++
++    [Fact]
++    public async Task Sale_aborted_by_the_client_is_never_logged_at_Error()
++    {
++        await SellAndAbort("ABORT-NOT-ERROR");
++
++        Assert.DoesNotContain(_factory.Logs.Entries, entry =>
++            entry.Level >= LogLevel.Error && (entry.Exception is OperationCanceledException || entry.Message.Contains("/policies", StringComparison.Ordinal)));
++    }
++
++    [Fact]
++    public async Task Sale_aborted_by_the_client_is_logged_at_Information_by_the_app()
++    {
++        await SellAndAbort("ABORT-INFORMATION");
++
++        Assert.Contains(_factory.Logs.Entries, entry =>
++            entry.Level == LogLevel.Information
++            && entry.Category.StartsWith("Uinsure.Policies", StringComparison.Ordinal)
++            && entry.Message.Contains("/policies", StringComparison.Ordinal));
++    }
++
++    [Fact]
++    public async Task Sale_aborted_by_the_client_is_not_stored()
++    {
++        await SellAndAbort("ABORT-NOT-STORED");
++
++        using var client = _factory.CreateClient();
++        await client.AssertNotStored("ABORT-NOT-STORED");
++    }
++
++    // POST a valid sale, wait until its lookup is in flight, then abort it as a client that goes away does.
++    // Returns what the server ended the request with.
++    private async Task<ServedRequest> SellAndAbort(string reference)
++    {
++        var ct = TestContext.Current.CancellationToken;
++        var lookupWaiting = _factory.ArmLookup(reference);
++        var served = _factory.Served(reference);
++
++        using var client = _factory.CreateClient();
++        using var abort = CancellationTokenSource.CreateLinkedTokenSource(ct);
++        using var request = new HttpRequestMessage(HttpMethod.Post, "/policies")
++        {
++            Content = new StringContent(new SellPolicyRequestBuilder(reference).Build().ToJsonString(), Encoding.UTF8, "application/json"),
++        };
++        request.Headers.Add(ClientAbortedApiFactory.ProbeHeader, reference);
++
++        var sending = client.SendAsync(request, abort.Token);
++        await lookupWaiting.WaitAsync(Patience, ct);
++        await abort.CancelAsync();
++
++        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sending);
++        return await served.WaitAsync(Patience, ct);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/ConcurrencyConflictTests.cs b/tests/Uinsure.Policies.Api.Tests/ConcurrencyConflictTests.cs
+new file mode 100644
+index 0000000..9238449
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/ConcurrencyConflictTests.cs
+@@ -0,0 +1,64 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Builders;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// The concurrency row of the contract, through the records: a sold policy (POST → GET) saved from a stale copy
++// answers 409 /problems/concurrency with no ruleId and a detail that asks for a retry, the stored policy reads
++// back as sold, and the concurrency token is PolicyRecord.Version, never a Domain type's. The stale save is the
++// factory's test path (F1 has no write endpoint that changes a stored policy).
++// No Rule trait: concurrency is not a numbered rule.
++public sealed class ConcurrencyConflictTests : IClassFixture<StaleSaveApiFactory>
++{
++    private const string ConcurrencyType = "/problems/concurrency";
++
++    private readonly StaleSaveApiFactory _factory;
++
++    public ConcurrencyConflictTests(StaleSaveApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public async Task Stale_save_of_a_sold_policy_answers_409_concurrency_with_no_ruleId()
++    {
++        using var client = _factory.CreateClient();
++        await client.SellAndReadBack(SellPolicyRequestBuilder.Distinctive("STALE-409").Build(), "STALE-409");
++
++        using var response = await client.PostAsync(StaleSaveApiFactory.PathFor("STALE-409"), content: null, TestContext.Current.CancellationToken);
++
++        var problem = await ProblemAssert.TransportProblem(response, HttpStatusCode.Conflict, StaleSaveApiFactory.Path, ConcurrencyType);
++        Assert.Equal("The policy was changed by another request", problem.Member("title").GetString());
++        Assert.Equal("Retry the request.", problem.Member("detail").GetString());
++    }
++
++    [Fact]
++    public async Task Stale_save_of_a_sold_policy_leaves_it_reading_back_as_sold()
++    {
++        using var client = _factory.CreateClient();
++        var sold = SellPolicyRequestBuilder.Distinctive("STALE-READ-BACK").Build();
++        await client.SellAndReadBack(sold, "STALE-READ-BACK");
++
++        using var response = await client.PostAsync(StaleSaveApiFactory.PathFor("STALE-READ-BACK"), content: null, TestContext.Current.CancellationToken);
++        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
++
++        using var read = await client.GetPolicy("STALE-READ-BACK");
++        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
++        SoldPolicyAssert.ReadsBackAsSold(await read.ReadJson(), sold, "STALE-READ-BACK", new DateOnly(2027, 11, 15));
++    }
++
++    [Fact]
++    public async Task Stale_save_conflicts_on_the_Version_of_the_PolicyRecord()
++    {
++        using var client = _factory.CreateClient();
++        await client.SellAndReadBack(SellPolicyRequestBuilder.Distinctive("STALE-RECORD").Build(), "STALE-RECORD");
++
++        using var response = await client.PostAsync(StaleSaveApiFactory.PathFor("STALE-RECORD"), content: null, TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
++        Assert.Equal("Uinsure.Policies.Persistence.Records.PolicyRecord", _factory.ConcurrencyTokenOwner);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/SellAmountOverflowTests.cs b/tests/Uinsure.Policies.Api.Tests/SellAmountOverflowTests.cs
+new file mode 100644
+index 0000000..165e6ed
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/SellAmountOverflowTests.cs
+@@ -0,0 +1,48 @@
++using System.Net;
++using Microsoft.Extensions.Logging;
++using Uinsure.Policies.Api.Tests.Builders;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// OWASP API4:2023 (finding A1/I1): no amount a request can bind may throw on the way to a rule. An extreme
++// negative amount with no fractional part binds under strict JSON, so it must be answered as an ordinary
++// request: never a 500, never an Error-level log, and nothing stored. Run in Production, where a 500 is
++// logged at Error by the unexpected-exception handler. API4 is not a requirements rule, so no Rule trait;
++// the SELL-7 422 these amounts must get is asserted in SellAmountShapeTests.
++public sealed class SellAmountOverflowTests : IClassFixture<LogCapturingApiFactory>
++{
++    private readonly LogCapturingApiFactory _factory;
++
++    public SellAmountOverflowTests(LogCapturingApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public async Task Amount_of_minus_10_to_the_27_is_not_a_500_and_logs_no_error()
++    {
++        await AssertHandledWithoutError(-1_000_000_000_000_000_000_000_000_000m, "OVERFLOW-NEG-E27");
++    }
++
++    [Fact]
++    public async Task Amount_of_decimal_MinValue_is_not_a_500_and_logs_no_error()
++    {
++        await AssertHandledWithoutError(decimal.MinValue, "OVERFLOW-NEG-MIN");
++    }
++
++    private async Task AssertHandledWithoutError(decimal amount, string reference)
++    {
++        using var client = _factory.CreateClient();
++        var body = new SellPolicyRequestBuilder(reference).WithAmount(amount).Build();
++        var logged = _factory.Logs.Entries.Count;
++
++        using var response = await client.PostPolicy(body);
++
++        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
++        Assert.DoesNotContain(_factory.Logs.Entries.Skip(logged), entry => entry.Level >= LogLevel.Error);
++        await client.AssertNotStored(reference);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/SellAmountShapeTests.cs b/tests/Uinsure.Policies.Api.Tests/SellAmountShapeTests.cs
+new file mode 100644
+index 0000000..e9a1556
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/SellAmountShapeTests.cs
+@@ -0,0 +1,130 @@
++using Uinsure.Policies.Api.Tests.Builders;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// The amount's 400 shape rows (ruling H6): an amount with more than 2 decimal places, or above 1,000,000.00,
++// is rejected before any rule runs, with errors["amount"], and never rounded, so nothing ambiguous is stored.
++// A zero or negative amount within that scale stays the 422 SELL-7. Each side of each limit is its own test.
++// Shape is not a numbered rule, so the shape rows carry no Rule trait. The negative rows (finding A1/I2, I3)
++// show the shape check hands any negative amount with at most 2 decimal places, however large, over to
++// SELL-7, so they carry its trait.
++public sealed class SellAmountShapeTests : IClassFixture<PoliciesApiFactory>
++{
++    private const string Sell7Title = "Policy amount must be greater than zero";
++
++    private readonly PoliciesApiFactory _factory;
++
++    public SellAmountShapeTests(PoliciesApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public async Task Amount_with_2_decimal_places_is_accepted()
++    {
++        using var client = _factory.CreateClient();
++        var body = new SellPolicyRequestBuilder("AMOUNT-2DP").WithAmount(803.47m).Build();
++
++        var policy = await client.SellAndReadBack(body, "AMOUNT-2DP");
++
++        SoldPolicyAssert.ReadsBackAsSold(policy, body, "AMOUNT-2DP", new DateOnly(2027, 11, 7));
++        Assert.Equal(803.47m, policy.Member("amount").GetDecimal());
++    }
++
++    [Fact]
++    public async Task Amount_with_3_decimal_places_is_rejected_with_400()
++    {
++        using var client = _factory.CreateClient();
++        var body = new SellPolicyRequestBuilder("AMOUNT-3DP").WithAmount(527.185m).Build();
++
++        using var response = await client.PostPolicy(body);
++
++        ProblemAssert.HasError(await ProblemAssert.ValidationErrors(response), "amount");
++        await client.AssertNotStored("AMOUNT-3DP");
++    }
++
++    // Below a penny is a scale error, so it is the 400, not the 422 SELL-7 of a zero amount.
++    [Fact]
++    public async Task Amount_of_0_001_is_rejected_with_400()
++    {
++        using var client = _factory.CreateClient();
++        var body = new SellPolicyRequestBuilder("AMOUNT-0-001").WithAmount(0.001m).Build();
++
++        using var response = await client.PostPolicy(body);
++
++        ProblemAssert.HasError(await ProblemAssert.ValidationErrors(response), "amount");
++        await client.AssertNotStored("AMOUNT-0-001");
++    }
++
++    [Fact]
++    public async Task Amount_of_1_000_000_00_is_accepted()
++    {
++        using var client = _factory.CreateClient();
++        var body = new SellPolicyRequestBuilder("AMOUNT-1M").WithAmount(1_000_000.00m).Build();
++
++        var policy = await client.SellAndReadBack(body, "AMOUNT-1M");
++
++        SoldPolicyAssert.ReadsBackAsSold(policy, body, "AMOUNT-1M", new DateOnly(2027, 11, 7));
++        Assert.Equal(1_000_000.00m, policy.Member("amount").GetDecimal());
++    }
++
++    [Fact]
++    public async Task Amount_of_1_000_000_01_is_rejected_with_400()
++    {
++        using var client = _factory.CreateClient();
++        var body = new SellPolicyRequestBuilder("AMOUNT-1M-01").WithAmount(1_000_000.01m).Build();
++
++        using var response = await client.PostPolicy(body);
++
++        ProblemAssert.HasError(await ProblemAssert.ValidationErrors(response), "amount");
++        await client.AssertNotStored("AMOUNT-1M-01");
++    }
++
++    // The 1,000,000.00 cap bounds positive amounts only: a negative beyond it is still the 422 SELL-7, not a 400.
++    [Fact]
++    [Trait("Rule", "SELL-7")]
++    public async Task Amount_of_minus_1_000_000_01_is_rejected_with_422_SELL_7()
++    {
++        using var client = _factory.CreateClient();
++        var body = new SellPolicyRequestBuilder("SELL7-NEG-1M-01").WithAmount(-1_000_000.01m).Build();
++
++        using var response = await client.PostPolicy(body);
++
++        var problem = await ProblemAssert.SingleRuleViolation(response, "SELL-7", Sell7Title);
++        Assert.Equal(-1_000_000.01m, problem.Member("amount").GetDecimal());
++        await client.AssertNotStored("SELL7-NEG-1M-01");
++    }
++
++    // Below decimal.MinValue / 100, amount * 100 cannot be represented; the shape check must still answer.
++    [Fact]
++    [Trait("Rule", "SELL-7")]
++    public async Task Amount_of_minus_10_to_the_27_is_rejected_with_422_SELL_7()
++    {
++        using var client = _factory.CreateClient();
++        var body = new SellPolicyRequestBuilder("SELL7-NEG-E27").WithAmount(-1_000_000_000_000_000_000_000_000_000m).Build();
++
++        using var response = await client.PostPolicy(body);
++
++        var problem = await ProblemAssert.SingleRuleViolation(response, "SELL-7", Sell7Title);
++        Assert.Equal(-1_000_000_000_000_000_000_000_000_000m, problem.Member("amount").GetDecimal());
++        await client.AssertNotStored("SELL7-NEG-E27");
++    }
++
++    // The most negative amount that binds.
++    [Fact]
++    [Trait("Rule", "SELL-7")]
++    public async Task Amount_of_decimal_MinValue_is_rejected_with_422_SELL_7()
++    {
++        using var client = _factory.CreateClient();
++        var body = new SellPolicyRequestBuilder("SELL7-NEG-MIN").WithAmount(decimal.MinValue).Build();
++
++        using var response = await client.PostPolicy(body);
++
++        var problem = await ProblemAssert.SingleRuleViolation(response, "SELL-7", Sell7Title);
++        Assert.Equal(decimal.MinValue, problem.Member("amount").GetDecimal());
++        await client.AssertNotStored("SELL7-NEG-MIN");
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/ClientAbortedApiFactory.cs b/tests/Uinsure.Policies.Api.Tests/Support/ClientAbortedApiFactory.cs
+new file mode 100644
+index 0000000..2e57530
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/ClientAbortedApiFactory.cs
+@@ -0,0 +1,109 @@
++using System.Collections.Concurrent;
++using Microsoft.AspNetCore.Builder;
++using Microsoft.AspNetCore.Hosting;
++using Microsoft.AspNetCore.Http;
++using Microsoft.AspNetCore.TestHost;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Logging;
++using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Services;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// What the server did with one request, seen from outside the app's whole pipeline (after its exception handling).
++public sealed record ServedRequest(int Status, string? ContentType, bool Aborted);
++
++// Production over HTTPS, for a sale the client gives up on. The app's IPolicyRepository is wrapped so a lookup
++// of an armed reference waits on the request's own token until the client aborts, as a slow database call does
++// when the client goes away; the OperationCanceledException then comes from the real controller → service →
++// repository path. A middleware ahead of the app's pipeline records the status and content type the server
++// ended with for each request carrying the probe header, and a logger provider captures what is logged.
++public sealed class ClientAbortedApiFactory : ProductionApiFactory
++{
++    public const string ProbeHeader = "X-Test-Abort-Probe";
++
++    private readonly ConcurrentDictionary<string, TaskCompletionSource> _reached = new(StringComparer.Ordinal);
++    private readonly ConcurrentDictionary<string, TaskCompletionSource<ServedRequest>> _served = new(StringComparer.Ordinal);
++
++    public ClientAbortedApiFactory() => ClientOptions.BaseAddress = TransportClients.HttpsBaseAddress;
++
++    public CapturingLoggerProvider Logs { get; } = new();
++
++    // Arms the next lookup of the reference only. The task completes once that lookup is waiting, so the test
++    // aborts mid-request, never before the request reaches the repository.
++    public Task ArmLookup(string reference) =>
++        _reached.GetOrAdd(reference, _ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
++
++    // Completes when the request with this probe value has left the app's pipeline.
++    public Task<ServedRequest> Served(string probe) => ServedSignal(probe).Task;
++
++    protected override void ConfigureWebHost(IWebHostBuilder builder)
++    {
++        base.ConfigureWebHost(builder);
++
++        builder.ConfigureTestServices(services =>
++        {
++            services.AddSingleton<ILoggerProvider>(Logs);
++            services.AddTransient<IStartupFilter>(_ => new ServedRequestRecorder(this));
++
++            var app = services.Single(descriptor => descriptor.ServiceType == typeof(IPolicyRepository));
++            var implementation = app.ImplementationType
++                ?? throw new InvalidOperationException("The app's IPolicyRepository is expected to be registered by type.");
++            services.Remove(app);
++            services.Add(new ServiceDescriptor(
++                typeof(IPolicyRepository),
++                provider => new StallingPolicyRepository((IPolicyRepository)ActivatorUtilities.CreateInstance(provider, implementation), this),
++                app.Lifetime));
++        });
++    }
++
++    private TaskCompletionSource<ServedRequest> ServedSignal(string probe) =>
++        _served.GetOrAdd(probe, _ => new TaskCompletionSource<ServedRequest>(TaskCreationOptions.RunContinuationsAsynchronously));
++
++    private sealed class ServedRequestRecorder(ClientAbortedApiFactory factory) : IStartupFilter
++    {
++        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
++        {
++            app.Use(async (context, nextMiddleware) =>
++            {
++                var probe = context.Request.Headers[ProbeHeader].ToString();
++                if (probe.Length == 0)
++                {
++                    await nextMiddleware(context);
++                    return;
++                }
++
++                try
++                {
++                    await nextMiddleware(context);
++                }
++                finally
++                {
++                    factory.ServedSignal(probe).TrySetResult(new ServedRequest(
++                        context.Response.StatusCode,
++                        context.Response.ContentType,
++                        context.RequestAborted.IsCancellationRequested));
++                }
++            });
++            next(app);
++        };
++    }
++
++    private sealed class StallingPolicyRepository(IPolicyRepository real, ClientAbortedApiFactory factory) : IPolicyRepository
++    {
++        public async Task<Policy?> GetByReference(PolicyReference reference, CancellationToken ct)
++        {
++            if (factory._reached.TryRemove(reference.Value, out var reached))
++            {
++                reached.TrySetResult();
++                await Task.Delay(Timeout.Infinite, ct);
++            }
++
++            return await real.GetByReference(reference, ct);
++        }
++
++        public void Add(Policy policy) => real.Add(policy);
++
++        public Task SaveChanges(CancellationToken ct) => real.SaveChanges(ct);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/LogCapturingApiFactory.cs b/tests/Uinsure.Policies.Api.Tests/Support/LogCapturingApiFactory.cs
+new file mode 100644
+index 0000000..4882ea4
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/LogCapturingApiFactory.cs
+@@ -0,0 +1,22 @@
++using Microsoft.AspNetCore.Hosting;
++using Microsoft.AspNetCore.TestHost;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Logging;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// Production, with nothing added but a logger provider that captures what is logged, so a test can show that
++// an ordinary request writes no Error-level entry. Clients use HTTPS, so requests pass the HTTPS check.
++public sealed class LogCapturingApiFactory : ProductionApiFactory
++{
++    public LogCapturingApiFactory() => ClientOptions.BaseAddress = TransportClients.HttpsBaseAddress;
++
++    public CapturingLoggerProvider Logs { get; } = new();
++
++    protected override void ConfigureWebHost(IWebHostBuilder builder)
++    {
++        base.ConfigureWebHost(builder);
++
++        builder.ConfigureTestServices(services => services.AddSingleton<ILoggerProvider>(Logs));
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/StaleSaveApiFactory.cs b/tests/Uinsure.Policies.Api.Tests/Support/StaleSaveApiFactory.cs
+new file mode 100644
+index 0000000..4f6ecb9
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/StaleSaveApiFactory.cs
+@@ -0,0 +1,94 @@
++using Microsoft.AspNetCore.Builder;
++using Microsoft.AspNetCore.Hosting;
++using Microsoft.AspNetCore.Http;
++using Microsoft.AspNetCore.TestHost;
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.ChangeTracking;
++using Microsoft.Extensions.DependencyInjection;
++using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Persistence;
++using Uinsure.Policies.Services;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// The API plus a test-only path that makes a stale save of a sold policy, inside the app's own exception
++// handling exactly as a write endpoint would. F1 has no endpoint that changes a stored policy, so the path does
++// what a lost race does: it loads the policy through the app's IPolicyRepository, another request then loads
++// and saves the same policy with a new Version, and this request saves the copy it loaded. The repository's
++// PersistenceConflictException(Concurrency) is then answered by the app. The entry found is the tracked one
++// whose Version is EF's concurrency token, whatever its type; the factory records that type's name.
++public sealed class StaleSaveApiFactory : PoliciesApiFactory
++{
++    public const string Path = "/test/stale-save";
++
++    // The Version the other request saves: a literal, never Guid.NewGuid().
++    private static readonly Guid OtherRequestVersion = new("0f1b0000-0000-4000-8000-000000000001");
++
++    private readonly Lock _gate = new();
++    private string? _concurrencyTokenOwner;
++
++    // The full name of the tracked type whose Version is the concurrency token, seen on the last stale save.
++    public string? ConcurrencyTokenOwner
++    {
++        get
++        {
++            lock (_gate)
++            {
++                return _concurrencyTokenOwner;
++            }
++        }
++    }
++
++    public static string PathFor(string reference) => $"{Path}?reference={Uri.EscapeDataString(reference)}";
++
++    protected override void ConfigureWebHost(IWebHostBuilder builder)
++    {
++        base.ConfigureWebHost(builder);
++
++        builder.ConfigureTestServices(services =>
++            services.AddTransient<IStartupFilter>(_ => new StaleSaveEndpointStartupFilter(this)));
++    }
++
++    private static EntityEntry VersionedEntry(PoliciesDbContext context) =>
++        context.ChangeTracker.Entries().Single(entry => entry.Metadata.FindProperty("Version")?.IsConcurrencyToken == true);
++
++    private async Task StaleSave(HttpContext context)
++    {
++        var ct = context.RequestAborted;
++        var reference = new PolicyReference(context.Request.Query["reference"].ToString());
++        var repository = context.RequestServices.GetRequiredService<IPolicyRepository>();
++        if (await repository.GetByReference(reference, ct) is null)
++        {
++            throw new InvalidOperationException($"'{reference.Value}' was expected to be sold before the stale save.");
++        }
++
++        var mine = VersionedEntry(context.RequestServices.GetRequiredService<PoliciesDbContext>());
++        lock (_gate)
++        {
++            _concurrencyTokenOwner = mine.Metadata.ClrType.FullName;
++        }
++
++        // Another request loads the same policy and saves it first, with a new Version.
++        using (var other = context.RequestServices.GetRequiredService<IServiceScopeFactory>().CreateScope())
++        {
++            var otherContext = other.ServiceProvider.GetRequiredService<PoliciesDbContext>();
++            _ = await other.ServiceProvider.GetRequiredService<IPolicyRepository>().GetByReference(reference, ct);
++            VersionedEntry(otherContext).Property("Version").CurrentValue = OtherRequestVersion;
++            await otherContext.SaveChangesAsync(ct);
++        }
++
++        // This request saves the copy it loaded, which still carries the Version it was loaded with.
++        mine.State = EntityState.Modified;
++        await repository.SaveChanges(ct);
++        context.Response.StatusCode = StatusCodes.Status204NoContent;
++    }
++
++    private sealed class StaleSaveEndpointStartupFilter(StaleSaveApiFactory factory) : IStartupFilter
++    {
++        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
++        {
++            next(app);
++            app.Map(Path, branch => branch.Run(factory.StaleSave));
++        };
++    }
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/DomainPersistenceIgnoranceTests.cs b/tests/Uinsure.Policies.Architecture.Tests/DomainPersistenceIgnoranceTests.cs
+new file mode 100644
+index 0000000..56d3da3
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/DomainPersistenceIgnoranceTests.cs
+@@ -0,0 +1,41 @@
++using System.Reflection;
++using Uinsure.Policies.Architecture.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// A14: the Domain knows nothing of storage. No Domain type carries a Version (it lives on PolicyRecord), and no
++// Domain class keeps a parameterless constructor for EF to materialise it (Persistence uses Policy.Restore).
++public sealed class DomainPersistenceIgnoranceTests
++{
++    private const BindingFlags AnyDeclared =
++        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
++
++    private static IEnumerable<Type> DomainTypes =>
++        SourceAssemblies.Domain.GetTypes()
++            .Where(type => type.Namespace?.StartsWith("Uinsure.Policies.Domain", StringComparison.Ordinal) == true)
++            .Where(type => !SourceAssemblies.IsCompilerGenerated(type));
++
++    [Fact]
++    public void No_Domain_type_has_a_Version_member()
++    {
++        var versions = DomainTypes
++            .SelectMany(type => type.GetMembers(AnyDeclared))
++            .Where(member => member.Name == "Version" || member.Name == "<Version>k__BackingField")
++            .Select(member => $"{member.DeclaringType?.FullName}.{member.Name}");
++
++        Assert.Empty(versions);
++    }
++
++    [Fact]
++    public void No_Domain_class_has_a_parameterless_constructor()
++    {
++        var parameterless = DomainTypes
++            .Where(type => type.IsClass && !type.IsAbstract)
++            .SelectMany(type => type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
++            .Where(constructor => constructor.GetParameters().Length == 0)
++            .Select(constructor => $"{constructor.DeclaringType?.FullName}()");
++
++        Assert.Empty(parameterless);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/LayerSeamTests.cs b/tests/Uinsure.Policies.Architecture.Tests/LayerSeamTests.cs
+new file mode 100644
+index 0000000..0ee3d7c
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/LayerSeamTests.cs
+@@ -0,0 +1,83 @@
++using System.Reflection;
++using Uinsure.Policies.Architecture.Tests.Support;
++using Uinsure.Policies.Services;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// A15: the layers meet at interfaces. The controller depends on IPolicyService, never on a concrete Services
++// class; PolicyService implements IPolicyService and takes its references from IReferenceGenerator, which
++// ReferenceGenerator implements.
++public sealed class LayerSeamTests
++{
++    private const string ControllerBaseName = "Microsoft.AspNetCore.Mvc.ControllerBase";
++
++    private static IEnumerable<Type> Controllers =>
++        SourceAssemblies.Api.GetTypes().Where(type => !SourceAssemblies.IsCompilerGenerated(type) && InheritsControllerBase(type));
++
++    [Fact]
++    public void PoliciesController_takes_IPolicyService()
++    {
++        var controller = Assert.Single(Controllers, type => type.Name == "PoliciesController");
++
++        Assert.All(controller.GetConstructors(), constructor =>
++            Assert.Contains(typeof(IPolicyService), constructor.GetParameters().Select(parameter => parameter.ParameterType)));
++    }
++
++    [Fact]
++    public void Controllers_take_no_concrete_Services_class()
++    {
++        var concrete = Controllers
++            .SelectMany(controller => controller.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
++                .SelectMany(constructor => constructor.GetParameters())
++                .Where(parameter => parameter.ParameterType.Assembly == SourceAssemblies.Services && !parameter.ParameterType.IsInterface)
++                .Select(parameter => $"{controller.Name} takes {parameter.ParameterType.FullName}"));
++
++        Assert.Empty(concrete);
++    }
++
++    [Fact]
++    public void PolicyService_implements_IPolicyService()
++    {
++        Assert.Contains(typeof(IPolicyService), typeof(PolicyService).GetInterfaces());
++    }
++
++    [Fact]
++    public void PolicyService_takes_IReferenceGenerator()
++    {
++        var constructor = Assert.Single(typeof(PolicyService).GetConstructors());
++
++        Assert.Contains(typeof(IReferenceGenerator), constructor.GetParameters().Select(parameter => parameter.ParameterType));
++    }
++
++    [Fact]
++    public void ReferenceGenerator_implements_IReferenceGenerator()
++    {
++        Assert.Contains(typeof(IReferenceGenerator), typeof(ReferenceGenerator).GetInterfaces());
++    }
++
++    // Finding A1/I4: IReferenceGenerator is the only way to a reference, so ReferenceGenerator offers no
++    // public static entry point that code could call around the injected seam.
++    [Fact]
++    public void ReferenceGenerator_declares_no_public_static_method()
++    {
++        var statics = typeof(ReferenceGenerator)
++            .GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
++            .Select(method => method.Name);
++
++        Assert.Empty(statics);
++    }
++
++    private static bool InheritsControllerBase(Type type)
++    {
++        for (var baseType = type.BaseType; baseType is not null; baseType = baseType.BaseType)
++        {
++            if (baseType.FullName == ControllerBaseName)
++            {
++                return true;
++            }
++        }
++
++        return false;
++    }
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/PersistenceRecordTests.cs b/tests/Uinsure.Policies.Architecture.Tests/PersistenceRecordTests.cs
+new file mode 100644
+index 0000000..9dcef43
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/PersistenceRecordTests.cs
+@@ -0,0 +1,79 @@
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Metadata;
++using Uinsure.Policies.Architecture.Tests.Support;
++using Uinsure.Policies.Persistence;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// A12: EF maps only the Persistence records, internal *Record types in Uinsure.Policies.Persistence.Records,
++// never a Domain type; the configurations configure records; and the concurrency token is PolicyRecord.Version.
++// The model is PoliciesDbContext's own, built from its configurations; building it opens no connection.
++public sealed class PersistenceRecordTests
++{
++    private const string RecordsNamespace = "Uinsure.Policies.Persistence.Records";
++    private const string EntityTypeConfigurationName = "Microsoft.EntityFrameworkCore.IEntityTypeConfiguration`1";
++
++    [Fact]
++    public void EF_maps_only_Persistence_record_types()
++    {
++        var notRecords = MappedTypes().Where(type => !IsRecordType(type)).Select(type => type.FullName);
++
++        Assert.Empty(notRecords);
++    }
++
++    [Fact]
++    public void Persistence_record_types_exist_and_are_internal()
++    {
++        var records = SourceAssemblies.Persistence.GetTypes()
++            .Where(type => type.Namespace == RecordsNamespace && !SourceAssemblies.IsCompilerGenerated(type))
++            .ToArray();
++
++        Assert.Contains(records, type => type.Name == "PolicyRecord");
++        Assert.Empty(records.Where(type => type.IsPublic || type.IsNestedPublic).Select(type => type.FullName));
++    }
++
++    [Fact]
++    public void Entity_type_configurations_configure_only_record_types()
++    {
++        var configured = SourceAssemblies.Persistence.GetTypes()
++            .SelectMany(type => type.GetInterfaces())
++            .Where(contract => contract.IsGenericType && contract.GetGenericTypeDefinition().FullName == EntityTypeConfigurationName)
++            .Select(contract => contract.GetGenericArguments()[0])
++            .ToArray();
++
++        Assert.NotEmpty(configured);
++        Assert.Empty(configured.Where(type => !IsRecordType(type)).Select(type => type.FullName));
++    }
++
++    [Fact]
++    public void PolicyRecord_Version_is_the_concurrency_token()
++    {
++        using var context = NewContext();
++        var policyRecord = context.Model.GetEntityTypes()
++            .SingleOrDefault(entity => entity.ClrType.FullName == $"{RecordsNamespace}.PolicyRecord");
++        Assert.NotNull(policyRecord);
++
++        var tokens = policyRecord.GetProperties().Where(property => property.IsConcurrencyToken).Select(property => property.Name);
++        Assert.Equal(["Version"], tokens);
++    }
++
++    private static bool IsRecordType(Type type) =>
++        type.Assembly == SourceAssemblies.Persistence
++        && type.Namespace == RecordsNamespace
++        && type.Name.EndsWith("Record", StringComparison.Ordinal)
++        && !type.IsPublic
++        && !type.IsNestedPublic;
++
++    private static Type[] MappedTypes()
++    {
++        using var context = NewContext();
++        IModel model = context.Model;
++        var types = model.GetEntityTypes().Select(entity => entity.ClrType).Distinct().ToArray();
++        Assert.NotEmpty(types);
++        return types;
++    }
++
++    private static PoliciesDbContext NewContext() =>
++        new(new DbContextOptionsBuilder<PoliciesDbContext>().UseSqlite("DataSource=:memory:").Options);
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/PolicyRestoreTests.cs b/tests/Uinsure.Policies.Architecture.Tests/PolicyRestoreTests.cs
+new file mode 100644
+index 0000000..05bc843
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/PolicyRestoreTests.cs
+@@ -0,0 +1,53 @@
++using System.Reflection;
++using Uinsure.Policies.Architecture.Tests.Support;
++using Uinsure.Policies.Domain.Policies;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// A13: Policy.Restore rebuilds a policy from stored state without running any rule, so only Persistence may
++// call it. Every method body in the four src assemblies is read; the test projects are not src and may call it.
++public sealed class PolicyRestoreTests
++{
++    [Fact]
++    public void Policy_has_a_public_static_Restore_that_returns_a_Policy()
++    {
++        var restore = Restores();
++
++        var method = Assert.Single(restore);
++        Assert.Equal(typeof(Policy), method.ReturnType);
++    }
++
++    [Fact]
++    public void Policy_Restore_is_called_from_Persistence_and_from_no_other_src_assembly()
++    {
++        var restore = Restores();
++        Assert.NotEmpty(restore);
++
++        var callers = SourceAssemblies.All
++            .SelectMany(assembly => MethodCalls.In(assembly)
++                .Where(call => restore.Contains(call.Callee))
++                .Select(call => (Assembly: assembly, call.Caller)))
++            .ToArray();
++
++        Assert.Contains(callers, call => call.Assembly == SourceAssemblies.Persistence);
++        Assert.Empty(callers
++            .Where(call => call.Assembly != SourceAssemblies.Persistence)
++            .Select(call => $"{call.Assembly.GetName().Name}: {call.Caller}"));
++    }
++
++    // The scan itself: a call made inside an async method (PolicyService.Sell's state machine calls Policy.Sell)
++    // is found and counted against the assembly it was written in, so an empty caller list means something.
++    [Fact]
++    public void Call_scan_finds_a_call_made_inside_an_async_method()
++    {
++        var sell = typeof(Policy).GetMethod(nameof(Policy.Sell), BindingFlags.Public | BindingFlags.Static);
++        Assert.NotNull(sell);
++
++        Assert.Contains(MethodCalls.In(SourceAssemblies.Services), call => call.Callee.Equals(sell));
++    }
++
++    private static MethodInfo[] Restores() =>
++        [.. typeof(Policy).GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
++            .Where(method => method.Name == "Restore")];
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/Support/MethodCalls.cs b/tests/Uinsure.Policies.Architecture.Tests/Support/MethodCalls.cs
+new file mode 100644
+index 0000000..a86d495
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/Support/MethodCalls.cs
+@@ -0,0 +1,81 @@
++using System.Reflection;
++using System.Reflection.Emit;
++
++namespace Uinsure.Policies.Architecture.Tests.Support;
++
++// The methods a method body refers to (call, callvirt, newobj, ldftn, ldvirtftn), read from its IL with
++// reflection only. The IL is walked opcode by opcode, so an operand's bytes are never taken for an opcode.
++// Every type in an assembly is read, compiler-generated ones included, so a call from a lambda or an async
++// method's state machine counts against the assembly it was written in.
++internal static class MethodCalls
++{
++    private const BindingFlags Declared =
++        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
++
++    private static readonly Dictionary<short, OpCode> OpCodesByValue = typeof(OpCodes)
++        .GetFields(BindingFlags.Public | BindingFlags.Static)
++        .Select(field => (OpCode)field.GetValue(null)!)
++        .ToDictionary(opCode => opCode.Value);
++
++    private static readonly HashSet<short> MethodReferences =
++    [
++        OpCodes.Call.Value, OpCodes.Callvirt.Value, OpCodes.Newobj.Value, OpCodes.Ldftn.Value, OpCodes.Ldvirtftn.Value,
++    ];
++
++    // Each (caller, callee) pair in the assembly, the caller named Type.Method.
++    public static IEnumerable<(string Caller, MethodBase Callee)> In(Assembly assembly) =>
++        assembly.GetTypes()
++            .SelectMany(type => type.GetMethods(Declared).Cast<MethodBase>().Concat(type.GetConstructors(Declared)))
++            .SelectMany(method => CalledBy(method).Select(callee => ($"{method.DeclaringType?.FullName}.{method.Name}", callee)));
++
++    public static IEnumerable<MethodBase> CalledBy(MethodBase method)
++    {
++        var il = method.GetMethodBody()?.GetILAsByteArray();
++        if (il is null)
++        {
++            yield break;
++        }
++
++        var position = 0;
++        while (position < il.Length)
++        {
++            short value = il[position++];
++            if (value == 0xFE)
++            {
++                value = (short)(0xFE00 | il[position++]);
++            }
++
++            var opCode = OpCodesByValue[value];
++            if (MethodReferences.Contains(opCode.Value) && Resolve(method, BitConverter.ToInt32(il, position)) is { } callee)
++            {
++                yield return callee;
++            }
++
++            position += OperandSize(opCode, il, position);
++        }
++    }
++
++    private static MethodBase? Resolve(MethodBase method, int token)
++    {
++        var typeArguments = method.DeclaringType is { IsGenericType: true } type ? type.GetGenericArguments() : null;
++        var methodArguments = method.IsGenericMethod ? method.GetGenericArguments() : null;
++        try
++        {
++            return method.Module.ResolveMethod(token, typeArguments, methodArguments);
++        }
++        catch (Exception exception) when (exception is ArgumentException or BadImageFormatException or TypeLoadException or FileNotFoundException)
++        {
++            return null;
++        }
++    }
++
++    private static int OperandSize(OpCode opCode, byte[] il, int position) => opCode.OperandType switch
++    {
++        OperandType.InlineNone => 0,
++        OperandType.ShortInlineBrTarget or OperandType.ShortInlineI or OperandType.ShortInlineVar => 1,
++        OperandType.InlineVar => 2,
++        OperandType.InlineI8 or OperandType.InlineR => 8,
++        OperandType.InlineSwitch => 4 + (4 * BitConverter.ToInt32(il, position)),
++        _ => 4,
++    };
++}
+diff --git a/tests/Uinsure.Policies.Domain.Tests/Builders/PolicyBuilder.cs b/tests/Uinsure.Policies.Domain.Tests/Builders/PolicyBuilder.cs
+index 0e8bc62..71f7cc5 100644
+--- a/tests/Uinsure.Policies.Domain.Tests/Builders/PolicyBuilder.cs
++++ b/tests/Uinsure.Policies.Domain.Tests/Builders/PolicyBuilder.cs
+@@ -75,4 +75,15 @@ public sealed class PolicyBuilder
+         Assert.True(result.IsSuccess, "The builder's sale was expected to succeed.");
+         return result.Value;
+     }
++
++    // A policy with the given terms, in order, rebuilt through Policy.Restore: no sale can make more than
++    // one term until F4 adds renewal, so this is how a test gets a policy whose first and latest terms differ.
++    public Policy RestoreWithTerms(params Term[] terms) => Policy.Restore(
++        _reference,
++        _type,
++        _autoRenew,
++        false,
++        [.. _policyholders.Select(holder => holder.Build())],
++        _property,
++        terms);
+ }
+diff --git a/tests/Uinsure.Policies.Domain.Tests/PolicyStatusTests.cs b/tests/Uinsure.Policies.Domain.Tests/PolicyStatusTests.cs
+new file mode 100644
+index 0000000..6946154
+--- /dev/null
++++ b/tests/Uinsure.Policies.Domain.Tests/PolicyStatusTests.cs
+@@ -0,0 +1,109 @@
++using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Domain.Tests.Builders;
++using Uinsure.Policies.Domain.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Domain.Tests;
++
++// Status (requirements, the row after GET-1) is derived from today and never stored: Pending before the
++// first start, Expired after the last end, otherwise Active. Cancelled is not reachable until F3. A
++// one-term policy sold to start 2026-11-01 (TestClock.Today + 15) is covered from 2026-11-01 to
++// 2027-10-31 inclusive. The two-term rows (finding A1/I5) restore that term followed by 2027-11-01 to
++// 2028-10-31, so Pending is shown to measure from the first term's start and Expired from the latest term's
++// end. Untraited until F2 adds the GET-1 traits.
++public sealed class PolicyStatusTests
++{
++    private static readonly DateOnly Start = TestClock.Today.AddDays(15);
++
++    private static Policy TwoTermPolicy() => new PolicyBuilder().RestoreWithTerms(
++        new Term(new DateOnly(2026, 11, 1), 527.18m, new Payment("PAY-DOM-0042", PaymentMethod.DirectDebit, 527.18m)),
++        new Term(new DateOnly(2027, 11, 1), 561.09m, new Payment("PAY-DOM-0042-R1", PaymentMethod.DirectDebit, 561.09m)));
++
++    [Fact]
++    public void Status_on_the_sale_day_before_the_start_is_Pending()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        Assert.Equal(PolicyStatus.Pending, policy.StatusOn(TestClock.Today));
++    }
++
++    [Fact]
++    public void Status_on_the_day_before_the_start_is_Pending()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        Assert.Equal(PolicyStatus.Pending, policy.StatusOn(new DateOnly(2026, 10, 31)));
++    }
++
++    [Fact]
++    public void Status_on_the_start_day_is_Active()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        Assert.Equal(PolicyStatus.Active, policy.StatusOn(new DateOnly(2026, 11, 1)));
++    }
++
++    [Fact]
++    public void Status_on_the_end_day_is_Active()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        Assert.Equal(PolicyStatus.Active, policy.StatusOn(new DateOnly(2027, 10, 31)));
++    }
++
++    [Fact]
++    public void Status_on_the_day_after_the_end_is_Expired()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        Assert.Equal(PolicyStatus.Expired, policy.StatusOn(new DateOnly(2027, 11, 1)));
++    }
++
++    [Fact]
++    public void Status_on_the_day_before_the_first_start_of_two_terms_is_Pending()
++    {
++        var policy = TwoTermPolicy();
++
++        Assert.Equal(PolicyStatus.Pending, policy.StatusOn(new DateOnly(2026, 10, 31)));
++    }
++
++    [Fact]
++    public void Status_on_a_day_inside_the_first_of_two_terms_is_Active()
++    {
++        var policy = TwoTermPolicy();
++
++        Assert.Equal(PolicyStatus.Active, policy.StatusOn(new DateOnly(2027, 6, 1)));
++    }
++
++    [Fact]
++    public void Status_on_the_start_day_of_the_second_of_two_terms_is_Active()
++    {
++        var policy = TwoTermPolicy();
++
++        Assert.Equal(PolicyStatus.Active, policy.StatusOn(new DateOnly(2027, 11, 1)));
++    }
++
++    [Fact]
++    public void Status_on_a_day_inside_the_second_of_two_terms_is_Active()
++    {
++        var policy = TwoTermPolicy();
++
++        Assert.Equal(PolicyStatus.Active, policy.StatusOn(new DateOnly(2027, 11, 15)));
++    }
++
++    [Fact]
++    public void Status_on_the_end_day_of_the_second_of_two_terms_is_Active()
++    {
++        var policy = TwoTermPolicy();
++
++        Assert.Equal(PolicyStatus.Active, policy.StatusOn(new DateOnly(2028, 10, 31)));
++    }
++
++    [Fact]
++    public void Status_on_the_day_after_the_end_of_two_terms_is_Expired()
++    {
++        var policy = TwoTermPolicy();
++
++        Assert.Equal(PolicyStatus.Expired, policy.StatusOn(new DateOnly(2028, 11, 1)));
++    }
++}
+diff --git a/tests/Uinsure.Policies.Domain.Tests/PolicyTermsTests.cs b/tests/Uinsure.Policies.Domain.Tests/PolicyTermsTests.cs
+new file mode 100644
+index 0000000..23e95ad
+--- /dev/null
++++ b/tests/Uinsure.Policies.Domain.Tests/PolicyTermsTests.cs
+@@ -0,0 +1,135 @@
++using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Domain.Tests.Builders;
++using Uinsure.Policies.Domain.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Domain.Tests;
++
++// The current-term view (requirements GET-1): the current term is the term in force today, or the latest
++// term if today is outside them all. A one-term policy sold to start 2026-11-01 (TestClock.Today + 15) is
++// covered from 2026-11-01 to 2027-10-31 inclusive. The two-term rows (finding A1/I5) restore that term
++// followed by 2027-11-01 to 2028-10-31, so the first and latest terms differ and each member is pinned to the
++// right one. Untraited until F2 adds the GET-1 traits.
++public sealed class PolicyTermsTests
++{
++    private static readonly DateOnly Start = TestClock.Today.AddDays(15);
++
++    private static Policy TwoTermPolicy() => new PolicyBuilder().RestoreWithTerms(
++        new Term(new DateOnly(2026, 11, 1), 527.18m, new Payment("PAY-DOM-0042", PaymentMethod.DirectDebit, 527.18m)),
++        new Term(new DateOnly(2027, 11, 1), 561.09m, new Payment("PAY-DOM-0042-R1", PaymentMethod.DirectDebit, 561.09m)));
++
++    [Fact]
++    public void Latest_term_of_a_one_term_policy_is_its_only_term()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        var latest = policy.LatestTerm;
++
++        Assert.Same(Assert.Single(policy.Terms), latest);
++        Assert.NotNull(latest);
++        Assert.Equal(new DateOnly(2026, 11, 1), latest.Start);
++        Assert.Equal(new DateOnly(2027, 10, 31), latest.End);
++    }
++
++    [Fact]
++    public void Current_term_on_the_day_before_the_start_is_the_latest_term()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        var current = policy.CurrentTerm(new DateOnly(2026, 10, 31));
++
++        Assert.Same(Assert.Single(policy.Terms), current);
++    }
++
++    [Fact]
++    public void Current_term_on_the_start_day_is_the_term_covering_it()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        var current = policy.CurrentTerm(new DateOnly(2026, 11, 1));
++
++        Assert.Same(Assert.Single(policy.Terms), current);
++    }
++
++    [Fact]
++    public void Current_term_on_the_end_day_is_the_term_covering_it()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        var current = policy.CurrentTerm(new DateOnly(2027, 10, 31));
++
++        Assert.Same(Assert.Single(policy.Terms), current);
++    }
++
++    [Fact]
++    public void Current_term_on_the_day_after_the_end_is_the_latest_term()
++    {
++        var policy = new PolicyBuilder().WithStartDate(Start).Build();
++
++        var current = policy.CurrentTerm(new DateOnly(2027, 11, 1));
++
++        Assert.Same(Assert.Single(policy.Terms), current);
++    }
++
++    [Fact]
++    public void Latest_term_of_a_two_term_policy_is_the_second_term()
++    {
++        var policy = TwoTermPolicy();
++
++        var latest = policy.LatestTerm;
++
++        Assert.Same(policy.Terms[1], latest);
++        Assert.Equal(new DateOnly(2027, 11, 1), latest.Start);
++        Assert.Equal(new DateOnly(2028, 10, 31), latest.End);
++    }
++
++    [Fact]
++    public void Current_term_on_a_day_inside_the_first_of_two_terms_is_the_first_term()
++    {
++        var policy = TwoTermPolicy();
++
++        var current = policy.CurrentTerm(new DateOnly(2027, 6, 1));
++
++        Assert.Same(policy.Terms[0], current);
++    }
++
++    [Fact]
++    public void Current_term_on_the_end_day_of_the_first_of_two_terms_is_the_first_term()
++    {
++        var policy = TwoTermPolicy();
++
++        var current = policy.CurrentTerm(new DateOnly(2027, 10, 31));
++
++        Assert.Same(policy.Terms[0], current);
++    }
++
++    [Fact]
++    public void Current_term_on_the_start_day_of_the_second_of_two_terms_is_the_second_term()
++    {
++        var policy = TwoTermPolicy();
++
++        var current = policy.CurrentTerm(new DateOnly(2027, 11, 1));
++
++        Assert.Same(policy.Terms[1], current);
++    }
++
++    [Fact]
++    public void Current_term_before_the_first_start_of_two_terms_is_the_latest_term()
++    {
++        var policy = TwoTermPolicy();
++
++        var current = policy.CurrentTerm(new DateOnly(2026, 10, 31));
++
++        Assert.Same(policy.Terms[1], current);
++    }
++
++    [Fact]
++    public void Current_term_after_the_end_of_two_terms_is_the_latest_term()
++    {
++        var policy = TwoTermPolicy();
++
++        var current = policy.CurrentTerm(new DateOnly(2028, 11, 1));
++
++        Assert.Same(policy.Terms[1], current);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Services.Tests/Builders/StoredPolicyBuilder.cs b/tests/Uinsure.Policies.Services.Tests/Builders/StoredPolicyBuilder.cs
+new file mode 100644
+index 0000000..64f1749
+--- /dev/null
++++ b/tests/Uinsure.Policies.Services.Tests/Builders/StoredPolicyBuilder.cs
+@@ -0,0 +1,48 @@
++using Uinsure.Policies.Domain.Policies;
++using Xunit;
++
++namespace Uinsure.Policies.Services.Tests.Builders;
++
++// A policy as the repository hands it back: rebuilt by Policy.Restore from stored terms, the way Persistence
++// does, so a test can hold a policy with more than one term before Renew exists. Each term is the one term of
++// a sale that starts on the given date (sold on that date, so the start window always passes), and so ends on
++// start + 1 year - 1 day. Build() with no overrides is one term starting 2026-11-08, as a default sale does.
++public sealed class StoredPolicyBuilder(string reference)
++{
++    private static readonly Policyholder Holder = new("Katherine", "Johnson", new DateOnly(1981, 8, 26));
++    private static readonly Property Address = new("48 Quay St", "Unit 5", null, "M3 4LZ");
++
++    private DateOnly[] _termStarts = [new DateOnly(2026, 11, 8)];
++
++    public StoredPolicyBuilder WithTermsStarting(params DateOnly[] value)
++    {
++        _termStarts = value;
++        return this;
++    }
++
++    public Policy Build() => Policy.Restore(
++        new PolicyReference(reference),
++        PolicyType.Household,
++        true,
++        false,
++        [Holder],
++        Address,
++        [.. _termStarts.Select((start, index) => TermStarting(start, $"PAY-{reference}-{index + 1}"))]);
++
++    private static Term TermStarting(DateOnly start, string paymentReference)
++    {
++        var sale = Policy.Sell(
++            new PolicyReference("TERM-SOURCE"),
++            PolicyType.Household,
++            start,
++            527.18m,
++            true,
++            [Holder],
++            Address,
++            PaymentMethod.DirectDebit,
++            paymentReference,
++            start);
++        Assert.True(sale.IsSuccess, "The sale a stored term is taken from was expected to succeed.");
++        return Assert.Single(sale.Value.Terms);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Services.Tests/PolicyServiceGetDetailsTests.cs b/tests/Uinsure.Policies.Services.Tests/PolicyServiceGetDetailsTests.cs
+new file mode 100644
+index 0000000..41a5673
+--- /dev/null
++++ b/tests/Uinsure.Policies.Services.Tests/PolicyServiceGetDetailsTests.cs
+@@ -0,0 +1,113 @@
++using Microsoft.Extensions.Time.Testing;
++using Uinsure.Policies.Domain.Common;
++using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Services.Commands;
++using Uinsure.Policies.Services.Tests.Builders;
++using Uinsure.Policies.Services.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Services.Tests;
++
++// PolicyService.Get answers with the domain's view on UK today: the status is Policy.StatusOn(today) and the
++// current term Policy.CurrentTerm(today), the term covering today, else the latest. The domain's boundaries are
++// proven in Domain.Tests; these prove the service asks the domain, with today in Europe/London. At 23:30 UTC on
++// 30 June 2027 (BST) the UK date is already 1 July. Untraited until F2 adds the GET-1 traits.
++public sealed class PolicyServiceGetDetailsTests
++{
++    private static readonly DateTimeOffset BstLateEvening = TestClock.Utc(2027, 6, 30, 23, 30);
++
++    private readonly RecordingPolicyRepository _repository = new();
++    private readonly FakeTimeProvider _clock = new(TestClock.Now);
++    private readonly PolicyService _service;
++
++    public PolicyServiceGetDetailsTests()
++    {
++        _service = new PolicyService(_repository, new ReferenceGenerator(), _clock);
++    }
++
++    // The one term runs from 2026-11-08 to 2027-11-07; today is 2026-10-17.
++    [Fact]
++    public async Task Get_before_the_start_date_returns_Pending()
++    {
++        var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-PEND").Build());
++
++        var details = await Found(policy.Reference);
++
++        Assert.Equal(PolicyStatus.Pending, details.Status);
++        Assert.Same(Assert.Single(policy.Terms), details.CurrentTerm);
++    }
++
++    // The one term runs from 2026-11-08 to 2027-11-07; today is moved on to 2027-11-08.
++    [Fact]
++    public async Task Get_the_day_after_the_end_date_returns_Expired()
++    {
++        var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-EXP").Build());
++        _clock.SetUtcNow(TestClock.Utc(2027, 11, 8, 12, 0));
++
++        var details = await Found(policy.Reference);
++
++        Assert.Equal(PolicyStatus.Expired, details.Status);
++        Assert.Same(Assert.Single(policy.Terms), details.CurrentTerm);
++    }
++
++    // Terms 2025-10-01 to 2026-09-30 and 2026-10-01 to 2027-09-30; today (2026-10-17) is in the second.
++    [Fact]
++    public async Task Get_of_a_policy_with_two_terms_returns_the_term_covering_today_as_current()
++    {
++        var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-TWO")
++            .WithTermsStarting(new DateOnly(2025, 10, 1), new DateOnly(2026, 10, 1))
++            .Build());
++
++        var details = await Found(policy.Reference);
++
++        Assert.Same(policy.Terms[1], details.CurrentTerm);
++        Assert.Equal(new DateOnly(2026, 10, 1), details.CurrentTerm.Start);
++        Assert.Equal(PolicyStatus.Active, details.Status);
++    }
++
++    // The one term runs from 2026-07-01 to 2027-06-30: the UTC date is its last day, the UK date the day after.
++    [Fact]
++    public async Task Get_at_23_30_UTC_in_BST_on_the_UTC_date_of_the_end_returns_Expired()
++    {
++        var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-BSTEXP")
++            .WithTermsStarting(new DateOnly(2026, 7, 1))
++            .Build());
++        _clock.SetUtcNow(BstLateEvening);
++
++        var details = await Found(policy.Reference);
++
++        Assert.Equal(PolicyStatus.Expired, details.Status);
++    }
++
++    // Terms 2026-07-01 to 2027-06-30 and 2027-07-01 to 2028-06-30: the UTC date is in the first, the UK date
++    // in the second.
++    [Fact]
++    public async Task Get_at_23_30_UTC_in_BST_returns_the_term_starting_on_the_UK_date_as_current()
++    {
++        var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-BSTCUR")
++            .WithTermsStarting(new DateOnly(2026, 7, 1), new DateOnly(2027, 7, 1))
++            .Build());
++        _clock.SetUtcNow(BstLateEvening);
++
++        var details = await Found(policy.Reference);
++
++        Assert.Same(policy.Terms[1], details.CurrentTerm);
++        Assert.Equal(new DateOnly(2027, 7, 1), details.CurrentTerm.Start);
++        Assert.Equal(PolicyStatus.Active, details.Status);
++    }
++
++    private async Task<Policy> Store(Policy policy)
++    {
++        _repository.Add(policy);
++        await _repository.SaveChanges(TestContext.Current.CancellationToken);
++        return policy;
++    }
++
++    private async Task<PolicyDetails> Found(PolicyReference reference)
++    {
++        Result<PolicyDetails> result = await _service.Get(reference, TestContext.Current.CancellationToken);
++        Assert.True(result.IsSuccess, "The stored policy was expected to be found.");
++        Assert.Same(Assert.Single(_repository.Saved), result.Value.Policy);
++        return result.Value;
++    }
++}
+diff --git a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDetailsTests.cs b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDetailsTests.cs
+new file mode 100644
+index 0000000..3040653
+--- /dev/null
++++ b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDetailsTests.cs
+@@ -0,0 +1,34 @@
++using Microsoft.Extensions.Time.Testing;
++using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Services.Tests.Builders;
++using Uinsure.Policies.Services.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Services.Tests;
++
++// The details a sale answers with come from the domain, on the UK today the sale was made on: the status is
++// Policy.StatusOn(today) and the current term Policy.CurrentTerm(today), never a placeholder. Untraited until
++// F2 adds the GET-1 traits.
++public sealed class PolicyServiceSellDetailsTests
++{
++    private readonly RecordingPolicyRepository _repository = new();
++    private readonly PolicyService _service;
++
++    public PolicyServiceSellDetailsTests()
++    {
++        _service = new PolicyService(_repository, new ReferenceGenerator(), new FakeTimeProvider(TestClock.Now));
++    }
++
++    // The default sale starts on 2026-11-08, 22 days after today (2026-10-17).
++    [Fact]
++    public async Task Sale_starting_after_today_is_returned_as_Pending_with_the_sold_term_as_current()
++    {
++        var result = await _service.Sell(new SellPolicyBuilder("F1B-SVC-SELL-PEND").Build(), TestContext.Current.CancellationToken);
++
++        Assert.True(result.IsSuccess, "The sale was expected to succeed.");
++        Assert.Equal(PolicyStatus.Pending, result.Value.Status);
++        var sold = Assert.Single(result.Value.Policy.Terms);
++        Assert.Same(sold, result.Value.CurrentTerm);
++        Assert.Equal(new DateOnly(2026, 11, 8), result.Value.CurrentTerm.Start);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDuplicateTests.cs b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDuplicateTests.cs
+index ec36afa..0d68dae 100644
+--- a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDuplicateTests.cs
++++ b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDuplicateTests.cs
+@@ -16,7 +16,7 @@ public sealed class PolicyServiceSellDuplicateTests
+ 
+     public PolicyServiceSellDuplicateTests()
+     {
+-        _service = new PolicyService(_repository, new FakeTimeProvider(TestClock.Now));
++        _service = new PolicyService(_repository, new ReferenceGenerator(), new FakeTimeProvider(TestClock.Now));
+     }
+ 
+     // The second sale starts on today + 61 (breaks SELL-2) for an amount of 0 (breaks SELL-7).
+diff --git a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellPaymentTests.cs b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellPaymentTests.cs
+index 19eefca..0b51cbe 100644
+--- a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellPaymentTests.cs
++++ b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellPaymentTests.cs
+@@ -17,7 +17,7 @@ public sealed class PolicyServiceSellPaymentTests
+ 
+     public PolicyServiceSellPaymentTests()
+     {
+-        _service = new PolicyService(_repository, new FakeTimeProvider(TestClock.Now));
++        _service = new PolicyService(_repository, new ReferenceGenerator(), new FakeTimeProvider(TestClock.Now));
+     }
+ 
+     [Fact]
+diff --git a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellRaceTests.cs b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellRaceTests.cs
+new file mode 100644
+index 0000000..a55748e
+--- /dev/null
++++ b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellRaceTests.cs
+@@ -0,0 +1,48 @@
++using Microsoft.Extensions.Time.Testing;
++using Uinsure.Policies.Domain.Common;
++using Uinsure.Policies.Services.Tests.Builders;
++using Uinsure.Policies.Services.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Services.Tests;
++
++// SELL-1 on the race path. Two sales of one reference can both pass the GetByReference check; the second to
++// save then hits the unique index, and the repository raises PersistenceConflictException(DuplicateReference).
++// PolicyService answers that exactly as the check does: SELL-1, a conflict, alone. Only DuplicateReference is
++// converted; a Concurrency conflict is not a duplicate and goes on to the API's /problems/concurrency 409.
++public sealed class PolicyServiceSellRaceTests
++{
++    [Fact]
++    [Trait("Rule", "SELL-1")]
++    public async Task Sale_that_passes_the_duplicate_check_and_then_hits_the_unique_index_on_save_fails_with_SELL_1_alone()
++    {
++        var repository = new ConflictOnSavePolicyRepository(ConflictReason.DuplicateReference);
++        var service = new PolicyService(repository, new ReferenceGenerator(), new FakeTimeProvider(TestClock.Now));
++
++        var result = await service.Sell(new SellPolicyBuilder("SELL1-SVC-RACE").Build(), TestContext.Current.CancellationToken);
++
++        Assert.False(result.IsSuccess);
++        var violation = Assert.Single(result.Violations);
++        Assert.Equal("SELL-1", violation.RuleId);
++        Assert.Equal(ViolationKind.Conflict, violation.Kind);
++        Assert.Equal("A policy with reference 'SELL1-SVC-RACE' already exists.", violation.Message);
++        Assert.NotNull(violation.Extensions);
++        Assert.Equal("SELL1-SVC-RACE", violation.Extensions["reference"]);
++        Assert.Equal(1, repository.GetByReferenceCalls);
++        Assert.Equal(1, repository.AddCalls);
++        Assert.Equal(1, repository.SaveChangesCalls);
++    }
++
++    [Fact]
++    public async Task Concurrency_conflict_on_saving_a_sale_is_not_turned_into_SELL_1()
++    {
++        var repository = new ConflictOnSavePolicyRepository(ConflictReason.Concurrency);
++        var service = new PolicyService(repository, new ReferenceGenerator(), new FakeTimeProvider(TestClock.Now));
++
++        var conflict = await Assert.ThrowsAsync<PersistenceConflictException>(() =>
++            service.Sell(new SellPolicyBuilder("SELL1-SVC-STALE").Build(), TestContext.Current.CancellationToken));
++
++        Assert.Equal(ConflictReason.Concurrency, conflict.Reason);
++        Assert.Equal(1, repository.SaveChangesCalls);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellStartDateTests.cs b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellStartDateTests.cs
+index b24fb1a..3cf1244 100644
+--- a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellStartDateTests.cs
++++ b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellStartDateTests.cs
+@@ -105,7 +105,7 @@ public sealed class PolicyServiceSellStartDateTests
+     public async Task Sell_reads_the_clock_once()
+     {
+         var clock = new CountingTimeProvider(TestClock.Now);
+-        var service = new PolicyService(_repository, clock);
++        var service = new PolicyService(_repository, new ReferenceGenerator(), clock);
+ 
+         var result = await service.Sell(new SellPolicyBuilder("SELL2-SVC-ONCE").Build(), TestContext.Current.CancellationToken);
+ 
+@@ -114,7 +114,7 @@ public sealed class PolicyServiceSellStartDateTests
+     }
+ 
+     private Task<Result<PolicyDetails>> SellAt(DateTimeOffset utcNow, SellPolicy command) =>
+-        new PolicyService(_repository, new FakeTimeProvider(utcNow)).Sell(command, TestContext.Current.CancellationToken);
++        new PolicyService(_repository, new ReferenceGenerator(), new FakeTimeProvider(utcNow)).Sell(command, TestContext.Current.CancellationToken);
+ 
+     private void AssertSoldAndSaved(Result<PolicyDetails> result, DateOnly expectedStart)
+     {
+diff --git a/tests/Uinsure.Policies.Services.Tests/ReferenceGeneratorTests.cs b/tests/Uinsure.Policies.Services.Tests/ReferenceGeneratorTests.cs
+index 2e7a743..57e47e5 100644
+--- a/tests/Uinsure.Policies.Services.Tests/ReferenceGeneratorTests.cs
++++ b/tests/Uinsure.Policies.Services.Tests/ReferenceGeneratorTests.cs
+@@ -3,13 +3,16 @@ using Xunit;
+ namespace Uinsure.Policies.Services.Tests;
+ 
+ // SELL-6: the generated payment reference has the contract's "PAY-…" form and is unique per call.
++// Called through IReferenceGenerator, the only way in (finding A1/I4).
+ public sealed class ReferenceGeneratorTests
+ {
++    private readonly IReferenceGenerator _generator = new ReferenceGenerator();
++
+     [Fact]
+     [Trait("Rule", "SELL-6")]
+     public void Payment_reference_starts_with_PAY_and_has_a_generated_part()
+     {
+-        var reference = ReferenceGenerator.Payment();
++        var reference = _generator.Payment();
+ 
+         Assert.StartsWith("PAY-", reference, StringComparison.Ordinal);
+         Assert.True(reference.Length > "PAY-".Length, "Expected a generated part after 'PAY-'.");
+@@ -19,6 +22,6 @@ public sealed class ReferenceGeneratorTests
+     [Trait("Rule", "SELL-6")]
+     public void Two_payment_references_differ()
+     {
+-        Assert.NotEqual(ReferenceGenerator.Payment(), ReferenceGenerator.Payment());
++        Assert.NotEqual(_generator.Payment(), _generator.Payment());
+     }
+ }
+diff --git a/tests/Uinsure.Policies.Services.Tests/Support/ConflictOnSavePolicyRepository.cs b/tests/Uinsure.Policies.Services.Tests/Support/ConflictOnSavePolicyRepository.cs
+new file mode 100644
+index 0000000..267dbf4
+--- /dev/null
++++ b/tests/Uinsure.Policies.Services.Tests/Support/ConflictOnSavePolicyRepository.cs
+@@ -0,0 +1,30 @@
++using Uinsure.Policies.Domain.Policies;
++
++namespace Uinsure.Policies.Services.Tests.Support;
++
++// A repository on which another write wins the race. GetByReference finds nothing, because the other sale
++// has not committed when the service checks, and SaveChanges then fails with the given conflict, as
++// PolicyRepository does when the unique index on Reference (DuplicateReference) or the Version token
++// (Concurrency) rejects the write. Every call is counted so a test can see the check ran before the save.
++internal sealed class ConflictOnSavePolicyRepository(ConflictReason reason) : IPolicyRepository
++{
++    public int GetByReferenceCalls { get; private set; }
++
++    public int AddCalls { get; private set; }
++
++    public int SaveChangesCalls { get; private set; }
++
++    public Task<Policy?> GetByReference(PolicyReference reference, CancellationToken ct)
++    {
++        GetByReferenceCalls++;
++        return Task.FromResult<Policy?>(null);
++    }
++
++    public void Add(Policy policy) => AddCalls++;
++
++    public Task SaveChanges(CancellationToken ct)
++    {
++        SaveChangesCalls++;
++        throw new PersistenceConflictException(reason);
++    }
++}
+diff --git a/tests/postman/Uinsure.Policies.postman_collection.json b/tests/postman/Uinsure.Policies.postman_collection.json
+index 55c2e63..b25e465 100644
+--- a/tests/postman/Uinsure.Policies.postman_collection.json
++++ b/tests/postman/Uinsure.Policies.postman_collection.json
+@@ -2314,6 +2314,347 @@
+           ]
+         }
+       ]
++    },
++    {
++      "name": "F1b Layered models",
++      "description": "F1b changes no endpoint: the F1 Sell folder is its regression run. These are its new real-time rows, the amount's 400 shape limits (ruling H6): more than 2 decimal places, or above 1,000,000.00, is a 400 with errors.amount and is never stored. The layering, the concurrency 409 and the client-aborted request are integration-test and architecture-test only.",
++      "event": [
++        {
++          "listen": "prerequest",
++          "script": {
++            "type": "text/javascript",
++            "exec": [
++              "// F1b: dates from the real UK today (Postman can't fake time) and a fresh reference per request.",
++              "const pad = n => String(n).padStart(2, '0');",
++              "const ukToday = (() => {",
++              "    try {",
++              "        const text = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });",
++              "        if (/^\\d{4}-\\d{2}-\\d{2}$/.test(text)) { return text; }",
++              "    } catch (e) { /* no time-zone data: fall back to the machine's local date */ }",
++              "    const now = new Date();",
++              "    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());",
++              "})();",
++              "const parts = iso => iso.split('-').map(Number);",
++              "const utcIso = (y, m, d) => new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);",
++              "const addDays = (iso, n) => { const [y, m, d] = parts(iso); return utcIso(y, m, d + n); };",
++              "const addYears = (iso, n) => { const [y, m, d] = parts(iso); return utcIso(y + n, m, d); };",
++              "// SELL-3: start + 1 year - 1 day; a 29 Feb start ends on 28 Feb of the next year.",
++              "const endFor = iso => { const [y, m, d] = parts(iso); return m === 2 && d === 29 ? utcIso(y + 1, 2, 28) : addDays(addYears(iso, 1), -1); };",
++              "// The default body matches the integration builders' defaults (start today + 22, Katherine Johnson",
++              "// born 1981-08-26, 48 Quay St, Unit 5, M3 4LZ); each request sets the amount under test.",
++              "const start = addDays(ukToday, 22);",
++              "pm.variables.set('start', start);",
++              "pm.variables.set('startEnd', endFor(start));",
++              "const reference = 'F1B-' + Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 1296).toString(36).toUpperCase().padStart(2, '0');",
++              "pm.variables.set('reference', reference);"
++            ]
++          }
++        }
++      ],
++      "item": [
++        {
++          "name": "happy path",
++          "item": [
++            {
++              "name": "SHAPE · amount with 2 decimal places → 201",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
++                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
++                      "const assertReadsBackAsSold = policy => {",
++                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
++                      "    const end = pm.variables.get(\"startEnd\");",
++                      "    pm.expect(policy.type).to.eql(sold.type);",
++                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
++                      "    pm.expect(policy.endDate).to.eql(end);",
++                      "    pm.expect(policy.amount).to.eql(sold.amount);",
++                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
++                      "    pm.expect(policy.property).to.eql(sold.property);",
++                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
++                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
++                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
++                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
++                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
++                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
++                      "};",
++                      "pm.test(\"SHAPE · amount with 2 decimal places answers 201 with Location /policies/{reference}\", function () {",
++                      "    pm.response.to.have.status(201);",
++                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
++                      "    pm.test(\"SHAPE · reads back via GET\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(200);",
++                      "        const policy = res.json();",
++                      "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
++                      "        assertReadsBackAsSold(policy);",
++                      "        pm.expect(policy.amount).to.eql(803.47);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 803.47,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            },
++            {
++              "name": "SHAPE · amount 1,000,000.00 → 201",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
++                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
++                      "const assertReadsBackAsSold = policy => {",
++                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
++                      "    const end = pm.variables.get(\"startEnd\");",
++                      "    pm.expect(policy.type).to.eql(sold.type);",
++                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
++                      "    pm.expect(policy.endDate).to.eql(end);",
++                      "    pm.expect(policy.amount).to.eql(sold.amount);",
++                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
++                      "    pm.expect(policy.property).to.eql(sold.property);",
++                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
++                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
++                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
++                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
++                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
++                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
++                      "};",
++                      "pm.test(\"SHAPE · amount 1,000,000.00 answers 201 with Location /policies/{reference}\", function () {",
++                      "    pm.response.to.have.status(201);",
++                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
++                      "    pm.test(\"SHAPE · reads back via GET\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(200);",
++                      "        const policy = res.json();",
++                      "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
++                      "        assertReadsBackAsSold(policy);",
++                      "        pm.expect(policy.amount).to.eql(1000000);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 1000000.00,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            }
++          ]
++        },
++        {
++          "name": "rule violations",
++          "item": [
++            {
++              "name": "SHAPE · amount with 3 decimal places → 400",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"SHAPE · amount with 3 decimal places answers 400 with errors.amount and no ruleId\", function () {",
++                      "    pm.response.to.have.status(400);",
++                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
++                      "    const problem = pm.response.json();",
++                      "    pm.expect(problem.title).to.eql(\"One or more validation errors occurred.\");",
++                      "    pm.expect(problem).to.not.have.property(\"ruleId\");",
++                      "    pm.expect(problem.errors).to.be.an(\"object\").that.is.not.empty;",
++                      "    pm.expect(problem.errors).to.have.property(\"amount\");",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(pm.variables.get(\"reference\")), function (err, res) {",
++                      "    pm.test(\"SHAPE · nothing was stored (GET → 404)\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(404);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.185,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            },
++            {
++              "name": "SHAPE · amount 0.001 → 400",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "// Below a penny is a scale error: the 400, not the 422 SELL-7 of a zero amount.",
++                      "pm.test(\"SHAPE · amount 0.001 answers 400 with errors.amount and no ruleId\", function () {",
++                      "    pm.response.to.have.status(400);",
++                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
++                      "    const problem = pm.response.json();",
++                      "    pm.expect(problem.title).to.eql(\"One or more validation errors occurred.\");",
++                      "    pm.expect(problem).to.not.have.property(\"ruleId\");",
++                      "    pm.expect(problem.errors).to.be.an(\"object\").that.is.not.empty;",
++                      "    pm.expect(problem.errors).to.have.property(\"amount\");",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(pm.variables.get(\"reference\")), function (err, res) {",
++                      "    pm.test(\"SHAPE · nothing was stored (GET → 404)\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(404);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 0.001,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            },
++            {
++              "name": "SHAPE · amount 1,000,000.01 → 400",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"SHAPE · amount 1,000,000.01 answers 400 with errors.amount and no ruleId\", function () {",
++                      "    pm.response.to.have.status(400);",
++                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
++                      "    const problem = pm.response.json();",
++                      "    pm.expect(problem.title).to.eql(\"One or more validation errors occurred.\");",
++                      "    pm.expect(problem).to.not.have.property(\"ruleId\");",
++                      "    pm.expect(problem.errors).to.be.an(\"object\").that.is.not.empty;",
++                      "    pm.expect(problem.errors).to.have.property(\"amount\");",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(pm.variables.get(\"reference\")), function (err, res) {",
++                      "    pm.test(\"SHAPE · nothing was stored (GET → 404)\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(404);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 1000000.01,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            }
++          ]
++        }
++      ]
+     }
+   ]
+ }

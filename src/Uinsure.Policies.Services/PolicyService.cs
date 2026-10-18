@@ -5,7 +5,7 @@ using Uinsure.Policies.Services.Commands;
 
 namespace Uinsure.Policies.Services;
 
-public sealed class PolicyService(IPolicyRepository repository, TimeProvider clock)
+public sealed class PolicyService(IPolicyRepository repository, IReferenceGenerator references, TimeProvider clock) : IPolicyService
 {
     public async Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct)
     {
@@ -26,7 +26,7 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
             command.Policyholders,
             command.Property,
             command.PaymentMethod,
-            ReferenceGenerator.Payment(),
+            references.Payment(),
             today);
 
         if (!sale.IsSuccess)
@@ -47,11 +47,12 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
             return Result<PolicyDetails>.Failure(DuplicateReference(command.Reference));
         }
 
-        return Result<PolicyDetails>.Success(Details(policy));
+        return Result<PolicyDetails>.Success(Details(policy, today));
     }
 
     public async Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct)
     {
+        var today = UkCalendar.Today(clock);
         var policy = await repository.GetByReference(reference, ct);
         if (policy is null)
         {
@@ -62,12 +63,11 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
                 reference));
         }
 
-        return Result<PolicyDetails>.Success(Details(policy));
+        return Result<PolicyDetails>.Success(Details(policy, today));
     }
 
-    // F1 sells one term and nothing changes it, so the policy's only term is its current term.
-    // Status and the current term over several terms arrive with GET-1 in F2.
-    private static PolicyDetails Details(Policy policy) => new(policy, policy.Terms[0]);
+    private static PolicyDetails Details(Policy policy, DateOnly today) =>
+        new(policy, policy.CurrentTerm(today), policy.StatusOn(today));
 
     private static RuleViolation DuplicateReference(PolicyReference reference) => Violation(
         RuleIds.Sell1,

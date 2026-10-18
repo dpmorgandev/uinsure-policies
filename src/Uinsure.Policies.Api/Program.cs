@@ -54,7 +54,8 @@ builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options => options.InvalidModelStateResponseFactory = ValidationProblems.FromModelState);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddPersistence(builder.Configuration);
-builder.Services.AddScoped<PolicyService>();
+builder.Services.AddSingleton<IReferenceGenerator, ReferenceGenerator>();
+builder.Services.AddScoped<IPolicyService, PolicyService>();
 builder.Services.AddOpenApi();
 
 // RFC 9457 bodies: every problem response carries the request path and a traceId.
@@ -80,6 +81,7 @@ app.UseForwardedHeaders();
 
 // Logs the exception server-side and answers a generic 500 problem; no message or stack trace in the body.
 app.UseExceptionHandler();
+app.UseMiddleware<ClientAbortLoggingMiddleware>();
 
 // Outside Development an API rejects plain HTTP rather than redirecting it; /health/* is exempt.
 if (!app.Environment.IsDevelopment())
