@@ -126,7 +126,7 @@ nodes:
       - "SELL-6: a Payment for the full amount with a generated reference"
     tasks:
       - {id: t1, role: tester, step: red, layer: acceptance, rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7], title: "Sell acceptance suite in Api.Tests as POST → GET round trips, every success and failure row; Postman F1 folder; throwing stubs; F1 ids out of rule-coverage.pending.txt", status: done}
-      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub POST /policies (201 + Location) and bare GET /policies/{ref} with canned bodies", status: pending}
+      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub POST /policies (201 + Location) and bare GET /policies/{ref} with canned bodies", status: done}
       - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the Sell stub in Postman, read the acceptance tests; go or change", status: pending}
       - {id: t4, role: tester, step: red, layer: domain, rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7], title: "Domain.Tests for Policy.Sell at every boundary: reference normalisation, start today to today+60, end = start + 1y − 1d incl. 29 Feb, 1-3 holders, 16 on the start date, full-amount payment, amount > 0", status: pending}
       - {id: t5, role: builder, step: green, layer: domain, rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7], title: "Policy.Sell enforces SELL-1..7 with DateOnly today passed in, collecting every violation", status: pending}
