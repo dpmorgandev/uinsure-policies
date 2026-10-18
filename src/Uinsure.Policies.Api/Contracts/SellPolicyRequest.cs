@@ -58,8 +58,9 @@ public sealed class SellPolicyRequest : IValidatableObject
         }
 
         // Shape, not SELL-7: the value must be a whole number of pence and at most 1,000,000.00. A zero or
-        // negative amount within that scale is the 422 SELL-7. Checking the limit first keeps * 100 from overflowing.
-        if (Amount is { } amount && (amount > MaxAmount || decimal.Truncate(amount * 100) != amount * 100))
+        // negative amount within that scale is the 422 SELL-7. The remainder test cannot overflow for any
+        // decimal, however negative, which a multiplication by 100 would.
+        if (Amount is { } amount && (amount > MaxAmount || amount % 0.01m != 0))
         {
             yield return new ValidationResult(
                 "The amount must be at most 1,000,000.00 with no more than 2 decimal places.",
