@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Uinsure.Policies.Api.Contracts;
 
 namespace Uinsure.Policies.Api.Controllers;
@@ -9,6 +10,7 @@ public sealed class PoliciesController : ControllerBase
 {
     // STUB: canned responses until the green steps wire the service.
     [HttpPost]
+    [EnableRateLimiting("writes")]
     public ActionResult<PolicyResponse> Sell(SellPolicyRequest request, CancellationToken cancellationToken)
     {
         var reference = request.Reference!.Trim().ToUpperInvariant();
