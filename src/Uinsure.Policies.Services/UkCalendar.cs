@@ -1,8 +1,9 @@
-using System;
-
 namespace Uinsure.Policies.Services;
 
 public static class UkCalendar
 {
-    public static DateOnly Today(TimeProvider clock) => throw new NotImplementedException();
+    private static readonly TimeZoneInfo London = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
+
+    public static DateOnly Today(TimeProvider clock) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), London).DateTime);
 }

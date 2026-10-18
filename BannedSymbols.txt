@@ -1,0 +1,15 @@
+P:System.DateTime.Now;Use UkCalendar.Today(TimeProvider) instead.
+P:System.DateTime.UtcNow;Use UkCalendar.Today(TimeProvider) instead.
+P:System.DateTime.Today;Use UkCalendar.Today(TimeProvider) instead.
+P:System.DateTimeOffset.Now;Use UkCalendar.Today(TimeProvider) instead.
+P:System.DateTimeOffset.UtcNow;Use UkCalendar.Today(TimeProvider) instead.
+M:System.TimeProvider.GetLocalNow;Use UkCalendar.Today(TimeProvider) instead.
+P:System.TimeZoneInfo.Local;Use UkCalendar.Today(TimeProvider) instead.
+M:System.Math.Round(System.Decimal);Use Money.Round instead.
+M:System.Math.Round(System.Decimal,System.Int32);Use Money.Round instead.
+M:System.Math.Round(System.Decimal,System.MidpointRounding);Use Money.Round instead.
+M:System.Math.Round(System.Decimal,System.Int32,System.MidpointRounding);Use Money.Round instead.
+M:System.Decimal.Round(System.Decimal);Use Money.Round instead.
+M:System.Decimal.Round(System.Decimal,System.Int32);Use Money.Round instead.
+M:System.Decimal.Round(System.Decimal,System.MidpointRounding);Use Money.Round instead.
+M:System.Decimal.Round(System.Decimal,System.Int32,System.MidpointRounding);Use Money.Round instead.
