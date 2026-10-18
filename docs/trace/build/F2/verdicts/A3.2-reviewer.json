@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T23:32:47Z",
+  "plan": "build",
+  "node": "F2",
+  "attempt": 3,
+  "agent": "reviewer",
+  "agent_id": "ade8547ae5febfb5d",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F2",
+    "attempt": 3,
+    "base_sha": "c4b6231f4c14dcc52ed5f17306e4823aa0238f84",
+    "head_sha": "143e5ba6bed3b2a893d6f09f272d12bc9acae535",
+    "diff_fingerprint": "d131efb42c9086a2d4ab0091a9575ae34baf776f",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red@b7d5b5aa17b8ab0bdf6b52870eb01a749112aea5 (attempt 1)",
+      "gate.stub@305789df2125abfa6ff2e8ba2b0aa9805789008c (attempt 1, ok:false)",
+      "gate.stub@aee97abb56eee893951d3fc6dd2ed8b5fb10d9fa (attempt 2)",
+      "gate.red@c4f7d6474d27eb5a1bf691028815d19ed1bc05af",
+      "gate.green@311ccb69c8898da35aa08143a5aea82fd42af063",
+      "gate.green@cbb4c7c1bc5ffda1d14f15735c140b7a12850ff5",
+      "gate.refactor@803c8982404ceb4424e493af3fcc73641205ac4f",
+      "gate.finding-red@6947971e690bf8ea54fb840a94029efdf22cd7ac",
+      "gate.green@af38b4b6f0ca2910a007c52cc8f622b88fa64fb1",
+      "gate.coverage@143e5ba6bed3b2a893d6f09f272d12bc9acae535",
+      "gate.build@143e5ba6bed3b2a893d6f09f272d12bc9acae535",
+      "gate.test@143e5ba6bed3b2a893d6f09f272d12bc9acae535",
+      "gate.scope@143e5ba6bed3b2a893d6f09f272d12bc9acae535",
+      "gate.stubs@143e5ba6bed3b2a893d6f09f272d12bc9acae535",
+      "gate.run@143e5ba6bed3b2a893d6f09f272d12bc9acae535",
+      "gate.vulnerable@143e5ba6bed3b2a893d6f09f272d12bc9acae535"
+    ],
+    "rules_covered": [
+      "GET-1"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "A3 R1 (P2) is closed. tests/postman/Uinsure.Policies.postman_collection.json:3487 now checks the decimal.MinValue echo with the regex /\"amount\":-79228162514264337593543950335\\.00[,}]/, and line 3433 checks -1e27 with /\"amount\":-1000000000000000000000000000\\.00[,}]/. Both are anchored on the member name and on the token end, so the unpadded text can no longer pass. The packet diff shows the old include(...) prefix line was replaced, not loosened.",
+      "The Api side is pinned as well. SellAmountShapeTests.cs:139-149 adds Amount_of_decimal_MinValue_is_echoed_in_the_SELL_7_problem_as_its_exact_text_with_2_decimal_places, which compares GetRawText() to the literal \"-79228162514264337593543950335.00\". A parsed comparison could not tell padded text from unpadded. I traced TwoDecimalPlacesConverter.PadToTwoPlaces by hand: decimal.MinValue's invariant text has no '.', so the converter appends \".00\". The test fits the code.",
+      "Commit 143e5ba changes only tests/** (gate.coverage: 2 files). Its tests passed when added (gate.test: 374/374, one more than the 373 at af38b4b), so they are coverage tests, not reds. The commit still carries 'TDD: red' and has no Fixes-Finding trailer. Two reasons: the commit-msg hook accepts only A<n>/I<n> ids, and the TDD trailer has no value for coverage. The subject names A3/R1, and the receipt is the evidence. This is the same trailer and receipt mismatch A2 and A3 recorded. It is a harness gap for David to look at, not a tester or builder defect, so it is not a finding.",
+      "Postman counts agree with the receipt. The F2 Retrieve folder has 26 pm.test calls (17 in happy path, 9 in rule violations), matching gate.run's 26 assertions with 0 failed on :5080 at HEAD.",
+      "Whole node at HEAD. src/ has not changed since af38b4b. Since the A3 verdict, PolicyMappings, PolicyResponse, TwoDecimalPlacesConverter, RejectUnknownQueryParametersFilter and Program read the same in the packet diff. Status comes from details.Status, currentTermNumber is the term's index + 1, and hasClaims is policy.HasClaims. Refunds, claims and cancellation stay canned, and the comment says so truthfully, because no node has supplied them yet. The money converter pads the text and never rounds. The query filter counts only Query-bound parameters as known.",
+      "TDD order holds. Red 94a7473 comes first, then stub 2f81a40 and its fix 8988ed8 (gate.stub at attempt 2 let only the 4 pinned 404 rows pass), then the traited unit reds 770a29b and 7b6e4d9, then green 92ede9e, then the comment-only refactors 80d3ee2 and 98a574d. After those come the A2 finding tests 357e108..6947971 (gate.finding-red: 5 failing) before the fixes 8be3aed, 0e107fd and af38b4b, and last the coverage commit 143e5ba. No assertion was weakened, no Skip was added and no Trait changed: 143e5ba only adds lines, and the Postman edits make the checks stricter.",
+      "GET-1 coverage. Success rows: RetrieveResponseShapeTests, RetrieveStatusTests (both sides of the start and end boundaries, plus BST and GMT), RetrieveCurrentTermTests, RetrieveHasClaimsTests and PolicyMoneyFormatTests, with the raw-text money pins. Failure rows: the four 404 RetrieveNotFoundTests and the Services not-found test. 404 matches requirements.md:122. Unit traits are in Domain.Tests and Services.Tests, and gate.test shows RuleCoverageTests green.",
+      "Leftovers: gate.stubs found no NotImplementedException in src/. gate.build ran with -warnaserror and gave 0 warnings, so RS0030 is clean. No banned time or rounding API was used. Remaining nit from A3 (does not block): RetrieveHasClaimsTests.cs:76 has no space after a comma."
+    ]
+  }
+}

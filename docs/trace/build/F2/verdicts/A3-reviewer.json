@@ -1,0 +1,66 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T23:25:22Z",
+  "plan": "build",
+  "node": "F2",
+  "attempt": 3,
+  "agent": "reviewer",
+  "agent_id": "a7ca3175affc89737",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F2",
+    "attempt": 3,
+    "base_sha": "c4b6231f4c14dcc52ed5f17306e4823aa0238f84",
+    "head_sha": "af38b4b6f0ca2910a007c52cc8f622b88fa64fb1",
+    "diff_fingerprint": "62863841f3ead8e813974b9413751007248bd891",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red@b7d5b5aa17b8ab0bdf6b52870eb01a749112aea5 (attempt 1)",
+      "gate.stub@305789df2125abfa6ff2e8ba2b0aa9805789008c (attempt 1, ok:false)",
+      "gate.stub@aee97abb56eee893951d3fc6dd2ed8b5fb10d9fa (attempt 2)",
+      "gate.red@c4f7d6474d27eb5a1bf691028815d19ed1bc05af",
+      "gate.green@311ccb69c8898da35aa08143a5aea82fd42af063",
+      "gate.green@cbb4c7c1bc5ffda1d14f15735c140b7a12850ff5",
+      "gate.refactor@803c8982404ceb4424e493af3fcc73641205ac4f",
+      "gate.finding-red@6947971e690bf8ea54fb840a94029efdf22cd7ac",
+      "gate.green@af38b4b6f0ca2910a007c52cc8f622b88fa64fb1",
+      "gate.build@af38b4b6f0ca2910a007c52cc8f622b88fa64fb1",
+      "gate.test@af38b4b6f0ca2910a007c52cc8f622b88fa64fb1",
+      "gate.scope@af38b4b6f0ca2910a007c52cc8f622b88fa64fb1",
+      "gate.stubs@af38b4b6f0ca2910a007c52cc8f622b88fa64fb1",
+      "gate.run@af38b4b6f0ca2910a007c52cc8f622b88fa64fb1",
+      "gate.vulnerable@af38b4b6f0ca2910a007c52cc8f622b88fa64fb1"
+    ],
+    "rules_covered": [
+      "GET-1"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "GET-1",
+        "severity": "P2",
+        "file": "tests/postman/Uinsure.Policies.postman_collection.json",
+        "line": 3486,
+        "what": "The Postman decimal.MinValue SELL-7 check is still include('\"amount\":-79228162514264337593543950335'). That prefix match passes with or without '.00', so the Postman side of A2 R3 is still open.",
+        "why": "A2 R3 and investigator finding I3 named this exact prefix match. Inv-001 recommendation 1 asked for the exact echo text to be pinned. That is now done in Api.Tests for -1e27 (SellAmountShapeTests.cs:130). The Postman request this node added for decimal.MinValue still can't tell padded text from unpadded, and no Api test pins the decimal.MinValue echo text either. This doesn't block: the converter's padding is proven by PolicyMoneyFormatTests and the -1e27 text pin.",
+        "route_to": "tester"
+      }
+    ],
+    "notes": [
+      "A2 R1 / I1 is resolved. PolicyMappings.cs:37 now maps policy.HasClaims. PolicyBuilder gains WithHasClaims, and the default is still false. RetrieveHasClaimsTests seeds true and reads the whole policy back. It was red at 6947971 (gate.finding-red: hasClaims true) and green at af38b4b. A canned false now fails it. Following inv-001 rec 3, a grep of src/ finds no Refund, Claim or Cancellation data source, so leaving those canned is correct.",
+      "A2 R2 / I2 is resolved. PolicyResponse.cs:3-4 no longer claims anything is canned beyond what PolicyMappings.cs:23 lists, and that list (refunds, claims, cancellation) is true at HEAD. A grep of src/ finds no other 'canned' or 'stub step' text.",
+      "A2 R3 / I3 is resolved in code. TwoDecimalPlacesConverter pads the invariant text and never rounds. I traced it by hand: 0.125, 803.4, 100, 527.180, 1000000.00, -1e27 and 0.00 all come out right, and decimal.ToString never uses an exponent. Value_0_125_is_written_0_125... was red at 6947971 (0.125 written 0.13) and green after 0e107fd. The -1e27 echo text is pinned exactly. The one leftover is the Postman prefix match (R1, P2).",
+      "A2 R4 / I4 is resolved. The filter now counts as known only parameters whose BindingInfo.BindingSource is Query. [ApiController] inference puts reference on Path, request on Body and CancellationToken on Special. Three reds (?reference, ?cancellationToken, ?request) failed at 6947971 and pass at af38b4b; gate.run confirms ?reference=X gives 400. For later nodes: a [FromQuery(Name=...)] parameter or a complex [FromQuery] DTO would need BinderModelName or property names. No action has one yet, so this is not a finding.",
+      "A2 R5 / I5 and A2 R6 / I6 are resolved as coverage. The unpaid-second-term row now asserts status Active (RetrieveCurrentTermTests.cs:95). PolicyServiceGetDetailsTests adds the not-found test: one GET-1 NotFound violation with the exact detail, the reference extension, and no save. gate.finding-red records that both passed at 6947971 as coverage tests, with no code fix needed, as the brief states. Their commits still carry 'TDD: red' although nothing failed. This is the same trailer and receipt mismatch A2 recorded. The receipt is the evidence, and history is not rewritten.",
+      "Inv-001's accepted approach was followed. All five finding tests (357e108, 02e49a2, ef7d2e6, 2753a64, 6947971) come before the three fix commits (8be3aed, 0e107fd, af38b4b). gate.finding-red shows the red diff touched only tests/**, and gate.green shows the fix diff touched only the four src files. Each fix commit carries Fixes-Finding for the findings it fixes.",
+      "No assertion was weakened. I compared each test file in the A2 packet (pre-rebase, same content) with HEAD. The PolicyBuilder change only swaps the literal false for a field whose default is false. PolicyMoneyFormatTests, RetrieveCurrentTermTests, RetrieveNotFoundTests, SellAmountShapeTests, SellShapeTests and PolicyServiceGetDetailsTests only gain lines. No Skip was added and no Trait changed.",
+      "Whole-node TDD order holds: red 94a7473, then stub 2f81a40 and stub fix 8988ed8, then traited unit reds 770a29b and 7b6e4d9, then green 92ede9e, then comment-only refactors 80d3ee2 and 98a574d, then the A2 reds and fixes. A1's gate.stub at attempt 2 let only the 4 pinned 404 rows pass. The new hasClaims row would fail on that stub too, because it expects status Active and currentTermNumber 1.",
+      "GET-1 coverage is complete. Success rows: RetrieveResponseShapeTests, RetrieveStatusTests (each side of the start and end boundaries, plus BST and GMT controls), RetrieveCurrentTermTests, RetrieveHasClaimsTests and PolicyMoneyFormatTests. Failure rows: four 404 RetrieveNotFoundTests rows and the Services not-found test. The 404 status matches requirements.md:122. Unit traits exist in Domain.Tests and Services.Tests, and RuleCoverageTests is green in gate.test (373/373).",
+      "On stub-proofing: sold rows use the shared PolicyResponseAssert.ReadsBackAsSold. End dates and status are literals, and builder defaults are not the api.md example. Seeded rows use full local read-backs. The holder and property checks now appear twice, in RetrieveCurrentTermTests.ReadsBackTheSeededPolicy and in RetrieveHasClaimsTests. The rule of three tolerates two copies. Nit: RetrieveHasClaimsTests.cs:76 has 'Assert.Equal(\"Card\",payment...' with no space after the comma.",
+      "Leftovers: gate.stubs found no NotImplementedException in src/. gate.build ran with -warnaserror and gave 0 warnings, so RS0030 is clean. No banned time or rounding API was added. The converter uses ToString(CultureInfo.InvariantCulture), not Math.Round or decimal.Round."
+    ]
+  }
+}

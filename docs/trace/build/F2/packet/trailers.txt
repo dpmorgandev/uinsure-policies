@@ -1,28 +1,28 @@
-c00f03feca81704ea5c392b05b07a48c459f4aa9 chore(trace): F1b trail tail (merged)
+e090c3b02084c64b9f931db084479c62669ccbba chore(trace): F1b trail tail (merged)
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-c792a6e9357205b1913911b7ff6d44612a42be1d docs(context): f1b-done-merged
+d2a46f57e029f94d621bc0070e3012cabadfb7aa docs(context): f1b-done-merged
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-d0063dc64e073293e2ae51756a11a21c988b8535 plan(build/F2): pending → in_progress
+67a7d7aad397c4fd586cafd7db22f1e63cc25777 plan(build/F2): pending → in_progress
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-2cdf88e43a4e1ff1f467d89f761a1380f11f5bff plan(build/F2): tasks amended: F1b carry-overs
+0a93f3aa46798b283e7474c8b3e8d55f856a4ea5 plan(build/F2): tasks amended: F1b carry-overs
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-b7d5b5aa17b8ab0bdf6b52870eb01a749112aea5 test(GET-1): red: retrieve answers the full policy response, derived status, the current term and 2 dp money
+94a7473cd407d0112386e9b5d8ed84ac5bef8c59 test(GET-1): red: retrieve answers the full policy response, derived status, the current term and 2 dp money
 Agent: tester
 Plan: build
 Node: F2
@@ -30,13 +30,13 @@ Rule: GET-1
 TDD: red
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-3acd0f41beb9ee794f0b0c8eeb888d643dc16be5 plan(build/F2): t1 pending → done
+7d2d3ef603230f99db773fb4af6861b3dc98bb72 plan(build/F2): t1 pending → done
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-305789df2125abfa6ff2e8ba2b0aa9805789008c feat(GET-1): stub full policy response shape
+2f81a406ffb393cb82343e5a3f8f0429141ffd0f feat(GET-1): stub full policy response shape
 Agent: builder
 Plan: build
 Node: F2
@@ -44,13 +44,13 @@ Rule: GET-1
 TDD: stub
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 
-e82562da7d7e49d0674269c6939002df8f77eaf5 plan(build/F2): attempt 1 → 2
+a7c547b1e73e4386c9c1fcf78901ce9f0d3e2377 plan(build/F2): attempt 1 → 2
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-aee97abb56eee893951d3fc6dd2ed8b5fb10d9fa fix(GET-1): canned status and term number match no expected value
+8988ed8f0b94c1953db81062239d2b97497ea94a fix(GET-1): canned status and term number match no expected value
 Agent: builder
 Plan: build
 Node: F2
@@ -60,19 +60,19 @@ Fixes-Finding: A1/I1
 Fixes-Finding: A1/I2
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 
-8c75bb4f8d5c97702e88480b105d13987ce42d7a plan(build/F2): in_progress → paused_acceptance
+169427981689036854ec62605ad18d4117f9c471 plan(build/F2): in_progress → paused_acceptance
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-da9021053f83236da4998e950465d49dc4a3110d plan(build/F2): paused_acceptance → in_progress
+9463774f6c226e64ec7029dca39859f59e56eba4 plan(build/F2): paused_acceptance → in_progress
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-c4f7d6474d27eb5a1bf691028815d19ed1bc05af test(GET-1): red: trait domain status and current-term tests
+770a29bc6e3a2bf729dd5a2df2f34832ffc21658 test(GET-1): red: trait domain status and current-term tests
 Agent: tester
 Plan: build
 Node: F2
@@ -80,13 +80,13 @@ Rule: GET-1
 TDD: red
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-aa6195f89f91c15bd57da521606b1ccc558395d2 plan(build/F2): t4 pending → done, t5 pending → skipped
+019c2da5651a5c372c0456291f3225d36b79c550 plan(build/F2): t4 pending → done, t5 pending → skipped
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-311ccb69c8898da35aa08143a5aea82fd42af063 test(GET-1): red: trait services status and current-term tests
+7b6e4d9fde5fa4673e7fd40eafdb18e1b2360bd2 test(GET-1): red: trait services status and current-term tests
 Agent: tester
 Plan: build
 Node: F2
@@ -94,19 +94,19 @@ Rule: GET-1
 TDD: red
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-b9cd5472a5331ebe27a86750fdcbbdc81d42a5f9 plan(build/F2): t6 pending → done
+50dff083e3c2bf736c68c4bce6a2fca44bcb4524 plan(build/F2): t6 pending → done
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-f6eea6b7644760f7b8d6bbb49846d8c4ed75b28e plan(build/F2): t7 pending → done
+0195c3c118b624a336a22cf8aad984abeba259f2 plan(build/F2): t7 pending → done
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-cbb4c7c1bc5ffda1d14f15735c140b7a12850ff5 feat(GET-1): green: api real status, current term, 2dp money, unknown query filter
+92ede9e4cec79b4aa9b039529f2ac1e1d844c37f feat(GET-1): green: api real status, current term, 2dp money, unknown query filter
 Agent: builder
 Plan: build
 Node: F2
@@ -116,13 +116,13 @@ Fixes-Finding: A1/I1
 Fixes-Finding: A1/I2
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 
-f2186286f4bef21e1b90abe98392c2bb5122f07b plan(build/F2): t8 pending → done
+87cfd6ab5221d4307bf717518423b604f6310389 plan(build/F2): t8 pending → done
 Agent: main
 Plan: build
 Node: F2
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
-702342095303e63da4074837e97d173193690822 refactor(GET-1): make TwoDecimalPlacesConverter comment true to the code
+80d3ee281e087e692b3ac9e6bf7728018b688fd8 refactor(GET-1): make TwoDecimalPlacesConverter comment true to the code
 Agent: builder
 Plan: build
 Node: F2
@@ -130,7 +130,7 @@ Rule: GET-1
 TDD: refactor
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 
-803c8982404ceb4424e493af3fcc73641205ac4f refactor(GET-1): make TwoDecimalPlacesConverter comment true at HEAD
+98a574d0cf903efb70c7a86786fc6f4b44411b2b refactor(GET-1): make TwoDecimalPlacesConverter comment true at HEAD
 Agent: builder
 Plan: build
 Node: F2
@@ -138,9 +138,114 @@ Rule: GET-1
 TDD: refactor
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 
-8ea8f604d6be272a478d5938d0a05f3c31d6f874 plan(build/F2): t9, t10 pending → done
+61bbe2bc140f0bcbfdb1a75ea60745b5d6ee6295 plan(build/F2): t9, t10 pending → done
 Agent: main
 Plan: build
 Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f24b687f17b1108d981686ed16939e5a2e6271af plan(build/F2): attempt 2 → 3, in_progress → investigating
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e3419e42f1b6884122fac4576196df90b991966c docs(inv-001): F2 attempt-3 escalation
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d696b0affb48763897674ef04bbe6455fd9eef2e docs(inv-001): recommendations decided
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b52f15bd7b467bfb3a83d22bbea7b07129190a98 plan(build/F2): investigating → in_progress
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+357e1089ceb246c174c52947c9f54a4f0cdb9510 test(GET-1): red: fix A2/I1
+Agent: tester
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: red
+Fixes-Finding: A2/I1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+02e49a23b89f6755363b2639057024a0746f34b4 test(GET-1): red: fix A2/I3
+Agent: tester
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: red
+Fixes-Finding: A2/I3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ef7d2e65464d6532dc4ba85ee465d9d4d7adf64e test(GET-1): red: fix A2/I4
+Agent: tester
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: red
+Fixes-Finding: A2/I4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+2753a64c43c2b5cd3b3088ee098ea69e48b2a7e0 test(GET-1): red: fix A2/I5
+Agent: tester
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: red
+Fixes-Finding: A2/I5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+6947971e690bf8ea54fb840a94029efdf22cd7ac test(GET-1): red: fix A2/I6
+Agent: tester
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: red
+Fixes-Finding: A2/I6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+8be3aed4ceff0d7f1786189671412e424b79d360 fix(GET-1): map stored HasClaims, make comments true
+Agent: builder
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: green
+Fixes-Finding: A2/I1
+Fixes-Finding: A2/I2
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+0e107fd27792b29b27b13f23702b93f0a8a1ed6f fix(GET-1): write money exactly, padded to 2 dp without rounding
+Agent: builder
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: green
+Fixes-Finding: A2/I3
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+af38b4b6f0ca2910a007c52cc8f622b88fa64fb1 fix(GET-1): reject only query-bound unknown keys
+Agent: builder
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: green
+Fixes-Finding: A2/I4
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+143e5ba6bed3b2a893d6f09f272d12bc9acae535 test(GET-1): red: fix A3/R1
+Agent: tester
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: red
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
