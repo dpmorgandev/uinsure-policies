@@ -337,6 +337,7 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
 | `BadHttpRequestException` (body over 64 KB, too slow, truncated) | its `StatusCode` (413, 408, 400) | fixed title and detail per status, no `ruleId`, never the exception message; logged at Warning (api-contract H4) |
 | request not over HTTPS, outside Development, not `/health/*` | 400 | `type: /problems/https-required`, no `ruleId` (api-contract H1) |
 | rate limiter rejection | 429 + `Retry-After` | `type: /problems/rate-limited`, no `ruleId` (api-contract H5) |
+| `OperationCanceledException` while `RequestAborted` is cancelled (the client went away) | none written | logged below Error (Information), no 500 problem body: nobody receives it, and it isn't a server fault (F1b, David 2026-10-18) |
 | any other exception | 500 | generic `detail` + `traceId`; full exception to logs only; no stack trace outside Development |
 
 - RFC 9457 body: `type` = `/problems/{rule-id lower-case, "/" → "-"}` (so `RENEW-1/2` → `/problems/renew-1-2`), `title`, `status`, `detail`, `instance`, `ruleId`, `traceId`, plus `RuleViolation.Extensions`. The exact payloads are owned by `api-contract`.

@@ -85,7 +85,7 @@ each returned alone → then every 422 rule is collected, and none returns early
 | `ViolationKind.BusinessRule` | 422 | + `ruleId` (first in `RuleIds.Order`) + `violations: [{ruleId, detail}]` |
 | `PersistenceConflictException(DuplicateReference)` | 409 | as SELL-1 |
 | `PersistenceConflictException(Concurrency)` | 409 | `type: /problems/concurrency`, no `ruleId`, detail asks to retry |
-| Transport: `BadHttpRequestException` · non-HTTPS outside Development (not `/health/*`) · rate limiter | its 413/408/400 · 400 · 429 + `Retry-After` | no `ruleId`; fixed title/detail, never the exception message (Warning) · `/problems/https-required` · `/problems/rate-limited` |
+| Transport: `BadHttpRequestException` · non-HTTPS outside Development (not `/health/*`) · rate limiter · client aborted (`OperationCanceledException` + `RequestAborted`) | its 413/408/400 · 400 · 429 + `Retry-After` · none | no `ruleId`; fixed title/detail, never the exception message (Warning) · `/problems/https-required` · `/problems/rate-limited` · logged at Information, no body |
 | any other exception | 500 | generic `detail` + `traceId`; exception to logs only; no stack trace outside Development |
 
 - RFC 9457 body: `type` = `/problems/{rule-id lower-case, "/" → "-"}`, `title`, `status`, `detail`, `instance`,
