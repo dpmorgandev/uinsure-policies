@@ -5,9 +5,9 @@ using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
+using Scalar.AspNetCore;
 using Uinsure.Policies.Api;
 using Uinsure.Policies.Api.Errors;
-using Scalar.AspNetCore;
 using Uinsure.Policies.Persistence;
 using Uinsure.Policies.Services;
 

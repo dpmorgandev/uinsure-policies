@@ -7,15 +7,12 @@ namespace Uinsure.Policies.Services;
 
 public sealed class PolicyService(IPolicyRepository repository, TimeProvider clock)
 {
-    private readonly IPolicyRepository _repository = repository;
-    private readonly TimeProvider _clock = clock;
-
     public async Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct)
     {
-        var today = UkCalendar.Today(_clock);
+        var today = UkCalendar.Today(clock);
 
         // SELL-1: a duplicate is a 409 returned alone, before any 422 rule is evaluated.
-        if (await _repository.GetByReference(command.Reference, ct) is not null)
+        if (await repository.GetByReference(command.Reference, ct) is not null)
         {
             return Result<PolicyDetails>.Failure(Violation(
                 RuleIds.Sell1,
@@ -42,15 +39,15 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
         }
 
         var policy = sale.Value;
-        _repository.Add(policy);
-        await _repository.SaveChanges(ct);
+        repository.Add(policy);
+        await repository.SaveChanges(ct);
 
         return Result<PolicyDetails>.Success(Details(policy, today));
     }
 
     public async Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct)
     {
-        var policy = await _repository.GetByReference(reference, ct);
+        var policy = await repository.GetByReference(reference, ct);
         if (policy is null)
         {
             return Result<PolicyDetails>.Failure(Violation(
@@ -60,7 +57,7 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
                 reference));
         }
 
-        return Result<PolicyDetails>.Success(Details(policy, UkCalendar.Today(_clock)));
+        return Result<PolicyDetails>.Success(Details(policy, UkCalendar.Today(clock)));
     }
 
     // The term covering today, else the latest. A policy with no cancellation is Pending until its first
