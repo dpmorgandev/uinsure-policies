@@ -1,0 +1,100 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T20:41:19Z",
+  "plan": "build",
+  "node": "F1b",
+  "attempt": 1,
+  "agent": "reviewer",
+  "agent_id": "aef79bad6f9e80a3b",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F1b",
+    "attempt": 1,
+    "base_sha": "e048cf53fb96a911b5e587f7d315230cdd353575",
+    "head_sha": "cd37af103e64bc60ca4cf6ae6448fad89bcb2fc1",
+    "diff_fingerprint": "445c471d386ee1e510e72c25acd024814973454c",
+    "verdict": "FAIL",
+    "gate_refs": [
+      "gate.red@277c479bea73859bcf07bfe2841e39939f1fea0a",
+      "gate.red@515febe815c3666f197f90f9fdc828642b10c59e",
+      "gate.green@3b677cd",
+      "gate.red-guards@6ece4c086f830d7f60e65a0c3e98f948970ce785",
+      "gate.stub@41e23af",
+      "gate.red@31763e5",
+      "gate.green@5017e26",
+      "gate.green@68fe41d",
+      "gate.green@890ea1ac3b0ba88b5da95a5615a3162f6222b786",
+      "gate.run@890ea1ac3b0ba88b5da95a5615a3162f6222b786",
+      "gate.refactor@275da5f",
+      "gate.build@0313ee5eee2820de133322135ef9762f93a0f975",
+      "gate.test@0313ee5eee2820de133322135ef9762f93a0f975",
+      "gate.scope@0313ee5eee2820de133322135ef9762f93a0f975",
+      "gate.stubs@0313ee5eee2820de133322135ef9762f93a0f975",
+      "gate.run@0313ee5eee2820de133322135ef9762f93a0f975",
+      "gate.vulnerable@0313ee5eee2820de133322135ef9762f93a0f975"
+    ],
+    "rules_covered": [
+      "SELL-1",
+      "SELL-2",
+      "SELL-3",
+      "SELL-4",
+      "SELL-5",
+      "SELL-6"
+    ],
+    "rules_missing": [
+      "SELL-7"
+    ],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "SELL-7",
+        "severity": "P1",
+        "file": "src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs",
+        "line": 62,
+        "what": "Amount below about -7.9e26 (e.g. -1000000000000000000000000000) makes amount * 100 overflow in Validate: OverflowException, then a 500 logged at Error instead of 422 SELL-7.",
+        "why": "The guard 'amount > MaxAmount' only stops overflow for positive values, though the comment says the limit check keeps * 100 from overflowing. A large negative decimal binds under strict JSON, reaches IValidatableObject.Validate and throws. UnexpectedExceptionHandler then answers a generic 500 at LogError. In F1 the same body got 422 SELL-7 (amount <= 0), so this breaks the F1b acceptance 'No behaviour change' and the HTTP-edge contract: client input must never cause a 500.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "SELL-7",
+        "severity": "P1",
+        "file": "tests/Uinsure.Policies.Api.Tests/SellAmountShapeTests.cs",
+        "line": 10,
+        "what": "The amount shape rows test only the positive side (2dp, 3dp, 0.001, 1,000,000.00, 1,000,000.01). No row sells an extreme negative amount, so the R1 overflow path is untested.",
+        "why": "Requirements-trace: each side of a boundary is its own test, and a test written from a finding must fail before the fix commit. The H6 shape check has a scale limit on both signs, and the SELL-7 failure row (amount <= 0) needs an extreme-negative case that asserts 422 SELL-7 (or 400 if David rules it shape), never 500.",
+        "route_to": "tester"
+      },
+      {
+        "id": "R3",
+        "rule_id": "none",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Services/ReferenceGenerator.cs",
+        "line": 5,
+        "what": "ReferenceGenerator keeps public static Payment() next to the explicit IReferenceGenerator.Payment(). The static is a second way around the injected seam; only ReferenceGeneratorTests call it.",
+        "why": "Code-quality: DI at the layer seams (IReferenceGenerator), with no dead or duplicate surface. Task t6 kept the static calls only for the stub. After the t8 green, PolicyService uses the interface, so the static is a leftover that lets later code bypass the seam the A15 test asserts.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R4",
+        "rule_id": "none",
+        "severity": "P2",
+        "file": "tests/Uinsure.Policies.Domain.Tests/PolicyTermsTests.cs",
+        "line": 232,
+        "what": "Domain.Tests for LatestTerm, CurrentTerm and StatusOn use only one-term policies. A LatestTerm => Terms[0] mutation survives every Domain test; only Services.Tests (two terms via Restore) kill it.",
+        "why": "Requirements-trace: rule logic is proven at every boundary in Domain.Tests. The F1b acceptance says these members 'live in the Domain with Domain.Tests'. Before F2 adds the GET-1 traits, a two-term Domain test should prove LatestTerm is the last term and that StatusOn measures Expired from it.",
+        "route_to": "tester"
+      }
+    ],
+    "notes": [
+      "F1b has no node rules. Against F1's SELL-1..7, no F1 test file was weakened. The only edits to existing tests are the constructor migration in commit 3695fab (three Services.Tests files, constructor lines only). No Api.Tests or Domain.Tests F1 file changed. gate.test shows 321/321 including RuleCoverageTests.",
+      "TDD order: the t1 reds (3f4c44c..277c479) and t4 red (515febe) come before every green. The services stub (41e23af) comes before the services red (31763e5) and green (5017e26). The Api stub and Pause 1 were skipped by David's ruling (t2/t3). The SELL-1 race test (6ece4c0) was green on arrival because the conversion has existed since F1. gate.red-guards proves it with two mutations, which I accept as evidence instead of a red.",
+      "Acceptance checked and met: A12-A15 (records are internal and the only EF-mapped types, Restore is called only from Persistence via an IL scan, no Version or parameterless constructor in the Domain, the controller depends on IPolicyService); the concurrency 409 through PolicyRecord.Version (ConcurrencyConflictTests with a full read-back); the per-request record map is an instance field on the scoped repository; client-abort Information logging with no 500 body; the race-path Services test.",
+      "No NotImplementedException in src (gate.stubs). decimal.Truncate is not on the banned list. No DateTime.Now, UtcNow or Today was added.",
+      "For David: ClientAbortLoggingMiddleware is a new Errors/ type that the architecture tree doesn't list. Task t10 described the abort handling as living in UnexpectedExceptionHandler. The gate detail explains why: the framework answers 499 before any IExceptionHandler runs. The contract wording may want updating.",
+      "For David: Policy.Restore omits claims and cancellation, and IReferenceGenerator omits Refund(), until F3 (both noted in the gate receipts). The Term constructor is now public so Persistence can rebuild terms."
+    ]
+  }
+}

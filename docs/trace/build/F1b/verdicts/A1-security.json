@@ -1,0 +1,66 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T20:39:47Z",
+  "plan": "build",
+  "node": "F1b",
+  "attempt": 1,
+  "agent": "security",
+  "agent_id": "afb8133438734fd16",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F1b",
+    "attempt": 1,
+    "base_sha": "e048cf53fb96a911b5e587f7d315230cdd353575",
+    "head_sha": "cd37af103e64bc60ca4cf6ae6448fad89bcb2fc1",
+    "diff_fingerprint": "445c471d386ee1e510e72c25acd024814973454c",
+    "verdict": "FAIL",
+    "gate_refs": [
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.vulnerable"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API4:2023",
+        "severity": "P1",
+        "file": "src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs",
+        "line": 62,
+        "what": "Amount check overflows on a large negative amount: amount * 100 throws OverflowException inside Validate, so the client gets a 500 and an Error log instead of the SELL-7 422.",
+        "why": "The check only bounds the positive side (amount > MaxAmount). A JSON amount such as -1000000000000000000000000000 parses as a decimal, passes the limit test, and then amount * 100 exceeds decimal.MaxValue. Any caller can trigger an unhandled exception on demand. The comment 'Checking the limit first keeps * 100 from overflowing' is wrong for negatives. The node's own acceptance says nothing ambiguous reaches the domain, and SELL-7 says a negative amount is 422. SellAmountShapeTests has no large-negative row.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "API1:2023 n/a: Out. No auth or tenancy; the reference is the only key.",
+      "API2:2023 n/a: Out. Authentication is out of scope.",
+      "API5:2023 n/a: Out. There are no roles.",
+      "API7:2023 n/a: Out. No outbound fetching; grep for HttpClient and WebRequest in src/ found nothing.",
+      "API10:2023 n/a: Out. There are no upstream APIs.",
+      "API3:2023 met: PolicyRecord and its Version are internal to Persistence. Nothing under Api/Contracts references Version, there is no [FromBody] on a Domain or EF type, and the response is built from the Domain Policy, which no longer has Version. The client cannot set HasClaims, EndDate or payment fields.",
+      "API4:2023 (light) is not met, only because of S1. The rest holds: Kestrel MaxRequestBodySize is 65,536, the rate limiter is unchanged, the DTO and EF string lengths match (postcode 8, names 100, address lines 200), and the policyholders collection bound is unchanged. The amount limit of 1,000,000.00 and the 2-decimal-place check work for positive values and for small negatives, so 527.180 is accepted and 527.185 is rejected.",
+      "API6:2023 met for this node: the quote path is not in scope here. The Version concurrency token moved to PolicyRecord.Version (IsConcurrencyToken). The repository sets a new Version only on records the change tracker marks Modified, and a stale save is still 409. The record map is a per-request instance field on a scoped repository, not static. No refund logic is present; the Refund stub was removed.",
+      "API8:2023 met: Program.cs changes are DI registration and the new middleware only. No UseDeveloperExceptionPage, StackTrace or Exception.Message in src. No secrets or connection strings in the diff. HSTS, https-required and the forwarded-headers handling are untouched.",
+      "API9:2023 met: no routes were added or removed, and there are no stub endpoints or NotImplementedException in src (gate.stubs).",
+      "NET SQL: no FromSqlRaw, ExecuteSqlRaw or SqlQueryRaw; EF LINQ only.",
+      "NET money: decimal throughout; no double or float in src. The migration keeps decimal(18,2) with HasPrecision. Rounding is rejected at the boundary rather than applied, so nothing needs Money.Round.",
+      "NET packages: the only addition is Riok.Mapperly 4.3.1, which Directory.Packages.props lists as approved, and gate.vulnerable reports none vulnerable across 8 projects. It is PrivateAssets=all with ExcludeAssets=runtime, so it is a build-time source generator only.",
+      "NET secrets: none in the diff.",
+      "NET logging: the new ClientAbortLoggingMiddleware logs only the method and path at Information, with no body, client IP or personal data. Existing log calls are unchanged. The path can contain a policy reference, which is not personal data.",
+      "Time: no DateTime.Now, UtcNow or Today in src. PolicyService uses UkCalendar.Today(clock).",
+      "The migration was regenerated with a new timestamp but the same schema: the old table names are kept via ToTable, and the idempotent script gate produced 6 CREATE TABLE."
+    ]
+  }
+}

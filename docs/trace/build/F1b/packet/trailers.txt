@@ -1,0 +1,267 @@
+d7eb943d8ba380e3f756c2433c0e54ba18bfd745 docs(context): F1 trail tail, f1-done-merged and f1b-ready snapshots
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+fc59f36d74cac8ed1449888f2ec8d52a04755d0d plan(build/F1b): pending → in_progress
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+763980d610f59495ead171100ee4c92d8aa0954e plan(build/F1b): tasks amended: F1 carry-overs placed (SETUP step 4)
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3f4c44c447c9cd2174cdc0085a39f641e31b00b7 test(F1b): red: an amount above 2 decimal places or 1,000,000.00 is a 400 shape error
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+a974846d1dca773f84eac0da470c7d8f65ab59e0 test(F1b): red: a stale save answers 409 concurrency through PolicyRecord.Version
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+eea84180723dd844dabf69c5863fe780bbf4f07d test(F1b): red: a client-aborted sale is logged at Information, never Error, with no 500 body
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+277c479bea73859bcf07bfe2841e39939f1fea0a test(F1b): red: architecture tests A12-A15 for the layered models and seams
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+9e2d498630ec8db239885a1126676c7695c09561 plan(build/F1b): t1 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+515febe815c3666f197f90f9fdc828642b10c59e test(F1b): red: a policy's latest term, current term and status on each side of its term boundaries
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f7e3f1f09619e76a670043af5ce8e5e7cde0444a plan(build/F1b): t4 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3b677cd9685f4617450fa9caa8d0a469152613b3 feat(F1b): green: domain Policy.Restore, LatestTerm, CurrentTerm and StatusOn
+Agent: builder
+Plan: build
+Node: F1b
+Rule: none
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+63eafc2246a3d3cb7c4b5bbcd3867e0e8960987e plan(build/F1b): t5 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+6ece4c086f830d7f60e65a0c3e98f948970ce785 test(SELL-1): red: a sale that races past the duplicate check and hits the unique index answers SELL-1 alone
+Agent: tester
+Plan: build
+Node: F1b
+Rule: SELL-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+2de67f67ead0feb2540072774a86b4be9e3ba01d plan(build/F1b): tasks amended: builder services stub before the services red
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+41e23af9efd344a9fd98a59243a095794a292563 feat(F1b): stub services
+Agent: builder
+Plan: build
+Node: F1b
+Rule: none
+TDD: stub
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+e0d6c61ec9719d499ffb6895a742b03c8755e22c plan(build/F1b): t6 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3695fab6244b5196890d37930d2fd4710e668f58 test(F1b): every service test builds PolicyService with an injected reference generator
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: refactor
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+31763e5310e47f78ea861be1b6d5be9977075f6c test(F1b): red: Sell and Get answer with the domain's current term and status on UK today
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+754582a952fb8798cde084d7b4fd40a1b0016de8 plan(build/F1b): t7 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5017e2671b223837408591c847aef6163b33fcdb feat(F1b): green: services PolicyDetails from the domain's current term and status
+Agent: builder
+Plan: build
+Node: F1b
+Rule: none
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+061089e75a4869cf9a3e790893c98ef9d231da29 plan(build/F1b): t8 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+68fe41d82bd0f83f6601cbbd12cd04d03ef6c43a feat(F1b): green: persistence records, configurations, Mapperly PolicyRecordMapper, Version on PolicyRecord
+Agent: builder
+Plan: build
+Node: F1b
+Rule: none
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+536e0fccf4e8ab0e804dd31c2d7958fc845b02a9 plan(build/F1b): t9 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+890ea1ac3b0ba88b5da95a5615a3162f6222b786 feat(F1b): green: api Mapperly PolicyMappings, amount shape 400, client-abort Information log
+Agent: builder
+Plan: build
+Node: F1b
+Rule: none
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+e55115859898aa1b000bd0e7eeed9924cf93d615 plan(build/F1b): t10 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+275da5f6a99d18c857ceb2439947bb8238f31c02 refactor(F1b): drop the unused Refund stub until F3
+Agent: builder
+Plan: build
+Node: F1b
+Rule: none
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+0313ee5eee2820de133322135ef9762f93a0f975 plan(build/F1b): t11 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+cd37af103e64bc60ca4cf6ae6448fad89bcb2fc1 plan(build/F1b): t12 pending → done
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f78948e34f3231fdfaa8dad49c6fdd6b82660438 plan(build/F1b): attempt 1 → 2
+Agent: main
+Plan: build
+Node: F1b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+31df5b626d3c599ea773e8a4ad1ed4817dac2408 test(none): red: fix I1 an extreme negative amount is never a 500 or an Error log
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: red
+Fixes-Finding: A1/I1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+419bae57bf2b29cc71f87dfda1259dc408fdc2ac test(SELL-7): red: fix I2 an amount of minus 10 to the 27 is the 422 SELL-7, not a 500
+Agent: tester
+Plan: build
+Node: F1b
+Rule: SELL-7
+TDD: red
+Fixes-Finding: A1/I2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+50ddbec2808be97a20082abada81861023fa2f66 test(SELL-7): red: fix I3 the shape tests cover negative amounts down to decimal.MinValue
+Agent: tester
+Plan: build
+Node: F1b
+Rule: SELL-7
+TDD: red
+Fixes-Finding: A1/I3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+6ea8dbe7498011ec628f3806a5b306b92263ce9b test(none): red: fix I4 ReferenceGenerator has no public static way around its interface
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: red
+Fixes-Finding: A1/I4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+4ccdcf34a3a5d8d31a05634a3865a45368f0b5ca test(none): red: fix I5 two-term Domain tests pin LatestTerm, CurrentTerm and StatusOn
+Agent: tester
+Plan: build
+Node: F1b
+Rule: none
+TDD: red
+Fixes-Finding: A1/I5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+8757eee2d4b580f32b615a50545ff1993970768b fix(SELL-7): the amount scale check cannot overflow
+Agent: builder
+Plan: build
+Node: F1b
+Rule: SELL-7
+TDD: green
+Fixes-Finding: A1/I1
+Fixes-Finding: A1/I2
+Fixes-Finding: A1/I3
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+8b13192e4cd7fc9a5e75500e0977a6a529473335 fix(none): ReferenceGenerator has no public static entry point
+Agent: builder
+Plan: build
+Node: F1b
+Rule: none
+TDD: green
+Fixes-Finding: A1/I4
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+

@@ -1,0 +1,63 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T20:56:44Z",
+  "plan": "build",
+  "node": "F1b",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "ab2308aafa6cc6c01",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F1b",
+    "attempt": 2,
+    "base_sha": "e048cf53fb96a911b5e587f7d315230cdd353575",
+    "head_sha": "8b13192e4cd7fc9a5e75500e0977a6a529473335",
+    "diff_fingerprint": "ee877150d5e2ac99d98c1791129e05c78ae45784",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red@277c479bea73859bcf07bfe2841e39939f1fea0a",
+      "gate.red@515febe815c3666f197f90f9fdc828642b10c59e",
+      "gate.green@3b677cd",
+      "gate.red-guards@6ece4c086f830d7f60e65a0c3e98f948970ce785",
+      "gate.stub@41e23af",
+      "gate.red@31763e5",
+      "gate.green@5017e26",
+      "gate.green@68fe41d",
+      "gate.green@890ea1ac3b0ba88b5da95a5615a3162f6222b786",
+      "gate.refactor@275da5f",
+      "gate.finding-red@4ccdcf34a3a5d8d31a05634a3865a45368f0b5ca",
+      "gate.green@8b13192e4cd7fc9a5e75500e0977a6a529473335",
+      "gate.build@8b13192e4cd7fc9a5e75500e0977a6a529473335",
+      "gate.test@8b13192e4cd7fc9a5e75500e0977a6a529473335",
+      "gate.scope@8b13192e4cd7fc9a5e75500e0977a6a529473335",
+      "gate.stubs@8b13192e4cd7fc9a5e75500e0977a6a529473335",
+      "gate.run@8b13192e4cd7fc9a5e75500e0977a6a529473335",
+      "gate.vulnerable@8b13192e4cd7fc9a5e75500e0977a6a529473335"
+    ],
+    "rules_covered": [
+      "SELL-1",
+      "SELL-2",
+      "SELL-3",
+      "SELL-4",
+      "SELL-5",
+      "SELL-6",
+      "SELL-7"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "Node rules in build.dag.yaml are [] for F1b. My prompt asked me to include SELL-7, which the A1 fixes touched, so I checked SELL-1..7 as a regression and against the agreed interpretations. All of them are met at HEAD. gate.test@8b13192 shows 339/339, including RuleCoverageTests.",
+      "A1/I1 + I2 resolved. In src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:63, the shape check is now `amount > MaxAmount || amount % 0.01m != 0`. The `amount * 100` is gone, so nothing in the check can overflow. An amount with at most 2 decimal places and any negative value now reaches the domain and gets the 422 SELL-7 (docs/requirements.md:63). The 400 for more than 2 decimal places or more than 1,000,000.00 is unchanged. 527.180 is still accepted, by value, per David's H6 ruling. No banned rounding API is used (the `%` operator is not on the banned list), and gate.build shows 0 warnings.",
+      "A1/I1 + I2 tests. tests/Uinsure.Policies.Api.Tests/SellAmountOverflowTests.cs runs in Production with log capture. For -1e27 and decimal.MinValue it asserts no 500, no Error-level log and nothing stored. In SellAmountShapeTests.cs:104-129, the same two amounts must give the 422 SELL-7 through ProblemAssert.SingleRuleViolation (status, problem+json, type, ruleId, a single entry in violations[]), echo the literal amount and store nothing. gate.finding-red@4ccdcf3 shows these four tests failing with 500 before the fix. gate.green@8b13192 shows them passing after it.",
+      "A1/I3 resolved. The negative rows now cover -1,000,000.01, -1e27 and decimal.MinValue, and each carries a SELL-7 trait. The -1,000,000.01 row passed before the fix, as expected: the old code did not overflow on it. It pins the point that the 1,000,000.00 cap bounds positive amounts only. The five original shape rows are unchanged.",
+      "A1/I4 resolved. src/Uinsure.Policies.Services/ReferenceGenerator.cs is now a sealed instance class whose only member is the IReferenceGenerator method, so there is no public static. LayerSeamTests.ReferenceGenerator_declares_no_public_static_method was red at 4ccdcf3 and is green at HEAD. In ReferenceGeneratorTests, only the call site changed, from the static to the interface. Both SELL-6 assertions are byte-identical, so nothing was weakened.",
+      "A1/I5 resolved as coverage. Policy.cs was correct and did not change. The 12 two-term tests restore 2026-11-01..2027-10-31 plus 2027-11-01..2028-10-31 and assert literal dates. Here is how they handle the named mutations. (a) LatestTerm => Terms[0] is killed by Latest_term_of_a_two_term_policy_is_the_second_term (Assert.Same Terms[1]), and also by the Status tests on 2027-11-15 and 2028-10-31, which would read Expired. (b) Pending measured from LatestTerm.Start is killed by Status_on_a_day_inside_the_first_of_two_terms_is_Active (2027-06-01 would read Pending). (c) Expired measured from Terms[0].End is killed by the second-term Active rows. (d) CurrentTerm always returning LatestTerm is killed by Current_term_on_a_day_inside_the_first_of_two_terms (expects Terms[0]). (e) A fallback to Terms[0] is killed by Current_term_before_the_first_start_of_two_terms_is_the_latest_term (expects Terms[1]). (f) Making Covers exclusive at either end is killed by the end-day-of-first and start-day-of-second rows. I found no mutation receipt (gate.red-guards) for I5, so this analysis is my own and was not run. The tests are fit for purpose.",
+      "TDD order in attempt 2: the five red commits (31df5b6, 419bae5, 50ddbec, 6ea8dbe, 4ccdcf3) come before both fix commits (8757eee, 8b13192). All of them carry Agent/Plan/Node/Rule/TDD and Fixes-Finding. gate.finding-red shows the red diff is tests/** only, and gate.green shows the fix diff is exactly SellPolicyRequest.cs and ReferenceGenerator.cs. No test file in the node was weakened, skipped or re-traited. The order from attempt 1 stands as the A1 reviewer accepted it.",
+      "Leftovers: gate.stubs@8b13192 finds no NotImplementedException in src/. A grep of src/ finds no DateTime/DateTimeOffset Now/UtcNow/Today, no GetLocalNow, no TimeZoneInfo.Local, no Math.Round or decimal.Round, and no catch (Exception). tests/**/*.cs has no Guid.NewGuid, no Random and no Skip.",
+      "For David (P2-level, not a finding): the extreme-negative amounts (-1e27, decimal.MinValue) can run in real time but have no Postman request. The F1 folder only has 'SELL-7 · amount negative → 422'. If you want to see the A1 defect fixed at Pause 2, the t14 QA script can list them as 'covered by test …' or add the requests.",
+      "For David: PolicyDetails.Status is computed by PolicyService and asserted in Services.Tests, but PolicyMappings does not map it to the response yet. That matches the F1b tasks t6/t8 and the 'GET-1 traits come in F2' acceptance. The notes carried over from A1 still stand: ClientAbortLoggingMiddleware is not in the architecture tree, Policy.Restore leaves out claims and cancellation, and IReferenceGenerator.Refund() is left until F3."
+    ]
+  }
+}
