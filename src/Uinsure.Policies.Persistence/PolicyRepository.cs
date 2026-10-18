@@ -12,8 +12,12 @@ internal sealed class PolicyRepository(PoliciesDbContext context) : IPolicyRepos
     private const int SqlServerUniqueIndex = 2601;
     private const int SqlServerUniqueConstraint = 2627;
 
+    // SELL-4/SELL-5: holders and terms load in the order they were sold, which is their generated key order.
     public Task<Policy?> GetByReference(PolicyReference reference, CancellationToken ct) =>
-        context.Policies.FirstOrDefaultAsync(p => p.Reference == reference, ct);
+        context.Policies
+            .Include(p => p.Policyholders.OrderBy(h => EF.Property<int>(h, "Id")))
+            .Include(p => p.Terms.OrderBy(t => EF.Property<int>(t, "Id")))
+            .FirstOrDefaultAsync(p => p.Reference == reference, ct);
 
     public void Add(Policy policy) => context.Policies.Add(policy);
 

@@ -27,9 +27,7 @@ internal sealed class PolicyConfiguration : IEntityTypeConfiguration<Policy>
         builder.HasOne(p => p.Property).WithOne().HasForeignKey<Property>("PolicyId").IsRequired();
         builder.HasMany(p => p.Terms).WithOne().HasForeignKey("PolicyId").IsRequired();
 
-        // The aggregate is always loaded whole.
-        builder.Navigation(p => p.Policyholders).AutoInclude();
+        // The aggregate is always loaded whole. The two collections are included, in order, by PolicyRepository.
         builder.Navigation(p => p.Property).AutoInclude();
-        builder.Navigation(p => p.Terms).AutoInclude();
     }
 }
