@@ -27,6 +27,7 @@ public sealed class SellStartDateWindowTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL2-AT-0");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL2-AT-0", new DateOnly(2027, 10, 16));
         Assert.Equal(TestClock.Today, policy.GetDate("startDate"));
     }
 
@@ -39,6 +40,7 @@ public sealed class SellStartDateWindowTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL2-AT-60");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL2-AT-60", new DateOnly(2027, 12, 15));
         Assert.Equal(TestClock.Today.AddDays(60), policy.GetDate("startDate"));
     }
 
@@ -100,6 +102,7 @@ public sealed class SellStartDateWindowTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL2-BST-UK");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL2-BST-UK", new DateOnly(2028, 6, 30));
         Assert.Equal(new DateOnly(2027, 7, 1), policy.GetDate("startDate"));
     }
 
@@ -114,6 +117,7 @@ public sealed class SellStartDateWindowTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL2-GMT-UTC");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL2-GMT-UTC", new DateOnly(2028, 1, 14));
         Assert.Equal(new DateOnly(2027, 1, 15), policy.GetDate("startDate"));
     }
 }
