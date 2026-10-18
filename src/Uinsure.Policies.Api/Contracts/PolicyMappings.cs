@@ -20,8 +20,7 @@ internal static partial class PolicyMappings
         new Property(request.Property!.AddressLine1!, request.Property.AddressLine2, request.Property.AddressLine3, request.Property.Postcode!),
         ToDomain(request.PaymentMethod!.Value));
 
-    // Stub: status, current term number, hasClaims, refunds, claims and cancellation are canned. Status and term
-    // number are values no GET-1 test expects, so a stub cannot pass a test by coincidence.
+    // hasClaims, refunds, claims and cancellation are canned until F3 supplies the data.
     // The policy-level dates and amount are the current term's (GET-1).
     public static PolicyResponse ToResponse(this PolicyDetails details)
     {
@@ -30,8 +29,8 @@ internal static partial class PolicyMappings
         return new PolicyResponse(
             policy.Reference.Value,
             ToDto(policy.Type),
-            PolicyStatus.Cancelled,
-            0,
+            ToDto(details.Status),
+            policy.Terms.ToList().IndexOf(term) + 1,
             term.Start,
             term.End,
             term.Amount,
@@ -51,6 +50,8 @@ internal static partial class PolicyMappings
     private static partial Domain.Policies.PaymentMethod ToDomain(PaymentMethod method);
 
     private static partial PolicyType ToDto(Domain.Policies.PolicyType type);
+
+    private static partial PolicyStatus ToDto(Domain.Policies.PolicyStatus status);
 
     private static partial PaymentMethod ToDto(Domain.Policies.PaymentMethod method);
 

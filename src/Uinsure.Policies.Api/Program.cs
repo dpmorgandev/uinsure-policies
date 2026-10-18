@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using Uinsure.Policies.Api;
+using Uinsure.Policies.Api.Contracts;
 using Uinsure.Policies.Api.Errors;
+using Uinsure.Policies.Api.Filters;
 using Uinsure.Policies.Persistence;
 using Uinsure.Policies.Services;
 
@@ -44,12 +46,13 @@ builder.Services.AddOptions<RateLimiterOptions>().Configure<IOptions<RateLimitin
 });
 
 // Strict input: unknown members, integer enums and string numbers are 400s.
-builder.Services.AddControllers()
+builder.Services.AddControllers(options => options.Filters.Add<RejectUnknownQueryParametersFilter>())
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
         options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+        options.JsonSerializerOptions.Converters.Add(new TwoDecimalPlacesConverter());
     })
     .ConfigureApiBehaviorOptions(options => options.InvalidModelStateResponseFactory = ValidationProblems.FromModelState);
 builder.Services.AddSingleton(TimeProvider.System);
