@@ -32,6 +32,7 @@ public sealed class SellPolicyholderAgeTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL5-16TH-ON-START");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL5-16TH-ON-START", new DateOnly(2027, 10, 31));
         var holder = Assert.Single(policy.GetProperty("policyholders").EnumerateArray());
         Assert.Equal(Start.AddYears(-16), holder.GetDate("dateOfBirth"));
     }
