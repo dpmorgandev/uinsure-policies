@@ -60,7 +60,10 @@ expected status and body, and a sign-off block for David. Every node rule appear
 
 - Stage with explicit `git add <paths>`, never `-A` or `.`.
 - Commit with `git commit -m "<subject>" -m "<body>" -m "<trailers, one per line>"`. A message file is outside
-  your write scope. Never use `printf` or escape tricks to get characters past a guard.
+  your write scope. Never use `printf` or escape tricks to get characters past a guard. Put real newlines
+  between the trailer lines (a literal `\n` is not a newline), and keep every trailer, Co-Authored-By included,
+  in that last block. `Rule` (an id, or `none`) is required, and so is `TDD`, except on the QA script commit
+  (`docs(<node>): QA script`), which has no TDD step.
 - Trailers on every commit:
   ```
   Agent: tester

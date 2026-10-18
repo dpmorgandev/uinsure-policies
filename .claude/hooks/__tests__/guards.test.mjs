@@ -12,6 +12,7 @@ import { check, normalise } from '../guard-bash.mjs';
 import { scopeViolations, dirtySnapshot, verdictProblems, findingsProblems } from '../gate-subagent.mjs';
 import { checkEdit } from '../lib/stub-rule.mjs';
 import { toRepoRel } from '../lib/paths.mjs';
+import { codeFingerprint } from '../lib/trace.mjs';
 import { allowlist } from '../lib/roles.mjs';
 
 const HOOKS = resolve(import.meta.dirname, '..');
@@ -220,6 +221,15 @@ test('G11: --no-verify, commit -n and hook-path overrides are denied for everyon
   assert.equal(check({ command: 'git commit -m "no new tests"', subagent: false, role: '', root: null }), null);
 });
 
+test('G11: a message holding ; or newlines and -warnaserror is not read as commit -n', () => {
+  const c = (command) => check({ command, subagent: false, role: '', root: null });
+  assert.equal(c('git add a && git commit -q -m "plan: t9" -m "Gates: build -warnaserror clean; 70/70." -m "Agent: main\nPlan: build"'), null);
+  assert.equal(c("git commit -q -m 'a; b -warnaserror'"), null);
+  assert.equal(c("git commit -q -F - <<'EOF'\nsubject\n\nbuild -warnaserror; done\n\nAgent: main\nEOF\necho ok"), null);
+  assert.match(c('git commit -q -n -m "a; b"') ?? '', /^G11: git commit -n/);
+  assert.match(c('git commit -m "x" -n') ?? '', /^G11: git commit -n/);
+});
+
 test('G11: reading core.hooksPath is allowed; every write form is still denied', () => {
   for (const cmd of ['git config --get core.hooksPath', 'git config core.hooksPath', 'git config --get-all core.hooksPath', 'git config get core.hooksPath', 'git -C repo config --get core.hooksPath']) {
     assert.equal(check({ command: cmd, subagent: false, role: '', root: null }), null, cmd);
@@ -245,12 +255,34 @@ test('G9: trailers must match agent_type and the branch; git add -A is denied', 
   assert.equal(c('git add src/A.cs'), null);
 }));
 
+test('G9: tester and builder commits need Rule and a TDD step; the QA script needs no TDD', () => withRepo('feature/build/F1', (root) => {
+  const c = (cmd, role = 'builder') => check({ command: cmd, subagent: true, role, root });
+  assert.match(c('git commit -m "feat(F1): green: x" -m "Agent: builder\nPlan: build\nNode: F1\nTDD: green"') ?? '', /Rule trailer/);
+  assert.match(c('git commit -m "feat(F1): green: x" -m "Agent: builder\nPlan: build\nNode: F1\nRule: none"') ?? '', /TDD: scaffold/);
+  assert.match(c('git commit -m "feat(F1): green: x" -m "Agent: builder\nPlan: build\nNode: F1\nRule: none\nTDD: qa"') ?? '', /TDD: scaffold/);
+  assert.equal(c('git commit -m "docs(F1): QA script" -m "Agent: tester\nPlan: build\nNode: F1\nRule: none"', 'tester'), null);
+  assert.equal(c('git commit -m "build(F1): scaffold" -m "Agent: builder\nPlan: build\nNode: F1\nRule: none\nTDD: scaffold"'), null);
+}));
+
+test('commit-msg: on a node branch, tester/builder need Rule and TDD; main bookkeeping does not', () => withRepo('feature/build/F1', (root) => {
+  const hook = join(ROOT, '.githooks', 'commit-msg');
+  const run = (msg) => {
+    writeFileSync(join(root, 'MSG'), msg);
+    return spawnSync('sh', [hook, join(root, 'MSG')], { cwd: root, encoding: 'utf8' }).status;
+  };
+  assert.equal(run('feat(F1): green: x\n\nAgent: builder\nPlan: build\nNode: F1\nRule: SELL-2\nTDD: green\n'), 0);
+  assert.equal(run('feat(F1): green: x\n\nAgent: builder\nPlan: build\nNode: F1\nTDD: green\n'), 1);
+  assert.equal(run('feat(F1): green: x\n\nAgent: builder\nPlan: build\nNode: F1\nRule: none\n'), 1);
+  assert.equal(run('docs(F1): QA script\n\nAgent: tester\nPlan: build\nNode: F1\nRule: none\n'), 0);
+  assert.equal(run('plan(build/F1): t1 pending → done\n\nAgent: main\nPlan: build\nNode: F1\n'), 0);
+}));
+
 // ---------- G14 ----------
 
-function verdictFile(root, round, agent, verdict, head, ts) {
+function verdictFile(root, round, agent, verdict, head, ts, fp = '') {
   const dir = join(root, 'docs', 'trace', 'build', 'F1', 'verdicts');
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, `${round}-${agent}.json`), JSON.stringify({ v: 1, ts, agent, verdict: { verdict, head_sha: head } }));
+  writeFileSync(join(dir, `${round}-${agent}.json`), JSON.stringify({ v: 1, ts, agent, verdict: { verdict, head_sha: head, diff_fingerprint: fp } }));
 }
 
 test('G14: PR only when the latest reviewer and security verdicts are PASS for HEAD', () => withRepo('feature/build/F1', (root) => {
@@ -263,7 +295,54 @@ test('G14: PR only when the latest reviewer and security verdicts are PASS for H
   verdictFile(root, 'A2', 'security', 'PASS', head, '2026-10-18T10:00:00Z');
   assert.equal(pr(), null);
   verdictFile(root, 'A2', 'reviewer', 'PASS', 'f'.repeat(40), '2026-10-18T10:00:00Z');
-  assert.match(pr() ?? '', /not HEAD/);
+  assert.match(pr() ?? '', /changed the code since/);
+}));
+
+test('G14: a PASS survives bookkeeping-only commits after review, but not a code commit', () => withRepo('feature/build/F1', (root) => {
+  const pr = () => check({ command: 'gh pr create --draft --body-file b.md', subagent: true, role: 'git', root });
+  const commit = (path, text, msg) => {
+    mkdirSync(join(root, path, '..'), { recursive: true });
+    writeFileSync(join(root, path), text);
+    sh(root, 'add', path);
+    sh(root, 'commit', '-q', '-m', msg);
+  };
+  commit('src/A.cs', 'namespace A;\n', 'code');
+  const reviewed = sh(root, 'rev-parse', 'HEAD');
+  verdictFile(root, 'A1', 'reviewer', 'PASS', reviewed, '2026-10-18T09:00:00Z');
+  verdictFile(root, 'A1', 'security', 'PASS', reviewed, '2026-10-18T09:00:00Z');
+  commit('docs/qa/build-F1.md', '# QA\n', 'qa');
+  commit('docs/plans/active/build.dag.yaml', DAG + '# t10 done\n', 'plan');
+  commit('docs/trace/build/F1/README.md', '# trail\n', 'trace');
+  commit('docs/context/snap.md', '# snapshot\n', 'context');
+  assert.equal(pr(), null);
+  commit('src/A.cs', 'namespace B;\n', 'code after review');
+  assert.match(pr() ?? '', /changed the code since/);
+}));
+
+test('G14: after a rebase, a PASS covers HEAD only while the code diff is unchanged', () => withRepo('main', (root) => {
+  const pr = () => check({ command: 'gh pr create --draft --body-file b.md', subagent: true, role: 'git', root });
+  sh(root, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+  sh(root, 'checkout', '-q', '-b', 'feature/build/F1');
+  writeFileSync(join(root, 'src', 'A.cs'), 'namespace A;\n');
+  sh(root, 'add', 'src/A.cs');
+  sh(root, 'commit', '-q', '-m', 'code');
+  const reviewed = sh(root, 'rev-parse', 'HEAD');
+  const fp = codeFingerprint(root, sh(root, 'merge-base', 'origin/main', 'HEAD'));
+  // main moves on; the branch is rebased onto it, so the reviewed commit is no longer an ancestor
+  sh(root, 'checkout', '-q', 'main');
+  writeFileSync(join(root, 'README.md'), 'main moved\n');
+  sh(root, 'add', 'README.md');
+  sh(root, 'commit', '-q', '-m', 'main');
+  sh(root, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+  sh(root, 'checkout', '-q', 'feature/build/F1');
+  sh(root, 'rebase', '-q', 'origin/main');
+  assert.notEqual(sh(root, 'rev-parse', 'HEAD'), reviewed);
+  verdictFile(root, 'A1', 'reviewer', 'PASS', reviewed, '2026-10-18T09:00:00Z', fp);
+  verdictFile(root, 'A1', 'security', 'PASS', reviewed, '2026-10-18T09:00:00Z', fp);
+  assert.equal(pr(), null);
+  writeFileSync(join(root, 'src', 'A.cs'), 'namespace C;\n');
+  sh(root, 'commit', '-q', '-am', 'code changed after the rebase');
+  assert.match(pr() ?? '', /changed the code since/);
 }));
 
 test('G14: a harness/<slug> branch opens a PR from the main session only, touching only the harness', () => withRepo('main', (root) => {

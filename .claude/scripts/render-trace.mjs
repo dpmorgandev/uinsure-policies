@@ -288,7 +288,7 @@ function matrix(t, ts) {
 function prBody(t, check) {
   const ids = (t.node.rules ?? []).join(', ');
   const integrate = lastGate(t.loop, 'gate.integrate');
-  const attempts = Math.max(currentAttempt(t.dir), 1);
+  const attempts = currentAttempt(t.dir);
   const lines = [
     `## ${t.plan}/${t.nodeId}: ${t.node.title}`,
     `Rules: ${ids} · Tests: ${integrate ? `${integrate.passed ?? '?'} passed, ${integrate.failed ?? '?'} failed on ${short(integrate.head)} after rebase onto ${BASE}` : 'integrate not run'}`,

@@ -101,7 +101,8 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
     at least one test (exit code 8 is ignored, so a mistyped id would pass with zero). A node with no
     rules: that layer's whole test project passes.
   - `persistence`: the build plus all unit tests pass.
-  - `api`: **the whole Api.Tests acceptance suite passes**.
+  - `api`: **the whole Api.Tests acceptance suite passes**, and `gate.run`: `dotnet run --project
+    src/Uinsure.Policies.Api` (launch profile, no `--urls`), both health routes 200 `Healthy`, stop it.
   - The diff ⊆ `src/**` plus the root build files.
 
 **`builder / refactor`**
@@ -116,8 +117,9 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 - `dotnet build Uinsure.Policies.slnx -warnaserror`
 - `dotnet test --solution Uinsure.Policies.slnx` (it includes the rule-coverage check)
 - diff scope: `git diff --name-only origin/main...HEAD` ⊆ the node's allowed paths (`src/**`, `tests/**`,
-  `docs/qa/**`, `docs/trace/**`, the plan file, the root build files)
+  `docs/qa/**`, `docs/trace/**`, `docs/context/**` (snapshots, context C8), the plan file, the root build files)
 - `grep -rn "NotImplementedException" src/` finds nothing
+- `gate.run` (the real process: test factories inject config); `dotnet list … package --vulnerable --include-transitive`
 
 **`review / review`**
 1. Write the review packet to `docs/trace/<plan>/<node>/packet/`: `diff.patch`
@@ -125,7 +127,8 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
    (`git log --reverse --format='%H %s%n%(trailers)' origin/main..HEAD`), and `gates.jsonl` (this
    attempt's gate events).
 2. Compute `base_sha` = `git merge-base origin/main HEAD`, and
-   `diff_fingerprint` = `git diff <base>...HEAD | git patch-id --stable`.
+   `diff_fingerprint` = the patch-id of that diff without `docs/{trace,plans,qa,context}` (`codeFingerprint`
+   in `lib/trace.mjs`), so bookkeeping commits after review and a clean rebase keep the verdict valid (G14).
 3. Dispatch reviewer ∥ security in one message, each given the node rules, `base_sha`, `head_sha`,
    `diff_fingerprint`, `attempt` and the packet path. Neither sees the other's verdict.
 4. The SubagentStop hook validates each verdict and writes `verdicts/<round>-<agent>.json`. Record

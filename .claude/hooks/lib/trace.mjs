@@ -10,6 +10,21 @@ export function git(args, cwd) {
   return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 }
 
+// Paths the orchestrator and the QA step write after review: trace, plan state, QA script, context snapshots.
+// A verdict covers the code; commits that touch only these don't make it stale (G14).
+export const BOOKKEEPING = ['docs/trace/', 'docs/plans/', 'docs/qa/', 'docs/context/'];
+
+export const isBookkeeping = (path) => BOOKKEEPING.some((p) => path.startsWith(p));
+
+// The verdict's diff_fingerprint: patch-id of base...head with the bookkeeping paths left out, so it
+// survives a rebase that doesn't change the code and the bookkeeping commits after review.
+export function codeFingerprint(root, base, head = 'HEAD') {
+  const excludes = BOOKKEEPING.map((p) => `:(exclude)${p.replace(/\/$/, '')}`);
+  const diff = execFileSync('git', ['diff', `${base}...${head}`, '--', '.', ...excludes], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  if (diff === '') return '';
+  return execFileSync('git', ['patch-id', '--stable'], { cwd: root, input: diff, encoding: 'utf8' }).trim().split(/\s+/)[0] ?? '';
+}
+
 export function repoRoot(cwd) {
   try {
     return resolve(git(['rev-parse', '--show-toplevel'], cwd));
@@ -77,17 +92,16 @@ export function appendJsonl(file, record) {
   appendFileSync(file, JSON.stringify(record) + '\n');
 }
 
-// attempt = the last loop.jsonl event's attempt (0 before setup).
+// The node's attempt: 1, plus one per attempt++ event (only reviewer, security or gate FAILs record one).
 export function currentAttempt(dir) {
-  const events = readJsonl(join(dir, 'loop.jsonl'));
-  for (let i = events.length - 1; i >= 0; i--) {
-    if (Number.isInteger(events[i].attempt)) return events[i].attempt;
-  }
-  return 0;
+  return 1 + readJsonl(join(dir, 'loop.jsonl')).filter((e) => e.event === 'attempt++').length;
 }
 
 // Round id for the next verdict or findings file: D<n> after an unanswered steer, else A<attempt>.
-export function currentRound(dir) {
+// Verdicts are always A<attempt>, so reviewer and security share one round per dispatch. Findings take
+// D<n> when a steer is the latest event since the last attempt++ or verdict, otherwise A<attempt>.
+export function currentRound(dir, kind = 'findings') {
+  if (kind === 'verdict') return `A${currentAttempt(dir)}`;
   const events = readJsonl(join(dir, 'loop.jsonl'));
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
@@ -95,7 +109,7 @@ export function currentRound(dir) {
     if (steer) return steer[1];
     if (e.event === 'attempt++' || (e.event ?? '').startsWith('verdict(')) break;
   }
-  return `A${Math.max(currentAttempt(dir), 1)}`;
+  return `A${currentAttempt(dir)}`;
 }
 
 // Recorded verbatim; the caller (gate-subagent.mjs) has already validated the verdict.

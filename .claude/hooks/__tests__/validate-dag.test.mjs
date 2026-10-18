@@ -13,7 +13,8 @@ const scaffold = { id: 't1', role: 'builder', step: 'scaffold', layer: null, rul
 function withF0bTasks(edit) {
   const dag = parseYaml(readFileSync(DAG_PATH, 'utf8'));
   const f0b = dag.nodes.find((n) => n.id === 'F0b');
-  f0b.tasks = edit(f0b.tasks).map((t, i) => ({ ...t, id: `t${i + 1}` }));
+  // Start from F0b's tasks without any scaffold, so the fixtures hold whether or not the live DAG has one.
+  f0b.tasks = edit(f0b.tasks.filter((t) => t.step !== 'scaffold')).map((t, i) => ({ ...t, id: `t${i + 1}` }));
   return validate(dag, { reqIds });
 }
 
