@@ -34,6 +34,7 @@ public class PoliciesApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Database:Provider", "Sqlite");
         builder.UseSetting("ConnectionStrings:Policies", "DataSource=:memory:");
         builder.UseSetting("APPLICATIONINSIGHTS_CONNECTION_STRING", string.Empty);
+        ConfigureRateLimits(builder);
 
         builder.ConfigureTestServices(services =>
         {
@@ -46,6 +47,17 @@ public class PoliciesApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
         });
+    }
+
+    // Every in-process request shares one client partition and one factory serves a whole test class, so
+    // the suites raise both limits far above any class's request count. RateLimitingApiFactory sets its
+    // own low limits; DefaultRateLimitsApiFactory sets none, so the app's defaults apply.
+    protected virtual void ConfigureRateLimits(IWebHostBuilder builder)
+    {
+        builder.UseSetting("RateLimiting:Global:PermitLimit", "100000");
+        builder.UseSetting("RateLimiting:Global:Window", "00:01:00");
+        builder.UseSetting("RateLimiting:Writes:PermitLimit", "100000");
+        builder.UseSetting("RateLimiting:Writes:Window", "00:01:00");
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
