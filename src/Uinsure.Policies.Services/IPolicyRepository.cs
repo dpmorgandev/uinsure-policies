@@ -4,9 +4,9 @@ namespace Uinsure.Policies.Services;
 
 public interface IPolicyRepository
 {
-    public Task<Policy?> GetByReference(PolicyReference reference, CancellationToken ct) => throw new NotImplementedException();
+    Task<Policy?> GetByReference(PolicyReference reference, CancellationToken ct);
 
-    public void Add(Policy policy) => throw new NotImplementedException();
+    void Add(Policy policy);
 
-    public Task SaveChanges(CancellationToken ct) => throw new NotImplementedException();
+    Task SaveChanges(CancellationToken ct);
 }
