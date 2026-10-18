@@ -17,7 +17,7 @@ public sealed class PolicyServiceSellRaceTests
     public async Task Sale_that_passes_the_duplicate_check_and_then_hits_the_unique_index_on_save_fails_with_SELL_1_alone()
     {
         var repository = new ConflictOnSavePolicyRepository(ConflictReason.DuplicateReference);
-        var service = new PolicyService(repository, new FakeTimeProvider(TestClock.Now));
+        var service = new PolicyService(repository, new ReferenceGenerator(), new FakeTimeProvider(TestClock.Now));
 
         var result = await service.Sell(new SellPolicyBuilder("SELL1-SVC-RACE").Build(), TestContext.Current.CancellationToken);
 
@@ -37,7 +37,7 @@ public sealed class PolicyServiceSellRaceTests
     public async Task Concurrency_conflict_on_saving_a_sale_is_not_turned_into_SELL_1()
     {
         var repository = new ConflictOnSavePolicyRepository(ConflictReason.Concurrency);
-        var service = new PolicyService(repository, new FakeTimeProvider(TestClock.Now));
+        var service = new PolicyService(repository, new ReferenceGenerator(), new FakeTimeProvider(TestClock.Now));
 
         var conflict = await Assert.ThrowsAsync<PersistenceConflictException>(() =>
             service.Sell(new SellPolicyBuilder("SELL1-SVC-STALE").Build(), TestContext.Current.CancellationToken));

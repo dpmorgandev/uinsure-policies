@@ -16,7 +16,7 @@ public sealed class PolicyServiceSellDuplicateTests
 
     public PolicyServiceSellDuplicateTests()
     {
-        _service = new PolicyService(_repository, new FakeTimeProvider(TestClock.Now));
+        _service = new PolicyService(_repository, new ReferenceGenerator(), new FakeTimeProvider(TestClock.Now));
     }
 
     // The second sale starts on today + 61 (breaks SELL-2) for an amount of 0 (breaks SELL-7).
