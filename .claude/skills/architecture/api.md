@@ -42,7 +42,8 @@ Every error is `application/problem+json` (RFC 9457) with `type`, `title`, `stat
 | E1, E6 | shape: unknown enum string, integer enum | 400 | default | as above | — | `errors{}` |
 | E1, E3, E5, E6 | shape: **unknown JSON field** | 400 | default | as above | — | `errors{"$.colour": [...]}` |
 | E2, E4 (any GET; any route) | shape: **unknown query parameter** | 400 | default | as above | — | `errors{"cancelationDate": ["Unknown query parameter."]}` |
-| E1 | shape: postcode > 8, address line 1 missing, names/DOB missing | 400 | default | as above | — | `errors{}` |
+| E1 | shape: postcode > 8, address line 1 missing, names/DOB missing, a first or last name > 100, an address line > 200 | 400 | default | as above | — | `errors{}` |
+| E1, E6 | shape: **amount** with more than 2 decimal places, or above 1,000,000.00 (H6) | 400 | default | as above | — | `errors{"amount": [...]}` |
 | E1 | shape: reference not matching `^[A-Z0-9-]{3,20}$` after trim + upper-case | 400 | default | as above | — | `errors{"reference": [...]}` |
 | E4 | shape: `cancellationDate` missing or not `YYYY-MM-DD` | 400 | default | as above | — | `errors{}` |
 | E5 | shape: `claimDate` missing, `description` > 500 | 400 | default | as above | — | `errors{}` |
