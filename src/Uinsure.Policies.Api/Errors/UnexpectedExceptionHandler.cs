@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Uinsure.Policies.Domain.Rules;
 using Uinsure.Policies.Services;
 
 namespace Uinsure.Policies.Api.Errors;
@@ -40,26 +39,18 @@ internal sealed class UnexpectedExceptionHandler(
         });
     }
 
-    // Two sales of one reference that raced past the service's check (SELL-1), or a stale Version.
+    // A stale Version. A duplicate reference never gets here: PolicyService turns it into the SELL-1 result.
     private async ValueTask<bool> WriteConflict(HttpContext httpContext, PersistenceConflictException exception)
     {
         logger.LogWarning("Persistence conflict on {Method} {Path}: {Reason}", httpContext.Request.Method, httpContext.Request.Path, exception.Reason);
 
-        var problem = exception.Reason == ConflictReason.DuplicateReference
-            ? new ProblemDetails
-            {
-                Type = ProblemCatalog.TypeFor(RuleIds.Sell1),
-                Title = ProblemCatalog.TitleFor(RuleIds.Sell1),
-                Detail = "A policy with this reference already exists.",
-                Extensions = { ["ruleId"] = RuleIds.Sell1 },
-            }
-            : new ProblemDetails
-            {
-                Type = "/problems/concurrency",
-                Title = "The policy was changed by another request",
-                Detail = "Retry the request.",
-            };
-        problem.Status = StatusCodes.Status409Conflict;
+        var problem = new ProblemDetails
+        {
+            Type = "/problems/concurrency",
+            Title = "The policy was changed by another request",
+            Detail = "Retry the request.",
+            Status = StatusCodes.Status409Conflict,
+        };
 
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
         return await problemDetails.TryWriteAsync(new ProblemDetailsContext { HttpContext = httpContext, ProblemDetails = problem });

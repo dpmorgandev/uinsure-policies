@@ -14,11 +14,7 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
         // SELL-1: a duplicate is a 409 returned alone, before any 422 rule is evaluated.
         if (await repository.GetByReference(command.Reference, ct) is not null)
         {
-            return Result<PolicyDetails>.Failure(Violation(
-                RuleIds.Sell1,
-                ViolationKind.Conflict,
-                $"A policy with reference '{command.Reference.Value}' already exists.",
-                command.Reference));
+            return Result<PolicyDetails>.Failure(DuplicateReference(command.Reference));
         }
 
         var sale = Policy.Sell(
@@ -40,7 +36,16 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
 
         var policy = sale.Value;
         repository.Add(policy);
-        await repository.SaveChanges(ct);
+        try
+        {
+            await repository.SaveChanges(ct);
+        }
+        catch (PersistenceConflictException conflict) when (conflict.Reason == ConflictReason.DuplicateReference)
+        {
+            // SELL-1: a sale of the same reference raced past the check above and hit the unique index.
+            // It answers exactly as the check does.
+            return Result<PolicyDetails>.Failure(DuplicateReference(command.Reference));
+        }
 
         return Result<PolicyDetails>.Success(Details(policy));
     }
@@ -63,6 +68,12 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
     // F1 sells one term and nothing changes it, so the policy's only term is its current term.
     // Status and the current term over several terms arrive with GET-1 in F2.
     private static PolicyDetails Details(Policy policy) => new(policy, policy.Terms[0]);
+
+    private static RuleViolation DuplicateReference(PolicyReference reference) => Violation(
+        RuleIds.Sell1,
+        ViolationKind.Conflict,
+        $"A policy with reference '{reference.Value}' already exists.",
+        reference);
 
     private static RuleViolation Violation(string ruleId, ViolationKind kind, string message, PolicyReference reference) =>
         new(ruleId, kind, message, new Dictionary<string, object?> { ["reference"] = reference.Value });
