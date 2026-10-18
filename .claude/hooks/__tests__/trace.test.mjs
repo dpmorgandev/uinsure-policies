@@ -73,6 +73,36 @@ test('redactCommand strips the repo root and caps at 200 chars', () => {
   assert.equal(redactCommand(root, 'x'.repeat(300)).length, 200);
 });
 
+test('redactCommand leaves no local path: worktree, main checkout, home dir and user name, every spelling', () => {
+  // built at runtime so pre-commit's G10 doesn't flag this file (same convention as the G10 fixture)
+  const U = ['Us', 'ers'].join('');
+  const opts = { home: `C:\\${U}\\jdoe`, user: 'jdoe' };
+  const root = `C:\\${U}\\jdoe\\Work\\Repo\\.claude\\worktrees\\build-F1`;
+  const cmds = [
+    `cat C:/${U}/jdoe/Work/Repo/.claude/worktrees/build-F1/src/A.cs`,
+    `cd /c/${U}/jdoe/Work/Repo && git log`,
+    `ls C:\\${U}\\jdoe\\Work\\Repo\\docs`,
+    `node C:/${U}/jdoe/AppData/Local/Temp/claude/C--${U}-jdoe-Work-Repo/abc/scratchpad/x.mjs`,
+  ];
+  const out = cmds.map((c) => redactCommand(root, c, opts));
+  assert.equal(out[0], 'cat src/A.cs');
+  assert.equal(out[1], 'cd <main> && git log');
+  assert.equal(out[2], 'ls <main>\\docs');
+  assert.equal(out[3], `node ~/AppData/Local/Temp/claude/C--${U}-<user>-Work-Repo/abc/scratchpad/x.mjs`);
+  // and the committed privacy scan agrees: nothing it would block is left
+  const dir = mkdtempSync(join(tmpdir(), 'redact-scan-'));
+  try {
+    writeFileSync(join(dir, 'out.txt'), out.join('\n') + '\n');
+    const repo = resolve(import.meta.dirname, '..', '..', '..');
+    const scan = spawnSync('bash', [join(repo, '.claude', 'hooks', 'privacy-scan.sh'), join(dir, 'out.txt')], { cwd: repo, encoding: 'utf8' });
+    assert.equal(scan.status, 0, scan.stderr);
+    writeFileSync(join(dir, 'raw.txt'), cmds.join('\n') + '\n');
+    assert.notEqual(spawnSync('bash', [join(repo, '.claude', 'hooks', 'privacy-scan.sh'), join(dir, 'raw.txt')], { cwd: repo, encoding: 'utf8' }).status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('agentOf: no agent_id is main; an empty agent_type is unknown (F0a spike rulings)', () => {
   assert.equal(agentOf({}), 'main');
   assert.equal(agentOf({ agent_id: 'a1', agent_type: '' }), 'unknown');
