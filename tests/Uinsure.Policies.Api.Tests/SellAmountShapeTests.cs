@@ -131,6 +131,23 @@ public sealed class SellAmountShapeTests : IClassFixture<PoliciesApiFactory>
         await client.AssertNotStored("SELL7-NEG-E27-TEXT");
     }
 
+    // The same exact-text pin at the most negative amount that binds (finding A3/R1): decimal.MinValue has 29
+    // significant digits and scale 0, so the padding must append ".00" to the text, not rescale the value.
+    [Fact]
+    [Trait("Rule", "SELL-7")]
+    [Trait("Rule", "GET-1")]
+    public async Task Amount_of_decimal_MinValue_is_echoed_in_the_SELL_7_problem_as_its_exact_text_with_2_decimal_places()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SELL7-NEG-MIN-TEXT").WithAmount(decimal.MinValue).Build();
+
+        using var response = await client.PostPolicy(body);
+
+        var problem = await ProblemAssert.SingleRuleViolation(response, "SELL-7", Sell7Title);
+        Assert.Equal("-79228162514264337593543950335.00", problem.Member("amount").GetRawText());
+        await client.AssertNotStored("SELL7-NEG-MIN-TEXT");
+    }
+
     // The most negative amount that binds.
     [Fact]
     [Trait("Rule", "SELL-7")]
