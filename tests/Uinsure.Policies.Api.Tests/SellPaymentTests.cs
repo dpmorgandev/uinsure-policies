@@ -41,7 +41,7 @@ public sealed class SellPaymentTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL6-TERM-LINK");
 
-        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL6-TERM-LINK", new DateOnly(2027, 10, 31));
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL6-TERM-LINK", new DateOnly(2027, 11, 7));
         var payment = Assert.Single(policy.GetProperty("payments").EnumerateArray());
         var term = Assert.Single(policy.GetProperty("terms").EnumerateArray());
         Assert.Equal("Card", payment.GetProperty("type").GetString());
@@ -64,7 +64,7 @@ public sealed class SellPaymentTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, reference);
 
-        SoldPolicyAssert.ReadsBackAsSold(policy, body, reference, new DateOnly(2027, 10, 31));
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, reference, new DateOnly(2027, 11, 7));
         var payment = Assert.Single(policy.GetProperty("payments").EnumerateArray());
         Assert.Equal(method, payment.GetProperty("type").GetString());
     }

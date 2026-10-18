@@ -30,7 +30,7 @@ public sealed class SellPolicyholderCountTests : IClassFixture<PoliciesApiFactor
 
         var policy = await client.SellAndReadBack(body, "SELL4-ONE");
 
-        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL4-ONE", new DateOnly(2027, 10, 31));
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL4-ONE", new DateOnly(2027, 11, 7));
         var holder = Assert.Single(policy.GetProperty("policyholders").EnumerateArray());
         Assert.Equal("Grace", holder.GetProperty("firstName").GetString());
         Assert.Equal("Hopper", holder.GetProperty("lastName").GetString());
@@ -52,7 +52,7 @@ public sealed class SellPolicyholderCountTests : IClassFixture<PoliciesApiFactor
 
         var policy = await client.SellAndReadBack(body, "SELL4-THREE");
 
-        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL4-THREE", new DateOnly(2027, 10, 31));
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL4-THREE", new DateOnly(2027, 11, 7));
         var holders = policy.GetProperty("policyholders").EnumerateArray()
             .Select(holder => (holder.GetProperty("firstName").GetString(), holder.GetProperty("lastName").GetString(), holder.GetDate("dateOfBirth")));
         Assert.Equal(

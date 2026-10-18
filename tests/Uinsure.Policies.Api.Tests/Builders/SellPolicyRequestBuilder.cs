@@ -5,24 +5,28 @@ namespace Uinsure.Policies.Api.Tests.Builders;
 
 // The E1 request body (SellPolicyRequest) as JSON, so a shape test can also remove a member, add an
 // unknown one or change a type. Build() with no overrides is a valid sale relative to TestClock.Today
-// (start 2026-11-01, today + 15). Each test passes its own literal reference.
+// (start 2026-11-08, today + 22, which ends on 2027-11-07). Each test passes its own literal reference.
+// The default start, amount and address never equal the api.md example (2026-11-01, 365.00, 1 High St,
+// M1 1AA), so a stub canned from the example can't pass a test that sells the defaults; BuilderDefaultsTests
+// guards that. The type, auto-renew flag and payment method are the example's (Household, true, DirectDebit):
+// an enum or a bool can't be canned-proof on its own, and the other side of each is sold by its own test.
 public sealed class SellPolicyRequestBuilder(string reference)
 {
     private string _reference = reference;
     private string _type = "Household";
-    private DateOnly _startDate = TestClock.Today.AddDays(15);
-    private decimal _amount = 365.00m;
+    private DateOnly _startDate = TestClock.Today.AddDays(22);
+    private decimal _amount = 527.18m;
     private bool _autoRenew = true;
     private string _paymentMethod = "DirectDebit";
     private PolicyholderBuilder[] _policyholders = [new PolicyholderBuilder()];
-    private string _addressLine1 = "1 High St";
-    private string? _addressLine2;
+    private string _addressLine1 = "48 Quay St";
+    private string? _addressLine2 = "Unit 5";
     private string? _addressLine3;
-    private string _postcode = "M1 1AA";
+    private string _postcode = "M3 4LZ";
 
-    // A valid sale whose every field differs from Build()'s defaults and from the api.md example (the
-    // two match), so a read-back of it can only come from a stored sale. It starts on 2026-11-16
-    // (today + 30), so it ends on 2027-11-15; each test states that end date as its own literal.
+    // A valid sale whose every field differs from Build()'s defaults and from the api.md example, so a
+    // read-back of it can only come from a stored sale. It starts on 2026-11-16 (today + 30), so it ends
+    // on 2027-11-15; each test states that end date as its own literal.
     public static SellPolicyRequestBuilder Distinctive(string reference) => new SellPolicyRequestBuilder(reference)
         .WithType("BuyToLet")
         .WithStartDate(TestClock.Today.AddDays(30))

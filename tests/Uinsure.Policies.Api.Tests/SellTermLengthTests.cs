@@ -100,7 +100,7 @@ public sealed class SellTermLengthTests : IClassFixture<PoliciesApiFactory>
     {
         using var client = _factory.CreateClient();
         var body = new SellPolicyRequestBuilder("SELL3-END-SENT").Build();
-        body["endDate"] = "2027-10-31";
+        body["endDate"] = "2027-11-07";
 
         using var response = await client.PostPolicy(body);
 
