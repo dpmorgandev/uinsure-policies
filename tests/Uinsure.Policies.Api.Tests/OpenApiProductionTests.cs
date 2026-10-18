@@ -17,7 +17,7 @@ public sealed class OpenApiProductionTests : IClassFixture<ProductionApiFactory>
     [Fact]
     public async Task OpenApi_document_is_not_served_outside_Development()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
 
         using var response = await client.GetAsync("/openapi/v1.json", TestContext.Current.CancellationToken);
 
@@ -27,7 +27,7 @@ public sealed class OpenApiProductionTests : IClassFixture<ProductionApiFactory>
     [Fact]
     public async Task Scalar_api_reference_is_not_served_outside_Development()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
 
         using var response = await client.GetAsync("/scalar", TestContext.Current.CancellationToken);
 

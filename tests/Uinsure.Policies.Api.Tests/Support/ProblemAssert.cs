@@ -46,6 +46,29 @@ internal static class ProblemAssert
         return problem;
     }
 
+    // A transport problem (the HTTPS check, the rate limiter, a BadHttpRequestException): RFC 9457 with a
+    // title, a detail, the request path as instance and a traceId, and no ruleId, because no rule is broken.
+    // The type is checked where the contract fixes one. Returns the body.
+    public static async Task<JsonElement> TransportProblem(HttpResponseMessage response, HttpStatusCode status, string instance, string? type = null)
+    {
+        Assert.Equal(status, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        var problem = await response.ReadJson();
+        if (type is not null)
+        {
+            Assert.Equal(type, problem.GetProperty("type").GetString());
+        }
+
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("title").GetString()));
+        Assert.Equal((int)status, problem.GetProperty("status").GetInt32());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("detail").GetString()));
+        Assert.Equal(instance, problem.GetProperty("instance").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+        Assert.False(problem.TryGetProperty("ruleId", out _));
+        return problem;
+    }
+
     // A 400 shape error: ValidationProblemDetails with a non-empty errors map and a traceId, no ruleId.
     // Returns the errors map.
     public static async Task<JsonElement> ValidationErrors(HttpResponseMessage response)
