@@ -49,9 +49,12 @@ builder.Services.AddControllers(o => o.Filters.Add<RejectUnknownQueryParametersF
 - `ProblemCatalog` holds RuleId → (status, type, title). `ResultExtensions.ToActionResult()` turns a
   `Result<T>` into the success response or a `ProblemDetails` with `ruleId`, `violations[]` and extensions.
   This is the only place a status code is chosen for a rule.
-- `UnexpectedExceptionHandler : IExceptionHandler` maps `PersistenceConflictException` to 409 and anything
-  else to a generic 500. It logs the exception and never puts its message or stack trace in the body
-  outside Development. Register it with `AddExceptionHandler<…>()` and `UseExceptionHandler()`.
+- `UnexpectedExceptionHandler : IExceptionHandler` maps `PersistenceConflictException` to 409,
+  `Microsoft.AspNetCore.Http.BadHttpRequestException` to its own `StatusCode` (413, 408, 400) with a fixed
+  title and detail per status, logged at Warning, and anything else to a generic 500 logged at Error. It
+  never puts an exception's message or stack trace in the body outside Development (a
+  `BadHttpRequestException` message names the byte limit, so not even then). Register it with
+  `AddExceptionHandler<…>()` and `UseExceptionHandler()`.
 
 ## Time
 
@@ -96,13 +99,31 @@ public static IServiceCollection AddPersistence(this IServiceCollection services
   `app.MapHealthChecks("/health/ready", new() { Predicate = c => c.Tags.Contains("ready") })`.
 - `builder.Services.AddOpenApi()`. Map `MapOpenApi()` and `MapScalarApiReference()` inside
   `if (app.Environment.IsDevelopment())` only.
-- Pipeline: `UseExceptionHandler()` → `UseHttpsRedirection()` → (HSTS outside Development) →
-  `UseAuthorization()` → `MapControllers()`.
+- Pipeline: `UseForwardedHeaders()` → `UseExceptionHandler()` → (outside Development: `UseHsts()`, then
+  reject non-HTTPS with 400 `/problems/https-required`, `/health/*` exempt) → `UseRateLimiter()` →
+  `UseAuthorization()` → `MapControllers()`. **No `UseHttpsRedirection()`:** Learn says APIs should reject
+  HTTP rather than redirect, because clients may not follow a redirect and the body has already crossed in
+  clear.
 - `ILogger<T>` with message templates: `logger.LogInformation("Policy {Reference} sold", reference)`.
-  Never interpolate, and never log names, dates of birth, addresses, postcodes or bodies.
+  Never interpolate, and never log names, dates of birth, addresses, postcodes, bodies or client IPs.
 - App Insights: `if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
   builder.Services.AddOpenTelemetry().UseAzureMonitor();`.
 - `public partial class Program;` at the end of `Program.cs` if the tests can't see `Program`.
+
+## Transport and resource limits
+
+- Forwarded headers: `XForwardedFor | XForwardedProto`, known networks 10.0.0.0/8, 172.16.0.0/12 and
+  192.168.0.0/16 (App Service's balancer), the default forward limit of 1. Never
+  `ASPNETCORE_FORWARDEDHEADERS_ENABLED` (it trusts any proxy, so the client IP can be spoofed).
+- Body limit: `builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 65_536)`, once,
+  server-wide.
+- Rate limiting: `AddRateLimiter` (built in, no package). A global per-IP fixed window and a named `writes`
+  policy on every POST, limits bound from the `RateLimiting` configuration section, `QueueLimit = 0`.
+  `OnRejected` sets 429 (the default is 503), `Retry-After` from `MetadataName.RetryAfter`, and a
+  `/problems/rate-limited` ProblemDetails. `[DisableRateLimiting]` or `.DisableRateLimiting()` on
+  `/health/*`. Never log the client IP.
+- Launch profiles: `https` (default, `https://localhost:7080;http://localhost:5080`) for demos, and `http`
+  (`http://localhost:5080`) for the loop and Postman. Both are Development, where the HTTPS check is off.
 
 ## Build
 
