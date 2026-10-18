@@ -196,7 +196,7 @@ nodes:
     rules: [GET-1]
     cuttable: false
     budget: null
-    status: in_progress
+    status: paused_acceptance
     attempt: 2
     branch: feature/build/F2
     worktree: .claude/worktrees/build-F2
@@ -209,7 +209,7 @@ nodes:
       - "startDate/endDate/amount describe the current term; terms[] holds the history; full response shape per api-contract"
     tasks:
       - {id: t1, role: tester, step: red, layer: acceptance, rules: [GET-1], title: "Retrieve acceptance suite: 404 problem body, derived status, current-term view, full response shape; Postman F2 folder; GET-1 out of rule-coverage.pending.txt; money in POST and GET responses at exactly 2 dp (1000000.00, 803.40, 100.00, 527.18); Postman requests for amounts -1e27 and decimal.MinValue (422 SELL-7)", status: done}
-      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub GET /policies/{ref} with the full canned response shape", status: pending}
+      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub GET /policies/{ref} with the full canned response shape", status: done}
       - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the Retrieve stub in Postman, read the acceptance tests; go or change", status: pending}
       - {id: t4, role: tester, step: red, layer: domain, rules: [GET-1], title: "Domain.Tests: status Pending, Active, Expired from today; current term = the term in force today, else the latest", status: pending}
       - {id: t5, role: builder, step: green, layer: domain, rules: [GET-1], title: "Policy derives status and the current term from DateOnly today", status: pending}
