@@ -43,6 +43,12 @@ public sealed class Policy
     public Property Property { get; }
     public IReadOnlyList<Term> Terms { get; }
 
+    public Term? LatestTerm { get; }
+
+    public Term CurrentTerm(DateOnly today) => throw new NotImplementedException();
+
+    public PolicyStatus StatusOn(DateOnly today) => throw new NotImplementedException();
+
     // SELL-2, 4, 5 and 7 are all checked; none returns early.
     public static Result<Policy> Sell(
         PolicyReference reference,
