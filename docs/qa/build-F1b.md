@@ -1,4 +1,4 @@
-# QA script — build / F1b — Layered models and interfaces
+pl# QA script — build / F1b — Layered models and interfaces
 
 Rule IDs: none of its own. F1b re-proves F1's rules unchanged: SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7
 Branch: feature/build/F1b   Worktree: .claude/worktrees/build-F1b
@@ -228,12 +228,12 @@ All 43 step rows: 43 PASS, 0 FAIL. No defect raised. UK today was 2026-10-18, so
 
 | | |
 |---|---|
-| Tester | |
-| Date | |
+| Tester | David Morgan (steps run by the tester agent, verified by the orchestrator) |
+| Date | 2026-10-18 |
 | Commit signed off | 17e4377686a0d8277f59d4f12cdb490980212410 (code identical to 8b13192: no `src/` or `tests/` diff) |
 | `dotnet test` result | 339 / 0 / 0 (total / failed / skipped) |
 | Postman CLI result | `F1 Sell`: requests 75 / failed 0; assertions 73 / failed 0 (the same over https://localhost:7080). `F1b Layered models`: requests 10 / failed 0; assertions 10 / failed 0. Whole collection: requests 87 / failed 0; assertions 85 / failed 0 |
-| Steps passed | __ of 43 |
-| Defects raised (finding ids) | |
-| Verdict | ☐ Accept F1b  ☐ Reject (findings above) |
-| Signature | |
+| Steps passed | 43 of 43 |
+| Defects raised (finding ids) | None in F1b. Amount read-back scale (GET returns 1000000.0 / 803.4 / 100.0; POST echoes 527.180) is pre-existing in F1, verified identical on main, and is carried over to F2 |
+| Verdict | ☐ Reject (findings above)  ☑ Accept F1b |
+| Signature | David Morgan 18/10/2026 22:37 |
