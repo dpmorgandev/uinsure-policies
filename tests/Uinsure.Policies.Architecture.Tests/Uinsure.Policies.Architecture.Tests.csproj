@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="NetArchTest.eNhancedEdition" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Uinsure.Policies.Domain\Uinsure.Policies.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Uinsure.Policies.Services\Uinsure.Policies.Services.csproj" />
+    <ProjectReference Include="..\..\src\Uinsure.Policies.Persistence\Uinsure.Policies.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\Uinsure.Policies.Api\Uinsure.Policies.Api.csproj" />
+  </ItemGroup>
+
+</Project>

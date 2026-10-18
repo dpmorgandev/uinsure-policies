@@ -1,0 +1,80 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T00:12:07Z",
+  "plan": "build",
+  "node": "F0b",
+  "attempt": 0,
+  "agent": "security",
+  "agent_id": "a48a182bb84d6cdef",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F0b",
+    "attempt": 1,
+    "base_sha": "241998791e2cb5071bff7e04cf860714aee251a1",
+    "head_sha": "6a615c8cd9c342a18030802209cc596e3c3b829f",
+    "diff_fingerprint": "b521c63078accbb014eadfa4c468e3f33916e6d6",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.build",
+      "gate.test",
+      "gate.no-stub",
+      "gate.green",
+      "gate.diff-scope",
+      "gate.diff-scope.waived"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET-SQL",
+      "NET-MONEY",
+      "NET-PACKAGES",
+      "NET-SECRETS",
+      "NET-LOGGING"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API8:2023",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Program.cs",
+        "line": 367,
+        "what": "Pipeline has no UseHttpsRedirection() or UseHsts(); the checklist expects both on.",
+        "why": "API8:2023 check row (HTTPS redirection and HSTS on). The rubric lists a missing HSTS note as P2. The skeleton serves health only and the launch profile is http on 5080, so this is hardening and not blocking. Add both, or document the TLS-terminating proxy, before the sell endpoint (F1).",
+        "route_to": "builder"
+      },
+      {
+        "id": "S2",
+        "rule_id": "API4:2023",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Program.cs",
+        "line": 343,
+        "what": "No explicit MaxRequestBodySize; the Kestrel default (about 30 MB) applies.",
+        "why": "API4:2023 (light) expects a sane body limit. No body-accepting endpoint exists in F0b, so nothing is exploitable now. Set a limit (for example 64 KB) when the first POST route lands in F1. Rate limiting: note only.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "n/a API1:2023 Out: no auth or tenancy; the reference will be the only key (README says so).",
+      "n/a API2:2023 Out: authentication is out of scope.",
+      "n/a API5:2023 Out: no roles. POST /claims would be an admin function in real life.",
+      "n/a API7:2023 Out: no outbound URL fetching. Grep for HttpClient and WebRequest over src/ found none.",
+      "n/a API10:2023 Out: no upstream APIs; pricing is client-supplied.",
+      "API3:2023 met: no controllers, request DTOs or entities exist yet. PoliciesDbContext has no DbSets, and the initial migration is empty. No [FromBody] on Domain or EF types. Nothing in Contracts leaks Version.",
+      "API4:2023: there is no GET /policies list route. String max lengths and the 1-3 policyholder bound have no subject yet (F1).",
+      "API6:2023 met vacuously: the node has no refund, cancel, renew or claim flow, no SaveChanges and no state-changing quote path. The Version concurrency token and the refund-sum checks apply from F1 onwards.",
+      "API8:2023 met apart from S1: UnexpectedExceptionHandler returns a fixed generic ProblemDetails (the sentinel, exception type and stack trace are absent from the body), and logs the exception server-side only. UnhandledExceptionTests proves this in Production. There is no UseDeveloperExceptionPage. OpenAPI and Scalar are mapped only under IsDevelopment, and OpenApiProductionTests proves 404 outside Development. The health endpoints return only the Healthy or Unhealthy text with no detail. No appsettings files and no connection string with credentials in src. The design-time factory and the unreachable-DB test use credential-free strings (Trusted_Connection, no password).",
+      "API9:2023 met: routes are /health/live and /health/ready. MapControllers has no controllers, so no stub or canned endpoint is left, and gate.no-stub shows no NotImplementedException in src.",
+      "NET-SQL: no FromSqlRaw, ExecuteSqlRaw or SqlQueryRaw in src.",
+      "NET-MONEY: no double or float anywhere in src. BannedSymbols.txt bans Math.Round and Decimal.Round so rounding goes only through Money.Round, which arrives in a later node.",
+      "NET-PACKAGES: I read no 'dotnet list package --vulnerable' receipt in gates.jsonl, and docs/requirements.md has no approved-package list to compare against. The diff pins System.Security.Cryptography.Pkcs to 10.0.13 to clear NU1902/NU1903. gate.build passes under -warnaserror, which fails on NuGet audit warnings, so no known-vulnerable package is flagged. The orchestrator may want to record an explicit vulnerable-package receipt before merge.",
+      "NET-SECRETS: no keys, tokens, .env files or credentialed connection strings in the diff. No private local paths or emails found in the added files.",
+      "NET-LOGGING: the only log call logs the exception, HTTP method and request path. No request body, and no personal data at this stage. Revisit if the path ever carries personal data."
+    ]
+  }
+}

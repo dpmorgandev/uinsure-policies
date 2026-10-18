@@ -1,0 +1,64 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T00:51:31Z",
+  "plan": "build",
+  "node": "F0b",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "aad7fa73ccb49b527",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F0b",
+    "attempt": 2,
+    "base_sha": "4c265e291cce02b9baac68a01b5e16992481db3e",
+    "head_sha": "238a61e4355a5d29266c2312d43c1cb0d0dbf3f8",
+    "diff_fingerprint": "fa59e1e7135760e4fea28cdecd67ae8b37326ac7",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.integrate@2026-10-18T00:49:01Z",
+      "gate.run@2026-10-18T00:49:01Z",
+      "gate.qa@2026-10-18T00:47:26Z",
+      "gate.finding-red@2026-10-18T00:24:24Z",
+      "gate.finding-green@2026-10-18T00:26:43Z",
+      "gate.run@2026-10-18T00:26:43Z",
+      "gate.build@2026-10-18T00:26:43Z",
+      "gate.test@2026-10-18T00:26:43Z",
+      "gate.no-stub@2026-10-18T00:26:43Z",
+      "gate.diff-scope@2026-10-18T00:26:43Z",
+      "gate.diff-scope.waived@2026-10-18T00:10:44Z",
+      "gate.vulnerable-packages@2026-10-18T00:28:15Z",
+      "gate.red@2026-10-17T23:40:22Z",
+      "gate.stub@2026-10-17T23:48:21Z",
+      "gate.green(services)@2026-10-18T00:01:35Z",
+      "gate.green(persistence)@2026-10-18T00:05:45Z",
+      "gate.green(api)@2026-10-18T00:07:50Z",
+      "gate.refactor@2026-10-18T00:09:02Z"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "none (F0b acceptance: 'The commit-on-main deny hook is active from F0b start')",
+        "severity": "P2",
+        "file": "docs/qa/build-F0b.md",
+        "line": 67,
+        "what": "QA step 21 and exploratory note 1 (line 74) still say the harness self-test gives 52 passed / 2 failed and pre-push will fail. After the rebase, gate.integrate records 60/60.",
+        "why": "PR #3 (in base 4c265e2) brought in the two validate-dag tests, and gate.integrate@00:49:01Z at 1fb85a8 records 'harness self-test 60/60'. The 'Known' line and the defect note are now false, so David would sign off against a wrong expected result and record a defect that no longer exists. The step's real check still holds: the G8 test exists in guards.test.mjs:205 and .githooks/main-locked exists. So AC-11 is still exercised and this doesn't block.",
+        "route_to": "tester"
+      }
+    ],
+    "notes": [
+      "F0b has no rule IDs, so rules_covered and rules_missing are empty. I judged it against the 12 acceptance items in docs/plans/active/build.dag.yaml:76-88.",
+      "src/ and tests/ at HEAD: I can't byte-compare against 455afeb without running git, so I checked the HEAD diff against what I passed in A1-reviewer.json. Everything I found is the same. Directory.Build.props includes BannedSymbols.txt unconditionally, with its why-comment. appsettings.Development.json sets Sqlite and 'Data Source=policies.development.db'. appsettings.json has no database config. PoliciesApiFactory has no EnsureCreated, and Program calls EnsureSqliteCreated. DevelopmentConfigurationTests and ApplicationInsightsEnabledTests are present. Counting the tests in the diff gives 74 (Architecture 48, Api 16, Services 10, Domain 0), which matches gate.integrate's 74/74 at 1fb85a8. The HEAD diff touches no .claude/ or .githooks/ path. The only change from 1fb85a8 to 238a61e that I can see in the diff is t12 → done in build.dag.yaml.",
+      "Leftovers: a grep over src/ at HEAD finds no NotImplementedException, DateTime/DateTimeOffset Now/UtcNow/Today, GetLocalNow, TimeZoneInfo.Local, Math.Round or decimal.Round.",
+      "QA script against acceptance: every item AC-1..AC-12 has at least one step (AC-1:17, AC-2:1-5, AC-3:4,18, AC-4:14-16, AC-5:11, AC-6:12-13, AC-7:7-10, AC-8:6, AC-9:20, AC-10:19, AC-11:21, AC-12:22). The expected counts match the suite: Health 2+2=4, OpenApi 2+2=4, UnhandledException 3, ApplicationInsights 2+2=4, UkCalendar 10, RuleCoverageTests 11, pending list 30 IDs. The Postman folder name 'F0b Walking skeleton', both request names, both pm.test names and the 2/0 summary all match the collection. The step 13 log template claim ({Method} {Path} only) matches UnexpectedExceptionHandler.cs:410.",
+      "Covered by standing ruling R5, not raised: 'Commit under test: c2d9902' (line 5) and the red-commit SHA '19c67f6' in step 17 (line 63) are pre-rebase SHAs. At HEAD the red commit is 5f7f229. Reconcile them at the trace step.",
+      "Wording only, not a finding: step 17 says 'src/Uinsure.Policies.Domain has no .cs files'. After a build, the Domain obj/ holds generated .cs files (GlobalUsings.g.cs, AssemblyInfo.cs). The intended meaning, no source .cs, is true.",
+      "Standing rulings honoured, not re-raised: R5, R7 (DatabaseOptions as a string plus Validate), I4 (missing Rule trailers on six earlier commits, and the stray 'TDD: red' on QA commit 18ea79d, which gate.qa notes), I5 (verify-in-F0 receipts at t13, TrxReport out of scope; QA step 20 defers to it correctly) and the docs/context diff-scope waiver.",
+      "Still open in later tasks, not a defect now: the AC-8 Postman CLI run (Pause 2, t15), and the AC-12 parts of the loop: walkthrough.md (t13), PR (t14) and merge (t16)."
+    ]
+  }
+}

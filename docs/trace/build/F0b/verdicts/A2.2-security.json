@@ -1,0 +1,83 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T00:50:20Z",
+  "plan": "build",
+  "node": "F0b",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "a6c6e1bbf734aaf6b",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F0b",
+    "attempt": 2,
+    "base_sha": "4c265e291cce02b9baac68a01b5e16992481db3e",
+    "head_sha": "238a61e4355a5d29266c2312d43c1cb0d0dbf3f8",
+    "diff_fingerprint": "fa59e1e7135760e4fea28cdecd67ae8b37326ac7",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.integrate",
+      "gate.run",
+      "gate.vulnerable-packages",
+      "gate.build",
+      "gate.test",
+      "gate.no-stub",
+      "gate.finding-green",
+      "gate.qa"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET-SQL",
+      "NET-MONEY",
+      "NET-PACKAGES",
+      "NET-SECRETS",
+      "NET-LOGGING"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API8:2023",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Program.cs",
+        "line": 33,
+        "what": "Pipeline has no UseHttpsRedirection() or UseHsts(); the checklist expects both on. Carried over unchanged from the earlier A1 verdict.",
+        "why": "API8:2023 check row (HTTPS redirection and HSTS). The rubric rates a missing HSTS note as P2. F0b serves only health endpoints and the launch profile is http on 5080, so this is hardening and not blocking. Add both, or document the TLS-terminating proxy, before the sell endpoint in F1. The earlier verdict cited line 367, which is a patch offset; the file has 48 lines.",
+        "route_to": "builder"
+      },
+      {
+        "id": "S2",
+        "rule_id": "API4:2023",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Program.cs",
+        "line": 8,
+        "what": "No explicit MaxRequestBodySize; the Kestrel default (about 30 MB) applies. Carried over unchanged from the earlier A1 verdict.",
+        "why": "API4:2023 (light) expects a sane body limit. F0b has no body-accepting endpoint, so nothing is exploitable now. Set a limit (for example 64 KB) when the first POST route lands in F1. Rate limiting: note only. The earlier verdict cited line 343, which is a patch offset.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "Re-review after integrate. I have no shell, so I could not recompute the patch-id or diff 455afeb against 238a61e. I checked these instead. The packet diff.patch shows src/ and tests/ in the same shape my A1 PASS described. The current Program.cs in the worktree is byte-for-byte what the patch shows (48 lines). The same greps over src/ give the same results as before. gate.integrate reports 74/74 tests and 0 failed after the rebase onto 4c265e2. Trailers show no builder commit after the A1 verdict, only the tester QA script (docs/qa) and Agent: main plan-status commits. This is consistent with src/ and tests/ being unchanged, but it is not proof by recomputation.",
+      "Greps over src/ for FromSqlRaw, ExecuteSqlRaw, SqlQueryRaw, HttpClient, WebRequest, UseDeveloperExceptionPage, StackTrace, Exception.Message, Password=, AccountKey=, ApiKey, double, float, FromBody, MaxRequestBodySize, UseHsts, UseHttpsRedirection and DateTime.Now/UtcNow/Today returned no matches. The only Log call is UnexpectedExceptionHandler.cs:13, which logs the exception, method and path with no body and no personal data.",
+      "The only credential-looking string in tests/ is the all-zero InstrumentationKey in ApplicationInsightsApiFactory.cs. Its endpoints are http://127.0.0.1:1/, so it is a test-only dummy and not a secret.",
+      "n/a API1:2023 Out: no auth or tenancy; the reference will be the only key (README says so).",
+      "n/a API2:2023 Out: authentication is out of scope.",
+      "n/a API5:2023 Out: no roles. POST /claims would be an admin function in real life.",
+      "n/a API7:2023 Out: no outbound URL fetching. No HttpClient or WebRequest in src/.",
+      "n/a API10:2023 Out: no upstream APIs; pricing is client-supplied.",
+      "API3:2023 met: no controllers, request DTOs or entities exist yet. PoliciesDbContext has no DbSets and the InitialCreate migration is empty.",
+      "API4:2023 (light): no list route and no bounded collections or string columns exist yet. The only finding is S2.",
+      "API6:2023 met vacuously: no refund, cancel, renew, claim or quote flow and no SaveChanges. Version-token and refund-sum checks apply from F1.",
+      "API8:2023 met apart from S1. UnexpectedExceptionHandler returns a fixed generic ProblemDetails. There is no developer exception page. OpenAPI and Scalar are mapped only under IsDevelopment. appsettings.json holds no connection string. appsettings.Development.json holds only a SQLite file path. Production fails closed on a missing Database:Provider through ValidateOnStart.",
+      "API9:2023 met: routes are /health/live and /health/ready, plus the Development-only /openapi/v1.json and /scalar. No stub endpoint remains, and gate.no-stub is clean.",
+      "NET-PACKAGES met: gate.vulnerable-packages (dotnet list package --vulnerable --include-transitive) reports no vulnerable packages across 8 of 8 projects. It ran at 455afeb, not at the rebased head. Directory.Packages.props is unchanged in the patch, and gate.integrate re-ran the build under -warnaserror, so NuGet audit warnings would have failed it. The System.Security.Cryptography.Pkcs transitive pin stays at 10.0.13.",
+      "NET-MONEY met: there is no double or float in src/, and BannedSymbols.txt bans Math.Round and Decimal.Round and is included unconditionally.",
+      "gate.diff-scope ok=false (the carried docs/context snapshots, under David's standing waiver) and the QA script's TDD: red trailer are process matters, not security matters."
+    ]
+  }
+}

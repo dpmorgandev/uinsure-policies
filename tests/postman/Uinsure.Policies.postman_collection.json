@@ -1,0 +1,71 @@
+{
+  "info": {
+    "name": "Uinsure.Policies",
+    "description": "Uinsure Policies API. One folder per plan node, each with its happy path and rule violations. Requests create their own data and compute dates from the real today; rows that need a fake clock are integration-test only.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "F0b Walking skeleton",
+      "item": [
+        {
+          "name": "happy path",
+          "item": [
+            {
+              "name": "HEALTH · live → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HEALTH · live answers 200 Healthy\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.text()).to.eql(\"Healthy\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health/live",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["health", "live"]
+                }
+              }
+            },
+            {
+              "name": "HEALTH · ready (database answers) → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"HEALTH · ready answers 200 Healthy when the database answers\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.text()).to.eql(\"Healthy\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health/ready",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["health", "ready"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,191 @@
+5e6a2fb1a36fd53df2746a87b762e84ed468b566 docs(context): f0a-done and f0a-g6-compound-closed snapshots
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5f1b7bee03c69b8dd6b76c38150ea10c0fa03942 plan(build/F0b): pending → in_progress
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+98b2a0dbeebce7fde8a6e513765772f6d1862147 plan(build/F0b): tasks amended: builder scaffold before red
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+bffd8f2e261452f1cb5e55cb85435ff8102dc996 build(F0b): scaffold
+Agent: builder
+Plan: build
+Node: F0b
+TDD: scaffold
+
+d9a12523c07b125234cecabe0caa00677ab69e8c plan(build/F0b): t1 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5f7f229d76b9c39583ee12f0d4e39e601ef4992e test(F0b): red: walking skeleton acceptance suite
+Agent: tester
+Plan: build
+Node: F0b
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+1ee2175050a1487261171a7614c5aa223f13ad93 plan(build/F0b): t2 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e735d6f442dab4534ce8babd1ca368f04bd9a373 feat(F0b): stub controller
+Agent: builder
+Plan: build
+Node: F0b
+Rule: none
+TDD: stub
+
+b7ff916b1e96effe09337dc14e700c83017fe6cc plan(build/F0b): t3 pending → done; F0b in_progress → paused_acceptance
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+91c14fd96cab51f7e338267deb0185b0da33725f plan(build/F0b): paused_acceptance → in_progress
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c438902bd47a34f1a63d5ef5bcfa2a675de544c7 fix(F0b): launch profile on port 5080
+Agent: builder
+Plan: build
+Node: F0b
+Rule: none
+TDD: stub
+Fixes-Finding: D1/I1
+
+438c4bd2635f177dc807084cfca7e567e42fc13f plan(build/F0b): in_progress → paused_acceptance
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d78a22fe9da53e15d52947fe65be64bc5733d998 plan(build/F0b): t4 pending → done; F0b paused_acceptance → in_progress
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+35284d005497c3678487958ceaf2c9e58f8c763f feat(F0b): green: services
+Agent: builder
+Plan: build
+Node: F0b
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+eb2ef1bfa072e694a9d7b84142ed74e43bd1a138 plan(build/F0b): t5 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b79170bf5cc03b9f3eac6377bc70d0857f5233eb feat(F0b): green: persistence
+Agent: builder
+Plan: build
+Node: F0b
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+e510bbdc1d23b9e1339c7a496d8c60c57b9631e7 plan(build/F0b): t6 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+0070ae17f91b1a409487c38c255dbaae44b01f18 feat(F0b): green: api
+Agent: builder
+Plan: build
+Node: F0b
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+895b68d08eb74d5a4ad101a2e07d7e650014067a plan(build/F0b): t7 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+8c8007d1cf711926f8c67f7fa3e2bbe01f33b8e0 refactor(F0b): space around == in EnsureSqliteCreated
+Agent: builder
+Plan: build
+Node: F0b
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+89550293107f495070e7e786f6e4c7274b7faa74 plan(build/F0b): t8 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+37db1fca0b3798656c55bb85c781c338619abb2f plan(build/F0b): t9 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+28f74154c82adbefce8d54bb6de39fe0dd1b8070 plan(build/F0b): attempt 1 → 2
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+672ab428096bcac6e8fb8dc2510d981aee1839f7 test(F0b): red: fix A1 I1 I3 I6
+Agent: tester
+Plan: build
+Node: F0b
+Rule: none
+TDD: red
+Fixes-Finding: A1/I1, A1/I3, A1/I6, A1/I7
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d8e5cd225cfde7210d84ba5d63ccb24da2115c5b fix(F0b): development configuration and unconditional banned symbols
+Agent: builder
+Plan: build
+Node: F0b
+Rule: none
+TDD: green
+Fixes-Finding: A1/I1
+Fixes-Finding: A1/I6
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+865b11d787c5da268037f0015d2dab6bd75d8bab plan(build/F0b): t10 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+18ea79d0ea0122f10228cb62b3a6ec3ea2ec091d docs(F0b): QA script
+Agent: tester
+Plan: build
+Node: F0b
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+1fb85a844e9439601137c32664bb46f82930744a plan(build/F0b): t11 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+238a61e4355a5d29266c2312d43c1cb0d0dbf3f8 plan(build/F0b): t12 pending → done
+Agent: main
+Plan: build
+Node: F0b
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
