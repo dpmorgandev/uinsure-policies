@@ -115,7 +115,7 @@ nodes:
     attempt: 2
     branch: feature/build/F1
     worktree: .claude/worktrees/build-F1
-    pr: null
+    pr: 10
     qa: docs/qa/build-F1.md
     trace: docs/trace/build/F1/
     acceptance:
