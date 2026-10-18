@@ -10,7 +10,7 @@ namespace Uinsure.Policies.Domain.Tests;
 // one-term policy sold to start 2026-11-01 (TestClock.Today + 15) is covered from 2026-11-01 to
 // 2027-10-31 inclusive. The two-term rows (finding A1/I5) restore that term followed by 2027-11-01 to
 // 2028-10-31, so Pending is shown to measure from the first term's start and Expired from the latest term's
-// end. Untraited until F2 adds the GET-1 traits.
+// end. Traited GET-1 in F2.
 public sealed class PolicyStatusTests
 {
     private static readonly DateOnly Start = TestClock.Today.AddDays(15);
@@ -20,6 +20,7 @@ public sealed class PolicyStatusTests
         new Term(new DateOnly(2027, 11, 1), 561.09m, new Payment("PAY-DOM-0042-R1", PaymentMethod.DirectDebit, 561.09m)));
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_the_sale_day_before_the_start_is_Pending()
     {
         var policy = new PolicyBuilder().WithStartDate(Start).Build();
@@ -28,6 +29,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_the_day_before_the_start_is_Pending()
     {
         var policy = new PolicyBuilder().WithStartDate(Start).Build();
@@ -36,6 +38,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_the_start_day_is_Active()
     {
         var policy = new PolicyBuilder().WithStartDate(Start).Build();
@@ -44,6 +47,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_the_end_day_is_Active()
     {
         var policy = new PolicyBuilder().WithStartDate(Start).Build();
@@ -52,6 +56,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_the_day_after_the_end_is_Expired()
     {
         var policy = new PolicyBuilder().WithStartDate(Start).Build();
@@ -60,6 +65,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_the_day_before_the_first_start_of_two_terms_is_Pending()
     {
         var policy = TwoTermPolicy();
@@ -68,6 +74,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_a_day_inside_the_first_of_two_terms_is_Active()
     {
         var policy = TwoTermPolicy();
@@ -76,6 +83,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_the_start_day_of_the_second_of_two_terms_is_Active()
     {
         var policy = TwoTermPolicy();
@@ -84,6 +92,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_a_day_inside_the_second_of_two_terms_is_Active()
     {
         var policy = TwoTermPolicy();
@@ -92,6 +101,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_the_end_day_of_the_second_of_two_terms_is_Active()
     {
         var policy = TwoTermPolicy();
@@ -100,6 +110,7 @@ public sealed class PolicyStatusTests
     }
 
     [Fact]
+    [Trait("Rule", "GET-1")]
     public void Status_on_the_day_after_the_end_of_two_terms_is_Expired()
     {
         var policy = TwoTermPolicy();
