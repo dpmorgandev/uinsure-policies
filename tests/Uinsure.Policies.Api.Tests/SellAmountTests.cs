@@ -26,6 +26,7 @@ public sealed class SellAmountTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL7-ONE-PENNY");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL7-ONE-PENNY", new DateOnly(2027, 11, 7));
         Assert.Equal(0.01m, policy.GetProperty("amount").GetDecimal());
     }
 
