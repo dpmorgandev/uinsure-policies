@@ -53,8 +53,9 @@ Write red unit tests for each rule boundary in `tests/Uinsure.Policies.Domain.Te
 3. For an untestable finding, write no test. Record the finding id and a concrete reason.
 
 ### `qa`: after both verdicts PASS
-Write `docs/qa/<plan>-<node>.md`: numbered steps, each tagged `[RULE-ID]`, with the request, the
-expected status and body, and a sign-off block for David. Every node rule appears in at least one step.
+Write `docs/qa/<plan>-<node>.md` from the QA template: one table row per step, `| <n> | <RULE-ID> | …`,
+the rule as a bare id (no brackets: `render-trace` reads that column), with the request, the expected
+status and body, and a sign-off block for David. Every node rule appears in at least one step row.
 
 ## Commits
 

@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { checkWrite, bashWriteTargets } from '../guard-agent.mjs';
 import { check, normalise } from '../guard-bash.mjs';
-import { scopeViolations, dirtySnapshot, verdictProblems, findingsProblems } from '../gate-subagent.mjs';
+import { scopeViolations, dirtySnapshot, verdictProblems, findingsProblems, findingsRound } from '../gate-subagent.mjs';
 import { checkEdit } from '../lib/stub-rule.mjs';
 import { toRepoRel } from '../lib/paths.mjs';
 import { codeFingerprint } from '../lib/trace.mjs';
@@ -295,6 +295,28 @@ test('commit-msg: on a node branch, tester/builder need Rule and TDD; main bookk
   assert.equal(run('docs(F1): QA script\n\nAgent: tester\nPlan: build\nNode: F1\nRule: none\n'), 0);
   assert.equal(run('plan(build/F1): t1 pending → done\n\nAgent: main\nPlan: build\nNode: F1\n'), 0);
 }));
+
+test('commit-msg: every Fixes-Finding names its round (<A|D><n>[.<k>]/I<n>)', () => withRepo('feature/build/F1', (root) => {
+  const hook = join(ROOT, '.githooks', 'commit-msg');
+  const run = (fixes) => {
+    writeFileSync(join(root, 'MSG'), `fix(SELL-1): x\n\nAgent: builder\nPlan: build\nNode: F1\nRule: SELL-1\nTDD: green\n${fixes.map((f) => `Fixes-Finding: ${f}\n`).join('')}`);
+    return spawnSync('sh', [hook, join(root, 'MSG')], { cwd: root, encoding: 'utf8' });
+  };
+  assert.equal(run(['A1/I2']).status, 0);
+  assert.equal(run(['D2/I10', 'A2.2/I1']).status, 0);
+  const bare = run(['A1/I1', 'I2']);
+  assert.equal(bare.status, 1);
+  assert.match(bare.stderr, /Fixes-Finding must be <round>\/<id>/);
+  assert.equal(run(['A1-I2']).status, 1);
+}));
+
+test('findingsRound: the round comes from source_ref, so a re-run after later events lands in its own round', () => {
+  assert.equal(findingsRound({ source_ref: 'steer(D2,pause1) in docs/trace/build/F1/loop.jsonl' }), 'D2');
+  assert.equal(findingsRound({ source_ref: 'reviewer FAIL, docs/trace/build/F1/verdicts/A1-reviewer.json' }), 'A1');
+  assert.equal(findingsRound({ source_ref: 'verdicts/A2.2-security.json' }), 'A2.2');
+  assert.equal(findingsRound({ source_ref: 'gate.red ok:false at abc1234' }), null);
+  assert.equal(findingsRound({}), null);
+});
 
 // ---------- G14 ----------
 

@@ -215,6 +215,45 @@ test('writeVerdict never overwrites; writeFindings records the findings ids', ()
   }
 });
 
+test('writeFindings: a revision in the same round adds its ids and keeps the earlier findings', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'trace-revise-'));
+  const base = { round: 'D2', plan: 'build', node: 'F1', attempt: 1, source: 'david' };
+  try {
+    writeFindings(dir, { ...base, agentId: 'i1', findings: { findings: [{ id: 'I1', fingerprint: 'a|b|c' }, { id: 'I2' }] }, body: '{"findings":[{"id":"I1"},{"id":"I2"}]}' });
+    const file = writeFindings(dir, { ...base, agentId: 'i2', findings: { findings: [{ id: 'I3', fingerprint: 'd|e|f' }] }, body: '{"findings":[{"id":"I3"}]}' });
+    const text = readFileSync(file, 'utf8');
+    assert.match(text, /^finding_ids: \[I1, I2, I3\]$/m);
+    assert.match(text, /^fingerprints: \["a\|b\|c", "d\|e\|f"\]$/m);
+    assert.match(text, /"id":"I1"[\s\S]*<!-- revision: agent i2, attempt 1 -->[\s\S]*"id":"I3"/);
+    assert.equal(text.match(/^---$/gm).length, 2, 'one front matter, not two');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('completeness: a lost activity record or a bare Fixes-Finding passes only when reconciled with evidence', () => {
+  const sha = 'b'.repeat(40);
+  const t = {
+    node: { owner: 'loop', kind: 'feature', rules: [] }, nodeId: 'F1', activity: [{ commit: { subject: 'other' } }], markers: {}, qa: {},
+    commits: [{ sha, subject: 'plan(build/F1): t12 pending → done', agent: 'main', plan: 'build', node: 'F1', tdd: null, rules: [], fixes: ['I2'] }],
+    loop: [{ event: 'gate.red', ok: true }, { event: 'gate.green', ok: true }, { event: 'gate.integrate', ok: true }],
+    verdicts: [], findings: ['A1'], findingIds: ['A1/I2'],
+  };
+  let reasons = completeness(t).reasons;
+  assert.ok(reasons.some((x) => x.includes('no activity record')), reasons.join('\n'));
+  assert.ok(reasons.some((x) => x.includes('Fixes-Finding I2')), reasons.join('\n'));
+  t.loop.push({ event: 'reconciled(activity:bbbbbbb)' }, { event: 'reconciled(fixes:bbbbbbb:I2)' });
+  reasons = completeness(t).reasons;
+  assert.ok(reasons.some((x) => x.includes('no activity record')), 'a reconciliation with no detail is not evidence');
+  t.loop.splice(-2, 2, { event: 'reconciled(activity:bbbbbbb)', detail: 'command exited 2 after the commit' },
+    { event: 'reconciled(fixes:bbbbbbb:I2)', detail: 'I2 is A1/I2: the commit follows findings/A1.md' });
+  reasons = completeness(t).reasons;
+  assert.ok(!reasons.some((x) => x.includes('no activity record') || x.includes('Fixes-Finding')), reasons.join('\n'));
+  t.loop.push({ event: 'reconciled(fixes:ccccccc:I3)', detail: 'another commit' });
+  t.commits[0].fixes.push('I3');
+  assert.ok(completeness(t).reasons.some((x) => x.includes('Fixes-Finding I3')), 'a reconciliation names its own commit');
+});
+
 test('completeness: Fixes-Finding <round>/<id> resolves; a lost verdict passes only when reconciled', () => {
   const t = {
     node: { owner: 'loop', kind: 'feature', rules: [] }, nodeId: 'F1', activity: [], markers: {}, qa: {},

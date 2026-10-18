@@ -136,7 +136,7 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 5. Both `PASS` with the current `head_sha` → next task. Any `FAIL`, or a verdict missing or stale →
    **failure route** (§5).
 
-**`tester / qa`**: dispatch. Gate: `docs/qa/<plan>-<node>.md` exists, and every node rule appears as `[RULE-ID]`.
+**`tester / qa`**: dispatch. Gate: `docs/qa/<plan>-<node>.md` exists, and every node rule has a step row `| <n> | <RULE-ID> |` (bare id, the column `render-trace` reads).
 
 **`git / integrate`**
 - Dispatch with `op: integrate`. Re-run the full suite yourself on the post-rebase HEAD and record
