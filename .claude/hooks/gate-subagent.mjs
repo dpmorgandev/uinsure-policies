@@ -130,6 +130,17 @@ export function verdictProblems(v, { role, rules, head, fp, attempt }) {
 const SOURCES = ['reviewer', 'security', 'gate', 'david', 'pr-comment'];
 const LAYERS = ['domain', 'services', 'persistence', 'api', 'tests'];
 
+// The round a findings object answers, read from its own source_ref: steer(D<n>,…) is that steer, and a
+// verdicts/A<n>-<agent>.json reference is that review round. null falls back to the loop's latest round,
+// which a re-run after later events can get wrong (F1's D2 restoration landed on A1 that way).
+export function findingsRound(f) {
+  const ref = typeof f?.source_ref === 'string' ? f.source_ref : '';
+  const steer = /steer\((D\d+),/.exec(ref);
+  if (steer) return steer[1];
+  const review = /\b(A\d+(?:\.\d+)?)-(?:reviewer|security)\.json/.exec(ref);
+  return review ? review[1] : null;
+}
+
 export function findingsProblems(f, { attempt }) {
   const p = [];
   const str = (x) => typeof x === 'string' && x !== '';
@@ -204,7 +215,9 @@ function stop(input) {
   }
 
   if (parsed && dir) {
-    const round = currentRound(dir, role === 'investigator' ? 'findings' : 'verdict');
+    const round = role === 'investigator'
+      ? (findingsRound(parsed) ?? currentRound(dir, 'findings'))
+      : currentRound(dir, 'verdict');
     if (role === 'investigator') writeFindings(dir, { round, agentId, plan: where.plan, node: where.node, attempt, source: parsed.source, findings: parsed, body: input.last_assistant_message });
     else writeVerdict(dir, { round, agent: role, agentId, plan: where.plan, node: where.node, attempt, verdict: parsed });
   }

@@ -146,8 +146,16 @@ export function writeVerdict(dir, { round, agent, agentId, plan, node, attempt, 
 export function writeFindings(dir, { round, agentId, plan, node, attempt, source, findings, body }) {
   const file = join(dir, 'findings', `${round}.md`);
   mkdirSync(dirname(file), { recursive: true });
-  const ids = (findings?.findings ?? []).map((f) => f.id).filter(Boolean);
-  const prints = (findings?.findings ?? []).map((f) => f.fingerprint).filter(Boolean);
+  // A second investigator run in the same round (a revision) adds to the file and never replaces it: the
+  // earlier findings are what the round's Fixes-Finding trailers point at (F1 D2 lost I1-I8 this way).
+  const earlier = existsSync(file) ? readFileSync(file, 'utf8') : null;
+  const listed = (key) => {
+    const line = earlier && new RegExp(`^${key}: \\[(.*)\\]$`, 'm').exec(earlier);
+    return line && line[1] ? (key === 'fingerprints' ? JSON.parse(`[${line[1]}]`) : line[1].split(', ')) : [];
+  };
+  const union = (a, b) => [...a, ...b.filter((x) => !a.includes(x))];
+  const ids = union(listed('finding_ids'), (findings?.findings ?? []).map((f) => f.id).filter(Boolean));
+  const prints = union(listed('fingerprints'), (findings?.findings ?? []).map((f) => f.fingerprint).filter(Boolean));
   const front = [
     '---',
     `v: 1`,
@@ -162,6 +170,7 @@ export function writeFindings(dir, { round, agentId, plan, node, attempt, source
     `fingerprints: [${prints.map((p) => JSON.stringify(p)).join(', ')}]`,
     '---',
   ].join('\n');
-  writeFileSync(file, `${front}\n${body}\n`);
+  const before = earlier ? `${earlier.replace(/^---\n[\s\S]*?\n---\n/, '').trimEnd()}\n\n<!-- revision: agent ${agentId}, attempt ${attempt} -->\n` : '';
+  writeFileSync(file, `${front}\n${before}${body}\n`);
   return file;
 }

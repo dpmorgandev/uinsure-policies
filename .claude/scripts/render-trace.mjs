@@ -137,8 +137,14 @@ export function completeness(t, { archive = false } = {}) {
   const r = [];
   const rules = t.node.rules ?? [];
   const recorded = t.activity.filter((a) => a.commit);
+  // A lost activity record or a malformed Fixes-Finding passes only when a reconciled event names the commit
+  // (reconciled(activity:<sha7>), reconciled(fixes:<sha7>:<id>)) and its detail points at the evidence.
+  const reconciledFor = (kind, sha, id) => t.loop.some((e) => {
+    const m = /^reconciled\((activity|fixes):([0-9a-f]{7,40})(?::([\w/.]+))?\)$/.exec(e.event ?? '');
+    return m && m[1] === kind && sha.startsWith(m[2]) && (kind === 'activity' || m[3] === id) && e.detail;
+  });
   for (const c of t.commits) {
-    if (!recorded.some((a) => a.agent === c.agent && a.commit.subject === c.subject)) r.push(`commit ${c.sha.slice(0, 7)} "${c.subject}" has no activity record for Agent ${c.agent || '?'}`);
+    if (!recorded.some((a) => a.agent === c.agent && a.commit.subject === c.subject) && !reconciledFor('activity', c.sha)) r.push(`commit ${c.sha.slice(0, 7)} "${c.subject}" has no activity record for Agent ${c.agent || '?'}`);
     if (!c.agent || !c.plan || !c.node) r.push(`commit ${c.sha.slice(0, 7)} is missing Agent/Plan/Node`);
     if (c.tdd && !TDD.includes(c.tdd)) r.push(`commit ${c.sha.slice(0, 7)} has TDD ${c.tdd}`);
   }
@@ -163,7 +169,7 @@ export function completeness(t, { archive = false } = {}) {
     if (steer && !t.findings.includes(steer[1])) r.push(`steer ${steer[1]} has no findings/${steer[1]}.md`);
   }
   const knownIds = new Set([...t.findings, ...(t.findingIds ?? []), ...t.verdicts.flatMap((v) => (v.verdict?.findings ?? []).map((f) => f.id))]);
-  for (const c of t.commits) for (const id of c.fixes) if (!knownIds.has(id)) r.push(`Fixes-Finding ${id} in ${c.sha.slice(0, 7)} resolves to nothing`);
+  for (const c of t.commits) for (const id of c.fixes) if (!knownIds.has(id) && !reconciledFor('fixes', c.sha, id)) r.push(`Fixes-Finding ${id} in ${c.sha.slice(0, 7)} resolves to nothing`);
   for (const id of rules) {
     if (!t.markers[id]) r.push(`rule ${id} has no test marker`);
     const red = t.commits.findIndex((c) => c.tdd === 'red' && c.rules.includes(id));

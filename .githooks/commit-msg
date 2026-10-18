@@ -24,6 +24,10 @@ esac
 [ "$msg_plan" = "$plan" ] || { echo "commit-msg: G9: Plan trailer must be '$plan' (got '$msg_plan')" >&2; exit 1; }
 [ "$msg_node" = "$node" ] || { echo "commit-msg: G9: Node trailer must be '$node' (got '$msg_node')" >&2; exit 1; }
 
+# Every Fixes-Finding names its round: <A|D><n>[.<k>]/I<n> (F1 shipped bare `I2` ids that resolve to nothing).
+bad="$(grep -E '^Fixes-Finding:' "$1" | tr -d '\r' | sed 's/^Fixes-Finding:[[:space:]]*//' | grep -vE '^[AD][0-9]+(\.[0-9]+)?/I[0-9]+$')"
+[ -z "$bad" ] || { echo "commit-msg: G9: Fixes-Finding must be <round>/<id>, e.g. A1/I2 (got '$bad')" >&2; exit 1; }
+
 # Tester and builder loop commits also carry Rule (an id, or `none` on a node without rules) and TDD.
 # The QA script (a docs( commit) has no TDD step.
 case "$agent" in
