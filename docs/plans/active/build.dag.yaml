@@ -112,7 +112,7 @@ nodes:
     cuttable: false
     budget: null
     status: in_progress
-    attempt: 1
+    attempt: 2
     branch: feature/build/F1
     worktree: .claude/worktrees/build-F1
     pr: null
