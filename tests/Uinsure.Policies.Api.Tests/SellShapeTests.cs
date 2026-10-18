@@ -205,6 +205,143 @@ public sealed class SellShapeTests : IClassFixture<PoliciesApiFactory>
         await client.AssertNotStored("SHAPE-POSTCODE-9");
     }
 
+    // The name and address caps match their columns: 100 for a policyholder's first and last name, 200
+    // for each address line. Each side of each cap is its own test.
+    [Fact]
+    public async Task First_name_of_100_characters_is_accepted()
+    {
+        using var client = _factory.CreateClient();
+        var firstName = new string('F', 100);
+        var body = new SellPolicyRequestBuilder("SHAPE-FIRST-100")
+            .WithPolicyholders(new PolicyholderBuilder().WithName(firstName, "Johnson"))
+            .Build();
+
+        var policy = await client.SellAndReadBack(body, "SHAPE-FIRST-100");
+
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SHAPE-FIRST-100", new DateOnly(2027, 11, 7));
+        var holder = Assert.Single(policy.Member("policyholders").EnumerateArray());
+        Assert.Equal(firstName, holder.Member("firstName").GetString());
+    }
+
+    [Fact]
+    public async Task First_name_of_101_characters_is_rejected_with_400()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SHAPE-FIRST-101")
+            .WithPolicyholders(new PolicyholderBuilder().WithName(new string('F', 101), "Johnson"))
+            .Build();
+
+        using var response = await client.PostPolicy(body);
+
+        ProblemAssert.HasError(await ProblemAssert.ValidationErrors(response), "policyholders[0].firstName");
+        await client.AssertNotStored("SHAPE-FIRST-101");
+    }
+
+    [Fact]
+    public async Task Last_name_of_100_characters_is_accepted()
+    {
+        using var client = _factory.CreateClient();
+        var lastName = new string('L', 100);
+        var body = new SellPolicyRequestBuilder("SHAPE-LAST-100")
+            .WithPolicyholders(new PolicyholderBuilder().WithName("Katherine", lastName))
+            .Build();
+
+        var policy = await client.SellAndReadBack(body, "SHAPE-LAST-100");
+
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SHAPE-LAST-100", new DateOnly(2027, 11, 7));
+        var holder = Assert.Single(policy.Member("policyholders").EnumerateArray());
+        Assert.Equal(lastName, holder.Member("lastName").GetString());
+    }
+
+    [Fact]
+    public async Task Last_name_of_101_characters_is_rejected_with_400()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SHAPE-LAST-101")
+            .WithPolicyholders(new PolicyholderBuilder().WithName("Katherine", new string('L', 101)))
+            .Build();
+
+        using var response = await client.PostPolicy(body);
+
+        ProblemAssert.HasError(await ProblemAssert.ValidationErrors(response), "policyholders[0].lastName");
+        await client.AssertNotStored("SHAPE-LAST-101");
+    }
+
+    [Fact]
+    public async Task Address_line_1_of_200_characters_is_accepted()
+    {
+        using var client = _factory.CreateClient();
+        var line = new string('A', 200);
+        var body = new SellPolicyRequestBuilder("SHAPE-ADDRESS1-200").WithAddress(line, "Unit 5", null).Build();
+
+        var policy = await client.SellAndReadBack(body, "SHAPE-ADDRESS1-200");
+
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SHAPE-ADDRESS1-200", new DateOnly(2027, 11, 7));
+        Assert.Equal(line, policy.Member("property").Member("addressLine1").GetString());
+    }
+
+    [Fact]
+    public async Task Address_line_1_of_201_characters_is_rejected_with_400()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SHAPE-ADDRESS1-201").WithAddress(new string('A', 201), "Unit 5", null).Build();
+
+        using var response = await client.PostPolicy(body);
+
+        ProblemAssert.HasError(await ProblemAssert.ValidationErrors(response), "property.addressLine1");
+        await client.AssertNotStored("SHAPE-ADDRESS1-201");
+    }
+
+    [Fact]
+    public async Task Address_line_2_of_200_characters_is_accepted()
+    {
+        using var client = _factory.CreateClient();
+        var line = new string('B', 200);
+        var body = new SellPolicyRequestBuilder("SHAPE-ADDRESS2-200").WithAddress("48 Quay St", line, null).Build();
+
+        var policy = await client.SellAndReadBack(body, "SHAPE-ADDRESS2-200");
+
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SHAPE-ADDRESS2-200", new DateOnly(2027, 11, 7));
+        Assert.Equal(line, policy.Member("property").Member("addressLine2").GetString());
+    }
+
+    [Fact]
+    public async Task Address_line_2_of_201_characters_is_rejected_with_400()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SHAPE-ADDRESS2-201").WithAddress("48 Quay St", new string('B', 201), null).Build();
+
+        using var response = await client.PostPolicy(body);
+
+        ProblemAssert.HasError(await ProblemAssert.ValidationErrors(response), "property.addressLine2");
+        await client.AssertNotStored("SHAPE-ADDRESS2-201");
+    }
+
+    [Fact]
+    public async Task Address_line_3_of_200_characters_is_accepted()
+    {
+        using var client = _factory.CreateClient();
+        var line = new string('C', 200);
+        var body = new SellPolicyRequestBuilder("SHAPE-ADDRESS3-200").WithAddress("48 Quay St", "Unit 5", line).Build();
+
+        var policy = await client.SellAndReadBack(body, "SHAPE-ADDRESS3-200");
+
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SHAPE-ADDRESS3-200", new DateOnly(2027, 11, 7));
+        Assert.Equal(line, policy.Member("property").Member("addressLine3").GetString());
+    }
+
+    [Fact]
+    public async Task Address_line_3_of_201_characters_is_rejected_with_400()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SHAPE-ADDRESS3-201").WithAddress("48 Quay St", "Unit 5", new string('C', 201)).Build();
+
+        using var response = await client.PostPolicy(body);
+
+        ProblemAssert.HasError(await ProblemAssert.ValidationErrors(response), "property.addressLine3");
+        await client.AssertNotStored("SHAPE-ADDRESS3-201");
+    }
+
     // Each is a required member of the property: equivalent inputs.
     [Theory]
     [InlineData("addressLine1", "SHAPE-NO-ADDRESS-1")]
