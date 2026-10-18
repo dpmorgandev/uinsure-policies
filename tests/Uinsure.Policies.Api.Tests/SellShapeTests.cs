@@ -187,6 +187,7 @@ public sealed class SellShapeTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SHAPE-POSTCODE-8");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SHAPE-POSTCODE-8", new DateOnly(2027, 11, 7));
         Assert.Equal(eight, policy.GetProperty("property").GetProperty("postcode").GetString());
     }
 

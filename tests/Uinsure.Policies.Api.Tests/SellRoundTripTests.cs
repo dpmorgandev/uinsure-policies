@@ -57,6 +57,7 @@ public sealed class SellRoundTripTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "ROUND-TRIP-BTL");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "ROUND-TRIP-BTL", new DateOnly(2027, 11, 7));
         Assert.Equal("BuyToLet", policy.GetProperty("type").GetString());
         Assert.False(policy.GetProperty("autoRenew").GetBoolean());
     }
