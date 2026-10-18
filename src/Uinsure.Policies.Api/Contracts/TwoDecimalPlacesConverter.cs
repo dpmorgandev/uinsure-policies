@@ -4,9 +4,10 @@ using System.Text.Json.Serialization;
 
 namespace Uinsure.Policies.Api.Contracts;
 
-// Every money amount is written with exactly two decimal places (803.40, not 803.4). Formatting only: amounts
-// reach the Api already rounded by Money.Round, so "F2" only pads and never changes a value. Reading stays
-// strict: only a JSON number is accepted.
+// Every money amount is written with exactly two decimal places (803.40, not 803.4). Formatting only: "F2" would
+// round a value with more than 2 decimal places, but none reaches it. SellPolicyRequest rejects such an amount
+// with a 400 (judged by value, so 527.180 is accepted and written as 527.18), and stored amounts come only from
+// accepted sales. Reading stays strict: only a JSON number is accepted.
 public sealed class TwoDecimalPlacesConverter : JsonConverter<decimal>
 {
     public override decimal Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
