@@ -148,7 +148,7 @@ each returned alone → then every 422 rule is collected, and none returns early
 | `Microsoft.EntityFrameworkCore.SqlServer`, `.Sqlite`, `.Design` (PrivateAssets=all) 10.0.13 | Persistence (Sqlite also Api.Tests) |
 | `Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore` | Persistence |
 | `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore` 2.18.0, `Azure.Monitor.OpenTelemetry.AspNetCore` | Api |
-| `Microsoft.CodeAnalysis.BannedApiAnalyzers` (PrivateAssets=all) | all `src` |
+| `Microsoft.CodeAnalysis.BannedApiAnalyzers` (PrivateAssets=all) · `Riok.Mapperly` 4.3.1 (ExcludeAssets=runtime, PrivateAssets=all; Api, Persistence) | all `src` |
 | `xunit.v3` 4.0.2 · `Microsoft.AspNetCore.Mvc.Testing` · `Microsoft.Extensions.TimeProvider.Testing` 10.11.0 · `NetArchTest.eNhancedEdition` 1.4.5 | tests |
 
 **Not to be added:** FluentValidation, MediatR, AutoMapper, Swashbuckle, Serilog, FluentAssertions, a
