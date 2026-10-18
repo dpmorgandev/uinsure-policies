@@ -117,7 +117,7 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 - `dotnet build Uinsure.Policies.slnx -warnaserror`
 - `dotnet test --solution Uinsure.Policies.slnx` (it includes the rule-coverage check)
 - diff scope: `git diff --name-only origin/main...HEAD` ⊆ the node's allowed paths (`src/**`, `tests/**`,
-  `docs/qa/**`, `docs/trace/**`, `docs/context/**` (snapshots, context C8), the plan file, the root build files)
+  `docs/qa/**`, `docs/trace/**`, `docs/context/**` (snapshots, context C8), the plan files incl. an escalation's `inv-NNN.plan.md`, the root build files)
 - `grep -rn "NotImplementedException" src/` finds nothing
 - `gate.run` (the real process: test factories inject config); `dotnet list … package --vulnerable --include-transitive`
 
@@ -173,7 +173,7 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 | `attempt` becomes | Action |
 |---|---|
 | 1–2 | Run the route below. |
-| 3, **or** a finding fingerprint `(rule_id, file, sha1(what))` equal to one from the previous attempt | **Stop.** Set the node `investigating`, record `investigation.opened(inv-NNN)`, and open `/plan-investigation` with `parent: <plan>/<node>`. The run ends until David decides. |
+| 3, **or** a finding fingerprint `(rule_id, file, sha1(what))` equal to one from the previous attempt | **Stop.** Set the node `investigating` (NNN = 1 + the highest `inv-NNN` in `docs/plans/{active,archive}/`), record `investigation.opened(inv-NNN)`, and run `/plan-investigation` with `--parent <plan>/<node>`. The run ends until David decides. |
 | 4 | The route, briefed by the accepted `amend-node`. |
 | 5 | **Stop.** Set the node `escalated`, record `escalated`, and ask David: amend the plan, cut the node, or take it over. |
 
@@ -244,7 +244,7 @@ Reply:    go  |  change: <what>
 - State is **derived**: the last `loop.jsonl` event, reconciled with
   `git log --format='%H %s%n%(trailers)' origin/main..HEAD`. If they disagree, **git wins**: backfill the
   missing event with `source: reconciled`.
-- At a pause, re-print its block and wait.
+- At a pause, re-print its block and wait. An `investigating` node resumes through `/plan-investigation` §8.
 - Reuse a gate result only if its `head` equals the current HEAD. Otherwise re-run it.
 
 ## Never
