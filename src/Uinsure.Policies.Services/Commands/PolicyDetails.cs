@@ -2,4 +2,4 @@ using Uinsure.Policies.Domain.Policies;
 
 namespace Uinsure.Policies.Services.Commands;
 
-public sealed record PolicyDetails(Policy Policy, Term Term);
+public sealed record PolicyDetails(Policy Policy, Term CurrentTerm, PolicyStatus Status);
