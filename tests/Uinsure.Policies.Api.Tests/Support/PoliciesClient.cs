@@ -61,9 +61,17 @@ internal static class PoliciesClient
         Assert.Equal(HttpStatusCode.NotFound, read.StatusCode);
     }
 
+    // A member that must be present: a missing one fails as an assertion that names it, not as a
+    // KeyNotFoundException.
+    public static JsonElement Member(this JsonElement element, string property)
+    {
+        Assert.True(element.TryGetProperty(property, out var value), $"The body has no '{property}' member.");
+        return value;
+    }
+
     // A DateOnly member, which the contract writes as yyyy-MM-dd.
     public static DateOnly GetDate(this JsonElement element, string property) =>
-        DateOnly.ParseExact(element.GetProperty(property).GetString() ?? string.Empty, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        DateOnly.ParseExact(element.Member(property).GetString() ?? string.Empty, "yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     public static string Iso(this DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }

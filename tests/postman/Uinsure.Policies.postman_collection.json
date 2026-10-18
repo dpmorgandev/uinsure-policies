@@ -99,6 +99,10 @@
               "pm.variables.set('todayPlus61', addDays(ukToday, 61));",
               "pm.variables.set('start', start);",
               "pm.variables.set('startEnd', endFor(start));",
+              "// A non-default start (today + 30) for the sales whose every value must be read back.",
+              "const start30 = addDays(ukToday, 30);",
+              "pm.variables.set('start30', start30);",
+              "pm.variables.set('start30End', endFor(start30));",
               "pm.variables.set('dob16OnStart', addYears(start, -16));",
               "pm.variables.set('dob16DayAfterStart', addDays(addYears(start, -16), 1));",
               "pm.variables.set('dob16DayAfterPlus61', addDays(addYears(addDays(ukToday, 61), -16), 1));",
@@ -124,6 +128,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"start30End\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SELL-1 · new reference answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
@@ -134,6 +156,7 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "    });",
                       "});"
                     ]
@@ -150,7 +173,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"BuyToLet\",\n  \"startDate\": \"{{start30}}\",\n  \"amount\": 412.34,\n  \"autoRenew\": false,\n  \"paymentMethod\": \"Card\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Grace\",\n      \"lastName\": \"Hopper\",\n      \"dateOfBirth\": \"1990-04-12\"\n    },\n    {\n      \"firstName\": \"Alan\",\n      \"lastName\": \"Turing\",\n      \"dateOfBirth\": \"1992-06-23\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"7 Canal St\",\n    \"addressLine2\": \"Flat 3\",\n    \"addressLine3\": \"Ancoats\",\n    \"postcode\": \"M4 6BX\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -173,6 +196,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"start30End\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SELL-1 · lower-case reference with spaces answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
@@ -183,6 +224,17 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
+                      "    });",
+                      "});",
+                      "// The lower-case GET must find the stored row, so it too reads back every value sold.",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + pm.variables.get(\"referenceLower\"), function (err, res) {",
+                      "    pm.test(\"SELL-1 · reads back via GET by the lower-case reference\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        const policy = res.json();",
+                      "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "    });",
                       "});"
                     ]
@@ -199,7 +251,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"  {{referenceLower}}  \",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"  {{referenceLower}}  \",\n  \"type\": \"BuyToLet\",\n  \"startDate\": \"{{start30}}\",\n  \"amount\": 412.34,\n  \"autoRenew\": false,\n  \"paymentMethod\": \"Card\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Grace\",\n      \"lastName\": \"Hopper\",\n      \"dateOfBirth\": \"1990-04-12\"\n    },\n    {\n      \"firstName\": \"Alan\",\n      \"lastName\": \"Turing\",\n      \"dateOfBirth\": \"1992-06-23\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"7 Canal St\",\n    \"addressLine2\": \"Flat 3\",\n    \"addressLine3\": \"Ancoats\",\n    \"postcode\": \"M4 6BX\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -222,6 +274,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"start30End\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SELL-1 · reference of 20 characters answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference20\"));",
@@ -232,6 +302,7 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference20\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "    });",
                       "});"
                     ]
@@ -248,7 +319,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference20}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference20}}\",\n  \"type\": \"BuyToLet\",\n  \"startDate\": \"{{start30}}\",\n  \"amount\": 412.34,\n  \"autoRenew\": false,\n  \"paymentMethod\": \"Card\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Grace\",\n      \"lastName\": \"Hopper\",\n      \"dateOfBirth\": \"1990-04-12\"\n    },\n    {\n      \"firstName\": \"Alan\",\n      \"lastName\": \"Turing\",\n      \"dateOfBirth\": \"1992-06-23\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"7 Canal St\",\n    \"addressLine2\": \"Flat 3\",\n    \"addressLine3\": \"Ancoats\",\n    \"postcode\": \"M4 6BX\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"

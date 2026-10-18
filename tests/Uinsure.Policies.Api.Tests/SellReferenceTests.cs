@@ -22,10 +22,12 @@ public sealed class SellReferenceTests : IClassFixture<PoliciesApiFactory>
     public async Task New_reference_is_sold_with_201_and_its_Location_and_reads_back()
     {
         using var client = _factory.CreateClient();
+        var body = SellPolicyRequestBuilder.Distinctive("SELL1-NEW").Build();
 
-        var policy = await client.SellAndReadBack(new SellPolicyRequestBuilder("SELL1-NEW").Build(), "SELL1-NEW");
+        var policy = await client.SellAndReadBack(body, "SELL1-NEW");
 
         Assert.Equal("SELL1-NEW", policy.GetProperty("reference").GetString());
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL1-NEW", new DateOnly(2027, 11, 15));
     }
 
     [Fact]
@@ -33,23 +35,31 @@ public sealed class SellReferenceTests : IClassFixture<PoliciesApiFactory>
     public async Task Reference_is_trimmed_and_upper_cased_in_the_Location_and_the_stored_policy()
     {
         using var client = _factory.CreateClient();
+        var body = SellPolicyRequestBuilder.Distinctive("  sell1-norm  ").Build();
 
-        var policy = await client.SellAndReadBack(new SellPolicyRequestBuilder("  sell1-norm  ").Build(), "SELL1-NORM");
+        var policy = await client.SellAndReadBack(body, "SELL1-NORM");
 
         Assert.Equal("SELL1-NORM", policy.GetProperty("reference").GetString());
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL1-NORM", new DateOnly(2027, 11, 15));
     }
 
+    // The lower-case GET must find the stored row: it reads back the distinctive sold values, not only
+    // the reference, which a route echo could produce.
     [Fact]
     [Trait("Rule", "SELL-1")]
     public async Task Policy_sold_reads_back_by_its_reference_in_lower_case()
     {
         using var client = _factory.CreateClient();
-        await client.SellAndReadBack(new SellPolicyRequestBuilder("SELL1-LOWER-GET").Build(), "SELL1-LOWER-GET");
+        var body = SellPolicyRequestBuilder.Distinctive("SELL1-LOWER-GET").Build();
+        var policy = await client.SellAndReadBack(body, "SELL1-LOWER-GET");
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL1-LOWER-GET", new DateOnly(2027, 11, 15));
 
         using var read = await client.GetPolicy("sell1-lower-get");
 
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
-        Assert.Equal("SELL1-LOWER-GET", (await read.ReadJson()).GetProperty("reference").GetString());
+        var readByLowerCase = await read.ReadJson();
+        Assert.Equal("SELL1-LOWER-GET", readByLowerCase.GetProperty("reference").GetString());
+        SoldPolicyAssert.ReadsBackAsSold(readByLowerCase, body, "SELL1-LOWER-GET", new DateOnly(2027, 11, 15));
     }
 
     [Fact]
@@ -99,8 +109,11 @@ public sealed class SellReferenceTests : IClassFixture<PoliciesApiFactory>
     public async Task Reference_of_3_characters_is_accepted()
     {
         using var client = _factory.CreateClient();
+        var body = SellPolicyRequestBuilder.Distinctive("S1A").Build();
 
-        await client.SellAndReadBack(new SellPolicyRequestBuilder("S1A").Build(), "S1A");
+        var policy = await client.SellAndReadBack(body, "S1A");
+
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "S1A", new DateOnly(2027, 11, 15));
     }
 
     [Fact]
@@ -122,8 +135,11 @@ public sealed class SellReferenceTests : IClassFixture<PoliciesApiFactory>
         using var client = _factory.CreateClient();
         const string twenty = "SELL1-MAX-LEN-20CHAR";
         Assert.Equal(20, twenty.Length);
+        var body = SellPolicyRequestBuilder.Distinctive(twenty).Build();
 
-        await client.SellAndReadBack(new SellPolicyRequestBuilder(twenty).Build(), twenty);
+        var policy = await client.SellAndReadBack(body, twenty);
+
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, twenty, new DateOnly(2027, 11, 15));
     }
 
     [Fact]

@@ -20,6 +20,21 @@ public sealed class SellPolicyRequestBuilder(string reference)
     private string? _addressLine3;
     private string _postcode = "M1 1AA";
 
+    // A valid sale whose every field differs from Build()'s defaults and from the api.md example (the
+    // two match), so a read-back of it can only come from a stored sale. It starts on 2026-11-16
+    // (today + 30), so it ends on 2027-11-15; each test states that end date as its own literal.
+    public static SellPolicyRequestBuilder Distinctive(string reference) => new SellPolicyRequestBuilder(reference)
+        .WithType("BuyToLet")
+        .WithStartDate(TestClock.Today.AddDays(30))
+        .WithAmount(412.34m)
+        .WithAutoRenew(false)
+        .WithPaymentMethod("Card")
+        .WithPolicyholders(
+            new PolicyholderBuilder().WithName("Grace", "Hopper").WithDateOfBirth(new DateOnly(1990, 4, 12)),
+            new PolicyholderBuilder().WithName("Alan", "Turing").WithDateOfBirth(new DateOnly(1992, 6, 23)))
+        .WithAddress("7 Canal St", "Flat 3", "Ancoats")
+        .WithPostcode("M4 6BX");
+
     public SellPolicyRequestBuilder WithReference(string value)
     {
         _reference = value;
