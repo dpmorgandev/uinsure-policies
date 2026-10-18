@@ -20,6 +20,7 @@ internal static partial class PolicyMappings
         new Property(request.Property!.AddressLine1!, request.Property.AddressLine2, request.Property.AddressLine3, request.Property.Postcode!),
         ToDomain(request.PaymentMethod!.Value));
 
+    // Stub: status, current term number, hasClaims, refunds, claims and cancellation are canned.
     // The policy-level dates and amount are the current term's (GET-1).
     public static PolicyResponse ToResponse(this PolicyDetails details)
     {
@@ -28,14 +29,20 @@ internal static partial class PolicyMappings
         return new PolicyResponse(
             policy.Reference.Value,
             ToDto(policy.Type),
+            PolicyStatus.Active,
+            1,
             term.Start,
             term.End,
             term.Amount,
+            false,
             policy.AutoRenew,
             [.. policy.Policyholders.Select(ToDto)],
             ToDto(policy.Property),
             [.. policy.Terms.Select((t, index) => new TermResponse(index + 1, t.Start, t.End, t.Amount, t.Payment?.Reference))],
-            [.. policy.Terms.Where(t => t.Payment is not null).Select(t => new PaymentResponse(t.Payment!.Reference, ToDto(t.Payment.Method), t.Payment.Amount))]);
+            [.. policy.Terms.Where(t => t.Payment is not null).Select(t => new PaymentResponse(t.Payment!.Reference, ToDto(t.Payment.Method), t.Payment.Amount))],
+            [],
+            [],
+            null);
     }
 
     private static partial Domain.Policies.PolicyType ToDomain(PolicyType type);
