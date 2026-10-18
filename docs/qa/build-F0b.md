@@ -72,19 +72,19 @@ worktree and is gitignored.
 Each defect becomes a finding on this node's failure route, not a /plan-bug.
 
 - Found while preparing this script: `dotnet-ef` isn't pinned in a repo tool manifest, so the version depends on the machine (step 18).
-- 
-- 
+- Step 12 [AC-6]: the console can't show "no exporter error"; the on/off proof is ApplicationInsightsTests plus ApplicationInsightsEnabledTests (4 tests; the enabled one was mutation-checked by the orchestrator). Reword for F1's script.
+- Steps 20 and 21: stale expectations. Step 20: the verify-in-F0 receipt is the gate.verify-in-f0 event in loop.jsonl; `public partial class Program` is not required (SDK 10.0.402); the deferral acceptance is in verdicts/A2-reviewer.json, not A1. Step 21: the self-test count is 64 after harness PRs #4 and #5.
 
 ## Sign-off
 
 | | |
 |---|---|
 | Tester | David Morgan |
-| Date | |
-| Commit signed off | |
-| `dotnet test` result | __ / __ / __ (expected 74 / 0 / 0) |
-| Postman CLI result | requests __ / failed __; assertions __ / failed __ (expected 2/0, 2/0) |
-| Steps passed | __ / 22 |
-| Defects raised (finding ids) | |
-| Verdict | ☐ Accept F0b  ☐ Reject (findings above) |
-| Signature | |
+| Date | 2026-10-18 |
+| Commit signed off | 241f3e9 (PR #6 head) |
+| `dotnet test` result | 74 / 0 / 0 (total / failed / skipped; orchestrator receipt at baf1f91, later commits are trail and plan only) |
+| Postman CLI result | requests 2 / failed 0; assertions 2 / failed 0 (orchestrator receipt gate.postman, fresh DB on :5080) |
+| Steps passed | not counted as a total. David reviewed steps 12, 17, 20, 21 and 22 with the orchestrator at Pause 2 (all pass; notes on 12, 20, 21) and accepted F0b |
+| Defects raised (finding ids) | none (QA-text notes only, see Exploratory notes) |
+| Verdict | ☑ Accept F0b  ☐ Reject (findings above) |
+| Signature | David Morgan, signed by Claude (tester agent) on David's explicit instruction at Pause 2, 2026-10-18 |
