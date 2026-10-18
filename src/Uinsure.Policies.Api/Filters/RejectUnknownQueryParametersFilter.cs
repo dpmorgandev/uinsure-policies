@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Uinsure.Policies.Api.Errors;
 
 namespace Uinsure.Policies.Api.Filters;
@@ -8,7 +9,11 @@ public sealed class RejectUnknownQueryParametersFilter : IActionFilter
 {
     public void OnActionExecuting(ActionExecutingContext context)
     {
-        var known = context.ActionDescriptor.Parameters.Select(parameter => parameter.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Only parameters bound from the query string are query keys; route, body and special parameters are not.
+        var known = context.ActionDescriptor.Parameters
+            .Where(parameter => parameter.BindingInfo?.BindingSource == BindingSource.Query)
+            .Select(parameter => parameter.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var unknown = context.HttpContext.Request.Query.Keys.Where(key => !known.Contains(key)).ToList();
         if (unknown.Count == 0)
         {
