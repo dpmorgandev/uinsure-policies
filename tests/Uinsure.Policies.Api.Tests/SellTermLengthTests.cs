@@ -76,6 +76,7 @@ public sealed class SellTermLengthTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL3-1-MAR-2027");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL3-1-MAR-2027", new DateOnly(2028, 2, 29));
         Assert.Equal(new DateOnly(2028, 2, 29), policy.GetDate("endDate"));
     }
 
@@ -90,6 +91,7 @@ public sealed class SellTermLengthTests : IClassFixture<PoliciesApiFactory>
 
         var policy = await client.SellAndReadBack(body, "SELL3-29-FEB-2028");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL3-29-FEB-2028", new DateOnly(2029, 2, 28));
         Assert.Equal(new DateOnly(2028, 2, 29), policy.GetDate("startDate"));
         Assert.Equal(new DateOnly(2029, 2, 28), policy.GetDate("endDate"));
     }
