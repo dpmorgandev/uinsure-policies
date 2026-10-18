@@ -34,7 +34,7 @@ public static class PersistenceServiceCollectionExtensions
     public static void EnsureSqliteCreated(this IServiceProvider services)
     {
         using var scope = services.CreateScope();
-        if (scope.ServiceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value.ProviderKind ==DatabaseProvider.Sqlite)
+        if (scope.ServiceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value.ProviderKind == DatabaseProvider.Sqlite)
         {
             scope.ServiceProvider.GetRequiredService<PoliciesDbContext>().Database.EnsureCreated();
         }
