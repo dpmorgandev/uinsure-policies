@@ -9,6 +9,14 @@ public sealed class Policy
     private const int MaxPolicyholders = 3;
     private const int MinimumAge = 16;
 
+    // For EF Core to materialise a stored policy; the navigations are filled in after construction.
+    private Policy()
+    {
+        Property = null!;
+        Policyholders = new List<Policyholder>();
+        Terms = new List<Term>();
+    }
+
     private Policy(
         PolicyReference reference,
         PolicyType type,

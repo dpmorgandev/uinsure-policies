@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Uinsure.Policies.Services;
 
 namespace Uinsure.Policies.Persistence;
 
@@ -24,6 +25,8 @@ public static class PersistenceServiceCollectionExtensions
                 _ => throw new InvalidOperationException("Unknown database provider."),
             };
         });
+
+        services.AddScoped<IPolicyRepository, PolicyRepository>();
 
         services.AddHealthChecks().AddDbContextCheck<PoliciesDbContext>(tags: ["ready"]);
 
