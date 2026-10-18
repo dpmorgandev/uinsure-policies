@@ -463,6 +463,56 @@
                   "path": ["policies"]
                 }
               }
+            },
+            {
+              "name": "SELL-5 · 16th birthday on the start date → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "pm.test(\"SELL-5 · 16th birthday on the start date answers 201 with Location /policies/{reference}\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
+                      "    pm.test(\"SELL-5 · reads back via GET\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        const policy = res.json();",
+                      "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        pm.expect(policy.policyholders[0].dateOfBirth).to.eql(pm.variables.get(\"dob16OnStart\"));",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"{{dob16OnStart}}\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
             }
           ]
         },
@@ -1021,6 +1071,60 @@
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Charles\",\n      \"lastName\": \"Babbage\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Mary\",\n      \"lastName\": \"Somerville\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Alan\",\n      \"lastName\": \"Turing\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "SELL-5 · 16th birthday the day after the start date → 422",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SELL-5 · 16th birthday the day after the start date answers 422 /problems/sell-5\", function () {",
+                      "    pm.response.to.have.status(422);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    pm.expect(problem.type).to.eql(\"/problems/sell-5\");",
+                      "    pm.expect(problem.title).to.eql(\"Policyholder under 16\");",
+                      "    pm.expect(problem.ruleId).to.eql(\"SELL-5\");",
+                      "    pm.expect(problem.instance).to.eql(\"/policies\");",
+                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(problem.violations.map(v => v.ruleId)).to.eql([\"SELL-5\"]);",
+                      "    pm.expect(problem.index).to.eql(1);",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(pm.variables.get(\"reference\")), function (err, res) {",
+                      "    pm.test(\"SELL-5 · nothing was stored (GET → 404)\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(404);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"{{dob16DayAfterStart}}\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
