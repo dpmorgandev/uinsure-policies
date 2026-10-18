@@ -13,11 +13,10 @@
     <TestingPlatformCommandLineArguments>--ignore-exit-code 8</TestingPlatformCommandLineArguments>
   </PropertyGroup>
 
-  <!-- Every src project: banned APIs (BannedSymbols.txt arrives with the services green step). -->
+  <!-- Every src project: banned APIs. The file is included unconditionally so a missing
+       BannedSymbols.txt fails the build instead of silently switching RS0030 off. -->
   <ItemGroup Condition="!$(MSBuildProjectName.EndsWith('.Tests'))">
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
-  </ItemGroup>
-  <ItemGroup Condition="!$(MSBuildProjectName.EndsWith('.Tests')) And Exists('$(MSBuildThisFileDirectory)BannedSymbols.txt')">
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
   </ItemGroup>
 
