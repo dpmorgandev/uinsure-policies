@@ -1,0 +1,146 @@
+c00f03feca81704ea5c392b05b07a48c459f4aa9 chore(trace): F1b trail tail (merged)
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c792a6e9357205b1913911b7ff6d44612a42be1d docs(context): f1b-done-merged
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d0063dc64e073293e2ae51756a11a21c988b8535 plan(build/F2): pending → in_progress
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+2cdf88e43a4e1ff1f467d89f761a1380f11f5bff plan(build/F2): tasks amended: F1b carry-overs
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b7d5b5aa17b8ab0bdf6b52870eb01a749112aea5 test(GET-1): red: retrieve answers the full policy response, derived status, the current term and 2 dp money
+Agent: tester
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3acd0f41beb9ee794f0b0c8eeb888d643dc16be5 plan(build/F2): t1 pending → done
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+305789df2125abfa6ff2e8ba2b0aa9805789008c feat(GET-1): stub full policy response shape
+Agent: builder
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: stub
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+e82562da7d7e49d0674269c6939002df8f77eaf5 plan(build/F2): attempt 1 → 2
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+aee97abb56eee893951d3fc6dd2ed8b5fb10d9fa fix(GET-1): canned status and term number match no expected value
+Agent: builder
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: stub
+Fixes-Finding: A1/I1
+Fixes-Finding: A1/I2
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+8c75bb4f8d5c97702e88480b105d13987ce42d7a plan(build/F2): in_progress → paused_acceptance
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+da9021053f83236da4998e950465d49dc4a3110d plan(build/F2): paused_acceptance → in_progress
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c4f7d6474d27eb5a1bf691028815d19ed1bc05af test(GET-1): red: trait domain status and current-term tests
+Agent: tester
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+aa6195f89f91c15bd57da521606b1ccc558395d2 plan(build/F2): t4 pending → done, t5 pending → skipped
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+311ccb69c8898da35aa08143a5aea82fd42af063 test(GET-1): red: trait services status and current-term tests
+Agent: tester
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b9cd5472a5331ebe27a86750fdcbbdc81d42a5f9 plan(build/F2): t6 pending → done
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f6eea6b7644760f7b8d6bbb49846d8c4ed75b28e plan(build/F2): t7 pending → done
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+cbb4c7c1bc5ffda1d14f15735c140b7a12850ff5 feat(GET-1): green: api real status, current term, 2dp money, unknown query filter
+Agent: builder
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: green
+Fixes-Finding: A1/I1
+Fixes-Finding: A1/I2
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+f2186286f4bef21e1b90abe98392c2bb5122f07b plan(build/F2): t8 pending → done
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+702342095303e63da4074837e97d173193690822 refactor(GET-1): make TwoDecimalPlacesConverter comment true to the code
+Agent: builder
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+803c8982404ceb4424e493af3fcc73641205ac4f refactor(GET-1): make TwoDecimalPlacesConverter comment true at HEAD
+Agent: builder
+Plan: build
+Node: F2
+Rule: GET-1
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+8ea8f604d6be272a478d5938d0a05f3c31d6f874 plan(build/F2): t9, t10 pending → done
+Agent: main
+Plan: build
+Node: F2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+

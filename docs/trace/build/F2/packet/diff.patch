@@ -1,0 +1,2314 @@
+diff --git a/docs/context/20261018-215242-f1b-done-merged.md b/docs/context/20261018-215242-f1b-done-merged.md
+new file mode 100644
+index 0000000..b9eda67
+--- /dev/null
++++ b/docs/context/20261018-215242-f1b-done-merged.md
+@@ -0,0 +1,77 @@
++---
++timestamp: 2026-10-18T21:52:42Z
++previous-context: 20261018-194306-f1b-ready.md
++checkpoint: true
++status: in-progress
++plan: build
++node: F1b
++phase: merge
++step: null
++attempt: 2
++branch: main
++worktree: null
++head: b2584f7
++tests: 339/339
++next-action: /feature build F2 (Retrieve); SETUP turns the carry-overs below into F2 tasks or David cuts them
++open-decisions: 0
++---
++
++## Summary
++F1b (layered models and interfaces) is done and merged: PR #15, merge commit b2584f7.
++Attempt 1 review failed on an amount overflow (a large negative amount gave a 500); round A1 fixed it test-first.
++Attempt 2 reviewer and security PASS. QA 43/43, signed by David (Accept F1b). Postman 87/0.
++Worktree and branches cleaned up. The next node is F2 (Retrieve, GET-1).
++
++## Completed since last snapshot
++- F1b SETUP and carry-over tasks t1–t12: records + Mapperly mapper, the three interfaces, A12–A15, concurrency, client-abort log (68fe41d, 275da5f)
++- Review A1 FAIL → attempt 2 (f78948e); findings A1 I1–I5 (docs/trace/build/F1b/findings/A1.md)
++- Finding reds (31df5b6..4ccdcf3); fixes: remainder scale check (8757eee), static Payment() removed (8b13192)
++- Reviewer and security PASS at 8b13192; QA script (8b17545) executed (4ff89e4) and signed (76c1ddb)
++- Integrate 339/0 at 76c1ddb; PR #15 with 3 comments; sign-off at 76c1ddb; done (bd6495f); trail (029035d)
++- Merged by David (b2584f7); cleanup removed the worktree and the local and remote branch
++
++## Current state
++main at b2584f7, tests 339/339 (full suite on the integrate head 76c1ddb; the pre-push hook re-ran it).
++2 uncommitted files: the F1b trail tail (docs/trace/build/F1b/loop.jsonl merged event, activity.jsonl). Commit them on the next branch.
++No worktrees. No blockers.
++
++## Next action
++/feature build F2. SETUP: commit the F1b trail tail and mark F1b t19 (merge) done on the F2 branch, then turn each
++carry-over below into an F2 task, or David cuts it.
++
++## Carry-overs
++- F1b t19 is still `pending` on main (plan state moves only by branch commits): mark it done on the F2 branch — this merge
++- Money scale in responses: POST echoes the sent scale (527.180) and GET reads 1000000.0 / 803.4 / 100.0 (SQLite storage; cause unverified). Same on F1 (checked on main). Acceptance: both echo exactly 2 dp (1000000.00, 803.40, 100.00, 527.18), pinned by API tests; check 527.180 against H6 — F1b QA (docs/qa/build-F1b.md defects row)
++- Status and current term on the GET response: PolicyDetails.Status is computed but not mapped (GET-1 traits land in F2) — reviewer A2 notes
++- README: state that the rate limits are per instance — security A2 P2 hygiene
++- Postman has no request for the extreme negative amounts (-1e27, decimal.MinValue); covered by tests only — reviewer A2 notes
++- Architecture tree: place ClientAbortLoggingMiddleware in it — reviewer A1/A2 notes
++- Policy.Restore has no claims or cancellation, and IReferenceGenerator.Refund() is gone, until F3 — reviewer A2 notes
++- Money: settle rounding and the scale bound before F3's refunds — security F1 A1/A2
++- Trailer b99e310 carries Rule: SELL-5 on a rule-less row. Record it, never rewrite it — F1 reviewer A2 R3
++- Harness items (next harness PR):
++  - gate.postman(pass) vs the event grammar
++  - the dotnet-ef tool manifest is 9.0.9 vs runtime 10.0.13 (F5)
++  - the git.md no-escape rule
++  - the integrate-receipt exception for docs/qa (hit again at F1b sign-off)
++  - reconciled events in the README
++  - H6 wording: "by value"
++  - pr-body renders an empty Rules line and table for a rule-less node
++  - the guard blocks the git agent appending the attribution line to the PR body, and the tester deleting the dev db under src/ (QA precondition)
++  - the event grammar rejects source: david for signoff
++  - the commit-msg G9 trailer-paragraph check tripped the git agent twice
++  - render rewrites requirements-matrix.md with only a new timestamp
++- Schedule: F7 is cut if not started by 12:00 Monday 2026-10-19, and F5 by 14:00 — build.plan.md
++
++## Open decisions
++(none)
++
++## Decisions made
++- .claude/specs/architecture.spec.md#decision (D1 amendment 2026-10-18: layering, Version, Restore, interfaces, Mapperly)
++- .claude/specs/api-contract.spec.md#rulings-david-2026-10-18-transport-hardening-f1-steer-d1 (H1–H6)
++
++## Pointers
++- docs/plans/active/build.dag.yaml (F1b done; F2 next)
++- docs/trace/build/F1b/ (README.md, walkthrough.md, findings/A1.md, verdicts/)
++- docs/qa/build-F1b.md (signed)
++- PR #15 (merged, b2584f7)
+diff --git a/docs/plans/active/build.dag.yaml b/docs/plans/active/build.dag.yaml
+index 4d991ed..4490401 100644
+--- a/docs/plans/active/build.dag.yaml
++++ b/docs/plans/active/build.dag.yaml
+@@ -187,7 +187,7 @@ nodes:
+       - {id: t16, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
+       - {id: t17, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: done}
+       - {id: t18, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: done}
+-      - {id: t19, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
++      - {id: t19, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: done}
+   - id: F2
+     title: Retrieve
+     kind: feature
+@@ -196,10 +196,10 @@ nodes:
+     rules: [GET-1]
+     cuttable: false
+     budget: null
+-    status: pending
+-    attempt: 0
+-    branch: null
+-    worktree: null
++    status: in_progress
++    attempt: 2
++    branch: feature/build/F2
++    worktree: .claude/worktrees/build-F2
+     pr: null
+     qa: docs/qa/build-F2.md
+     trace: docs/trace/build/F2/
+@@ -208,16 +208,16 @@ nodes:
+       - "status derived from today: Pending, Active, Expired (Cancelled is covered in F3)"
+       - "startDate/endDate/amount describe the current term; terms[] holds the history; full response shape per api-contract"
+     tasks:
+-      - {id: t1, role: tester, step: red, layer: acceptance, rules: [GET-1], title: "Retrieve acceptance suite: 404 problem body, derived status, current-term view, full response shape; Postman F2 folder; GET-1 out of rule-coverage.pending.txt", status: pending}
+-      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub GET /policies/{ref} with the full canned response shape", status: pending}
+-      - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the Retrieve stub in Postman, read the acceptance tests; go or change", status: pending}
+-      - {id: t4, role: tester, step: red, layer: domain, rules: [GET-1], title: "Domain.Tests: status Pending, Active, Expired from today; current term = the term in force today, else the latest", status: pending}
+-      - {id: t5, role: builder, step: green, layer: domain, rules: [GET-1], title: "Policy derives status and the current term from DateOnly today", status: pending}
+-      - {id: t6, role: builder, step: green, layer: services, rules: [GET-1], title: "PolicyService.Get: normalised reference, UK today, null for not found", status: pending}
+-      - {id: t7, role: builder, step: green, layer: persistence, rules: [GET-1], title: "GetByReference loads terms, policyholders, property, payments, refunds and claims", status: pending}
+-      - {id: t8, role: builder, step: green, layer: api, rules: [GET-1], title: "Real GET: response contract per api-contract, 404 problem body; whole acceptance suite green", status: pending}
+-      - {id: t9, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
+-      - {id: t10, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
++      - {id: t1, role: tester, step: red, layer: acceptance, rules: [GET-1], title: "Retrieve acceptance suite: 404 problem body, derived status, current-term view, full response shape; Postman F2 folder; GET-1 out of rule-coverage.pending.txt; money in POST and GET responses at exactly 2 dp (1000000.00, 803.40, 100.00, 527.18); Postman requests for amounts -1e27 and decimal.MinValue (422 SELL-7)", status: done}
++      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub GET /policies/{ref} with the full canned response shape", status: done}
++      - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the Retrieve stub in Postman, read the acceptance tests; go or change", status: done}
++      - {id: t4, role: tester, step: red, layer: domain, rules: [GET-1], title: "Domain.Tests: status Pending, Active, Expired from today; current term = the term in force today, else the latest", status: done}
++      - {id: t5, role: builder, step: green, layer: domain, rules: [GET-1], title: "Policy derives status and the current term from DateOnly today", status: skipped}
++      - {id: t6, role: builder, step: green, layer: services, rules: [GET-1], title: "PolicyService.Get: normalised reference, UK today, null for not found", status: done}
++      - {id: t7, role: builder, step: green, layer: persistence, rules: [GET-1], title: "GetByReference loads terms, policyholders, property and payments (refunds and claims arrive in F3)", status: done}
++      - {id: t8, role: builder, step: green, layer: api, rules: [GET-1], title: "Real GET: response contract per api-contract, 404 problem body; money formatted to exactly 2 dp in every response (POST and GET); global unknown-query-parameter filter (400, api-contract E2); whole acceptance suite green", status: done}
++      - {id: t9, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: done}
++      - {id: t10, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: done}
+       - {id: t11, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+       - {id: t12, role: tester, step: qa, layer: null, rules: [GET-1], title: "QA script docs/qa/build-F2.md, steps tagged per rule", status: pending}
+       - {id: t13, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
+@@ -251,10 +251,10 @@ nodes:
+       - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub POST cancellation, GET cancellation-quote and POST claims with canned bodies", status: pending}
+       - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the Cancel stubs in Postman, read the acceptance tests; go or change", status: pending}
+       - {id: t4, role: tester, step: red, layer: domain, rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c], title: "Domain.Tests for policy.Cancel, RefundCalculator, Money.Round and policy.RecordClaim at every boundary: before start, cooling-off day 14/15, pro-rata on 365/366, per-payment method, past date, cancel twice, after cover, claim rules", status: pending}
+-      - {id: t5, role: builder, step: green, layer: domain, rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c], title: "policy.Cancel, pure RefundCalculator (quote = same calculation), Money.Round, policy.RecordClaim", status: pending}
++      - {id: t5, role: builder, step: green, layer: domain, rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c], title: "policy.Cancel, pure RefundCalculator (quote = same calculation), Money.Round, policy.RecordClaim; Policy.Restore gains claims and cancellation", status: pending}
+       - {id: t6, role: tester, step: red, layer: services, rules: [CANCEL-3, COULD-1, COULD-2a], title: "Services.Tests: cancellation date defaults to UK today; quote computes without saving; claim date checked against UK today", status: pending}
+-      - {id: t7, role: builder, step: green, layer: services, rules: [CANCEL-3, COULD-1, COULD-2a], title: "PolicyService.Cancel, Quote and RecordClaim with UK today; refund references generated", status: pending}
+-      - {id: t8, role: builder, step: green, layer: persistence, rules: [CANCEL-2, COULD-2], title: "Refund and Claim configurations; Guid Version concurrency token → PersistenceConflictException; migration", status: pending}
++      - {id: t7, role: builder, step: green, layer: services, rules: [CANCEL-3, COULD-1, COULD-2a], title: "PolicyService.Cancel, Quote and RecordClaim with UK today; refund references generated via IReferenceGenerator.Refund() with its tests", status: pending}
++      - {id: t8, role: builder, step: green, layer: persistence, rules: [CANCEL-2, COULD-2], title: "Refund and Claim records and configurations; GetByReference loads refunds and claims; Version concurrency token → PersistenceConflictException; migration", status: pending}
+       - {id: t9, role: builder, step: green, layer: api, rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c], title: "Real cancellation, quote and claims endpoints: 422 violations, 409 for CANCEL-4, COULD-2c and concurrency; whole acceptance suite green", status: pending}
+       - {id: t10, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
+       - {id: t11, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
+@@ -352,7 +352,7 @@ nodes:
+     acceptance:
+       - "Every item in docs/readme-checklist.md is ticked and links to the README section that satisfies it; F5's items say 'cut' if F5 was cut"
+     tasks:
+-      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "README.md covering every docs/readme-checklist.md item, each ticked with a link to its section", status: pending}
++      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "README.md covering every docs/readme-checklist.md item, each ticked with a link to its section; states that the rate limits are per instance", status: pending}
+       - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "Every checklist item ticked and linked; links resolve; build and tests still green", status: pending}
+       - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+       - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F6.md", status: pending}
+diff --git a/docs/trace/build/F1b/activity.jsonl b/docs/trace/build/F1b/activity.jsonl
+index f9ea6b9..36e8043 100644
+--- a/docs/trace/build/F1b/activity.jsonl
++++ b/docs/trace/build/F1b/activity.jsonl
+@@ -735,3 +735,14 @@
+ {"v":1,"ts":"2026-10-18T21:45:06Z","plan":"build","node":"F1b","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_013FTnfEhL6yuyXnbeqkgzBK","file":null,"command":"git diff --stat docs/trace/requirements-matrix.md; git diff docs/trace/requirements-matrix.md | grep '^[-+][^-+]' | head -6"}
+ {"v":1,"ts":"2026-10-18T21:45:14Z","plan":"build","node":"F1b","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01Ja2F8hLo3Si5TWdq9AHFgh","file":null,"command":"git checkout -- docs/trace/requirements-matrix.md && git status --short"}
+ {"v":1,"ts":"2026-10-18T21:45:18Z","plan":"build","node":"F1b","attempt":2,"agent":"git","agent_id":"a66e02794961a6a6f","tool":"Bash","tool_use_id":"toolu_01JKDPAoYwwg8CM1sA8vDCbm","file":null,"command":"cd \".\" && git status --porcelain && echo \"---\" && git log --oneline -3 && echo \"---\" && git diff --stat HEAD -- docs/trace/build/F1b | tail -3"}
++{"v":1,"ts":"2026-10-18T21:45:28Z","plan":"build","node":"F1b","attempt":2,"agent":"git","agent_id":"a66e02794961a6a6f","tool":"Bash","tool_use_id":"toolu_01QT9jsEjB67FBhorsvpi6i9","file":null,"command":"cd \".\" && git add docs/trace/build/F1b && git commit -q -m \"chore(trace): F1b trail (sign-off)\" -m \"Agent: git\nPlan: build\nNode: F1b\n\nCo-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>\""}
++{"v":1,"ts":"2026-10-18T21:45:32Z","plan":"build","node":"F1b","attempt":2,"agent":"git","agent_id":"a66e02794961a6a6f","tool":"Bash","tool_use_id":"toolu_01Ppq8NPnquiBU9nNuja3Emz","file":null,"command":"cd \".\" && git log --oneline -1 && git diff --cached --stat"}
++{"v":1,"ts":"2026-10-18T21:45:38Z","plan":"build","node":"F1b","attempt":2,"agent":"git","agent_id":"a66e02794961a6a6f","tool":"Bash","tool_use_id":"toolu_01CZyZ2pznPPmGMDYvCvKTvs","file":null,"command":"cd \".\" && git commit -q -m \"chore(trace): F1b trail (sign-off)\" -m \"Final F1b trail after QA sign-off and hitl → done.\nAgent: git\nPlan: build\nNode: F1b\nCo-Authored-By: Claude Haiku 5.5 <noreply@anthro"}
++{"v":1,"ts":"2026-10-18T21:45:41Z","plan":"build","node":"F1b","attempt":2,"agent":"git","agent_id":"a66e02794961a6a6f","tool":"Bash","tool_use_id":"toolu_01JqpPsyJxE8Ff2dgcmrNnQo","file":null,"command":"cd \".\" && cat .githooks/commit-msg | head -60"}
++{"v":1,"ts":"2026-10-18T21:45:48Z","plan":"build","node":"F1b","attempt":2,"agent":"git","agent_id":"a66e02794961a6a6f","tool":"Bash","tool_use_id":"toolu_01FAZWyDHEBsrqUHDJCLatbM","file":null,"command":"cd \".\" && git commit -q -m \"chore(trace): F1b trail (sign-off)\" -m \"Final F1b trail after QA sign-off and hitl → done.\" -m \"Agent: git\nPlan: build\nNode: F1b\nCo-Authored-By: Claude Haiku 5.5 <noreply@a","commit":{"sha":"029035d3803812147d7b83f847e0084104b338f6","subject":"chore(trace): F1b trail (sign-off)","tdd":null}}
++{"v":1,"ts":"2026-10-18T21:45:51Z","plan":"build","node":"F1b","attempt":2,"agent":"git","agent_id":"a66e02794961a6a6f","tool":"Bash","tool_use_id":"toolu_01GGNXohgD6sTUEf4v3FxZxX","file":null,"command":"cd \".\" && git show --stat --format='%H%n%s' HEAD && git status --porcelain"}
++{"v":1,"ts":"2026-10-18T21:46:30Z","plan":"build","node":"F1b","attempt":2,"agent":"git","agent_id":"a66e02794961a6a6f","tool":"Bash","tool_use_id":"toolu_01FgQChTodfawsvbfSJVSxx2","file":null,"command":"cd \".\" && git push origin feature/build/F1b"}
++{"v":1,"ts":"2026-10-18T21:46:34Z","plan":"build","node":"F1b","attempt":2,"agent":"git","agent_id":"a66e02794961a6a6f","tool":"Bash","tool_use_id":"toolu_01VZWY1pLeMSr38uokPGvwDQ","file":null,"command":"cd \".\" && git rev-parse HEAD && git rev-parse origin/main && git rev-parse --abbrev-ref --symbolic-full-name @{u}"}
++{"v":1,"ts":"2026-10-18T21:46:42Z","plan":"build","node":"F1b","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01BTyVEQKy9Jg6GRqZBHzEVS","file":null,"command":"gh pr view 15 --json headRefOid,isDraft,state --jq '.headRefOid + \" draft=\" + (.isDraft|tostring) + \" \" + .state'; git diff --name-only 76c1ddb..029035d"}
++{"v":1,"ts":"2026-10-18T21:50:03Z","plan":"build","node":"F1b","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_012KyhFwdxRjJsQPwWz4pwwu","file":null,"command":"gh pr view 15 --json state,mergeCommit,mergedAt --jq '.state + \" \" + .mergeCommit.oid + \" \" + .mergedAt'"}
++{"v":1,"ts":"2026-10-18T21:50:08Z","plan":"build","node":"F1b","attempt":2,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01BRR5g7PYqm3koxeHoWGxyP","file":null,"command":"node .claude/scripts/render-trace.mjs event \"{\\\"plan\\\":\\\"build\\\",\\\"node\\\":\\\"F1b\\\",\\\"attempt\\\":2,\\\"source\\\":\\\"orchestrator\\\",\\\"event\\\":\\\"merged(b2584f7aa364ab4b645719f57e2fc31738fa845b)\\\",\\\"head\\\":\\\"02"}
+diff --git a/docs/trace/build/F1b/loop.jsonl b/docs/trace/build/F1b/loop.jsonl
+index e6aef3f..12cd241 100644
+--- a/docs/trace/build/F1b/loop.jsonl
++++ b/docs/trace/build/F1b/loop.jsonl
+@@ -43,3 +43,4 @@
+ {"v":1,"ts":"2026-10-18T21:19:06Z","plan":"build","node":"F1b","attempt":2,"source":"orchestrator","event":"gate.postman","cmd":"postman collection run tests/postman/Uinsure.Policies.postman_collection.json -e tests/postman/local.postman_environment.json -i F1 Sell -i F1b Layered models","exit":0,"expect":"pass","ok":true,"head":"17e4377686a0d8277f59d4f12cdb490980212410","detail":"pass: 85 requests, 83 assertions, 0 failed; fresh db; API on 5080 stopped"}
+ {"v":1,"ts":"2026-10-18T21:43:51Z","plan":"build","node":"F1b","attempt":2,"source":"orchestrator","event":"gate.integrate","cmd":"git fetch origin; merge-base --is-ancestor origin/main HEAD (e048cf5, no rebase needed); dotnet test --solution Uinsure.Policies.slnx","exit":0,"expect":"pass","ok":true,"head":"76c1ddb998c1000c332f3897ffcac3c218fc6727","head_sha":"76c1ddb998c1000c332f3897ffcac3c218fc6727","passed":339,"failed":0,"detail":"re-run after the signed QA commit (docs/qa is not an exempt path)"}
+ {"v":1,"ts":"2026-10-18T21:44:48Z","plan":"build","node":"F1b","attempt":2,"source":"orchestrator","event":"signoff(76c1ddb998c1000c332f3897ffcac3c218fc6727)","head":"76c1ddb998c1000c332f3897ffcac3c218fc6727","detail":"David: sign off. docs/qa/build-F1b.md signed by David Morgan 2026-10-18, Verdict Accept F1b; 43/43 steps PASS at 17e4377 (code unchanged since 8b13192); Postman 87/0, 85/0; integrate 339/0 on this head; amount read-back scale carried over to F2"}
++{"v":1,"ts":"2026-10-18T21:50:07Z","plan":"build","node":"F1b","attempt":2,"source":"orchestrator","event":"merged(b2584f7aa364ab4b645719f57e2fc31738fa845b)","head":"029035d3803812147d7b83f847e0084104b338f6","detail":"PR #15 merged by David in the GitHub UI at 2026-10-18T21:49:55Z"}
+diff --git a/src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs b/src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs
+index 19a7487..6ffd408 100644
+--- a/src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs
++++ b/src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs
+@@ -20,6 +20,7 @@ internal static partial class PolicyMappings
+         new Property(request.Property!.AddressLine1!, request.Property.AddressLine2, request.Property.AddressLine3, request.Property.Postcode!),
+         ToDomain(request.PaymentMethod!.Value));
+ 
++    // hasClaims, refunds, claims and cancellation are canned until F3 supplies the data.
+     // The policy-level dates and amount are the current term's (GET-1).
+     public static PolicyResponse ToResponse(this PolicyDetails details)
+     {
+@@ -28,14 +29,20 @@ internal static partial class PolicyMappings
+         return new PolicyResponse(
+             policy.Reference.Value,
+             ToDto(policy.Type),
++            ToDto(details.Status),
++            policy.Terms.ToList().IndexOf(term) + 1,
+             term.Start,
+             term.End,
+             term.Amount,
++            false,
+             policy.AutoRenew,
+             [.. policy.Policyholders.Select(ToDto)],
+             ToDto(policy.Property),
+             [.. policy.Terms.Select((t, index) => new TermResponse(index + 1, t.Start, t.End, t.Amount, t.Payment?.Reference))],
+-            [.. policy.Terms.Where(t => t.Payment is not null).Select(t => new PaymentResponse(t.Payment!.Reference, ToDto(t.Payment.Method), t.Payment.Amount))]);
++            [.. policy.Terms.Where(t => t.Payment is not null).Select(t => new PaymentResponse(t.Payment!.Reference, ToDto(t.Payment.Method), t.Payment.Amount))],
++            [],
++            [],
++            null);
+     }
+ 
+     private static partial Domain.Policies.PolicyType ToDomain(PolicyType type);
+@@ -44,6 +51,8 @@ internal static partial class PolicyMappings
+ 
+     private static partial PolicyType ToDto(Domain.Policies.PolicyType type);
+ 
++    private static partial PolicyStatus ToDto(Domain.Policies.PolicyStatus status);
++
+     private static partial PaymentMethod ToDto(Domain.Policies.PaymentMethod method);
+ 
+     private static partial PolicyholderDto ToDto(Policyholder holder);
+diff --git a/src/Uinsure.Policies.Api/Contracts/PolicyResponse.cs b/src/Uinsure.Policies.Api/Contracts/PolicyResponse.cs
+index 3d93d7b..7220efd 100644
+--- a/src/Uinsure.Policies.Api/Contracts/PolicyResponse.cs
++++ b/src/Uinsure.Policies.Api/Contracts/PolicyResponse.cs
+@@ -1,19 +1,39 @@
+ namespace Uinsure.Policies.Api.Contracts;
+ 
+-// F1 carries what a sale reads back: the current term's dates and amount, holders, property, terms and
+-// payments. F2 adds only status, currentTermNumber, hasClaims, refunds, claims and cancellation.
++// The full PolicyResponse of the API contract (GET-1). Status, currentTermNumber, hasClaims, refunds, claims
++// and cancellation are canned for now (stub step); the rest is what a sale reads back.
+ public sealed record PolicyResponse(
+     string Reference,
+     PolicyType Type,
++    PolicyStatus Status,
++    int CurrentTermNumber,
+     DateOnly StartDate,
+     DateOnly EndDate,
+     decimal Amount,
++    bool HasClaims,
+     bool AutoRenew,
+     IReadOnlyList<PolicyholderDto> Policyholders,
+     PropertyDto Property,
+     IReadOnlyList<TermResponse> Terms,
+-    IReadOnlyList<PaymentResponse> Payments);
++    IReadOnlyList<PaymentResponse> Payments,
++    IReadOnlyList<RefundResponse> Refunds,
++    IReadOnlyList<ClaimResponse> Claims,
++    CancellationSummary? Cancellation);
++
++public enum PolicyStatus
++{
++    Pending,
++    Active,
++    Expired,
++    Cancelled,
++}
+ 
+ public sealed record TermResponse(int TermNumber, DateOnly StartDate, DateOnly EndDate, decimal Amount, string? PaymentReference);
+ 
+ public sealed record PaymentResponse(string Reference, PaymentMethod Type, decimal Amount);
++
++public sealed record RefundResponse(string Reference, PaymentMethod Type, decimal Amount, string PaymentReference);
++
++public sealed record ClaimResponse(string Reference, DateOnly ClaimDate, string Description);
++
++public sealed record CancellationSummary(DateOnly CancellationDate, string RuleApplied, decimal TotalRefund);
+diff --git a/src/Uinsure.Policies.Api/Contracts/TwoDecimalPlacesConverter.cs b/src/Uinsure.Policies.Api/Contracts/TwoDecimalPlacesConverter.cs
+new file mode 100644
+index 0000000..97de260
+--- /dev/null
++++ b/src/Uinsure.Policies.Api/Contracts/TwoDecimalPlacesConverter.cs
+@@ -0,0 +1,18 @@
++using System.Globalization;
++using System.Text.Json;
++using System.Text.Json.Serialization;
++
++namespace Uinsure.Policies.Api.Contracts;
++
++// Every money amount is written with exactly two decimal places (803.40, not 803.4). Formatting only: "F2" would
++// round a value with more than 2 decimal places, but none reaches it. SellPolicyRequest rejects such an amount
++// with a 400 (judged by value, so 527.180 is accepted and written as 527.18), and stored amounts come only from
++// accepted sales. Reading stays strict: only a JSON number is accepted.
++public sealed class TwoDecimalPlacesConverter : JsonConverter<decimal>
++{
++    public override decimal Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
++        reader.TokenType == JsonTokenType.Number ? reader.GetDecimal() : throw new JsonException("Expected a number.");
++
++    public override void Write(Utf8JsonWriter writer, decimal value, JsonSerializerOptions options) =>
++        writer.WriteRawValue(value.ToString("F2", CultureInfo.InvariantCulture));
++}
+diff --git a/src/Uinsure.Policies.Api/Filters/RejectUnknownQueryParametersFilter.cs b/src/Uinsure.Policies.Api/Filters/RejectUnknownQueryParametersFilter.cs
+new file mode 100644
+index 0000000..c0bc045
+--- /dev/null
++++ b/src/Uinsure.Policies.Api/Filters/RejectUnknownQueryParametersFilter.cs
+@@ -0,0 +1,29 @@
++using Microsoft.AspNetCore.Mvc.Filters;
++using Uinsure.Policies.Api.Errors;
++
++namespace Uinsure.Policies.Api.Filters;
++
++// Strict input: a query key the action does not bind is a 400, in the same shape as any other shape error.
++public sealed class RejectUnknownQueryParametersFilter : IActionFilter
++{
++    public void OnActionExecuting(ActionExecutingContext context)
++    {
++        var known = context.ActionDescriptor.Parameters.Select(parameter => parameter.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
++        var unknown = context.HttpContext.Request.Query.Keys.Where(key => !known.Contains(key)).ToList();
++        if (unknown.Count == 0)
++        {
++            return;
++        }
++
++        foreach (var key in unknown)
++        {
++            context.ModelState.AddModelError(key, "Unknown query parameter.");
++        }
++
++        context.Result = ValidationProblems.FromModelState(context);
++    }
++
++    public void OnActionExecuted(ActionExecutedContext context)
++    {
++    }
++}
+diff --git a/src/Uinsure.Policies.Api/Program.cs b/src/Uinsure.Policies.Api/Program.cs
+index e96852a..03ffa4b 100644
+--- a/src/Uinsure.Policies.Api/Program.cs
++++ b/src/Uinsure.Policies.Api/Program.cs
+@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.RateLimiting;
+ using Microsoft.Extensions.Options;
+ using Scalar.AspNetCore;
+ using Uinsure.Policies.Api;
++using Uinsure.Policies.Api.Contracts;
+ using Uinsure.Policies.Api.Errors;
++using Uinsure.Policies.Api.Filters;
+ using Uinsure.Policies.Persistence;
+ using Uinsure.Policies.Services;
+ 
+@@ -44,12 +46,13 @@ builder.Services.AddOptions<RateLimiterOptions>().Configure<IOptions<RateLimitin
+ });
+ 
+ // Strict input: unknown members, integer enums and string numbers are 400s.
+-builder.Services.AddControllers()
++builder.Services.AddControllers(options => options.Filters.Add<RejectUnknownQueryParametersFilter>())
+     .AddJsonOptions(options =>
+     {
+         options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
+         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
+         options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict;
++        options.JsonSerializerOptions.Converters.Add(new TwoDecimalPlacesConverter());
+     })
+     .ConfigureApiBehaviorOptions(options => options.InvalidModelStateResponseFactory = ValidationProblems.FromModelState);
+ builder.Services.AddSingleton(TimeProvider.System);
+diff --git a/tests/Uinsure.Policies.Api.Tests/Builders/PolicyBuilder.cs b/tests/Uinsure.Policies.Api.Tests/Builders/PolicyBuilder.cs
+new file mode 100644
+index 0000000..d11f88a
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Builders/PolicyBuilder.cs
+@@ -0,0 +1,58 @@
++using Uinsure.Policies.Api.Tests.Support;
++using Uinsure.Policies.Domain.Policies;
++
++namespace Uinsure.Policies.Api.Tests.Builders;
++
++// A stored policy in a state no endpoint can make yet: more than one term, before F4's renewals exist. It is
++// built with Policy.Restore, as Persistence rebuilds a stored policy (no rule runs), and seeded through the
++// app's own IPolicyRepository (PolicySeeder); the test then reads it over HTTP. Build() with no overrides is
++// one paid term that is in force on TestClock.Today. None of it is the api.md example (Ada Lovelace,
++// 1 High St, M1 1AA, 365.00, 2026-11-01).
++public sealed class PolicyBuilder(string reference)
++{
++    private PolicyType _type = PolicyType.BuyToLet;
++    private bool _autoRenew = true;
++    private Policyholder[] _policyholders = [new("Mary", "Jackson", new DateOnly(1984, 4, 9))];
++    private Property _property = new("31 Deansgate", "Floor 4", null, "M3 2BA");
++    private Term[] _terms = [new(TestClock.Today.AddDays(-40), 446.50m, new Payment($"PAY-{reference}-1", PaymentMethod.Card, 446.50m))];
++
++    public PolicyBuilder WithType(PolicyType value)
++    {
++        _type = value;
++        return this;
++    }
++
++    public PolicyBuilder WithAutoRenew(bool value)
++    {
++        _autoRenew = value;
++        return this;
++    }
++
++    public PolicyBuilder WithPolicyholders(params Policyholder[] value)
++    {
++        _policyholders = value;
++        return this;
++    }
++
++    public PolicyBuilder WithProperty(Property value)
++    {
++        _property = value;
++        return this;
++    }
++
++    // The terms in order, oldest first, as a renewal appends them.
++    public PolicyBuilder WithTerms(params Term[] value)
++    {
++        _terms = value;
++        return this;
++    }
++
++    public Policy Build() => Policy.Restore(
++        new PolicyReference(reference),
++        _type,
++        _autoRenew,
++        false,
++        _policyholders,
++        _property,
++        _terms);
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/PolicyMoneyFormatTests.cs b/tests/Uinsure.Policies.Api.Tests/PolicyMoneyFormatTests.cs
+new file mode 100644
+index 0000000..55e0694
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/PolicyMoneyFormatTests.cs
+@@ -0,0 +1,79 @@
++using System.Net;
++using System.Text.Json;
++using Uinsure.Policies.Api.Tests.Builders;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// GET-1, the response shape: money is a JSON number in GBP written with exactly 2 decimal places, in the
++// sale's 201 body and in the read-back alike, whatever scale the request used and however the store keeps
++// it. The value is unchanged (527.180 is accepted by value, ruling H6); only the text is fixed. The raw JSON
++// token is asserted, because a parsed number cannot tell 803.4 from 803.40. Each amount the PolicyResponse
++// carries is checked: the policy's, its term's and its payment's.
++public sealed class PolicyMoneyFormatTests : IClassFixture<PoliciesApiFactory>
++{
++    private readonly PoliciesApiFactory _factory;
++
++    public PolicyMoneyFormatTests(PoliciesApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Amount_sold_as_1000000_00_is_written_1000000_00_in_the_sale_and_the_read_back()
++    {
++        await AssertWrittenWithTwoDecimalPlaces("GET1-MONEY-1M", 1000000.00m, "1000000.00");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Amount_sold_as_803_40_keeps_its_trailing_zero_in_the_sale_and_the_read_back()
++    {
++        await AssertWrittenWithTwoDecimalPlaces("GET1-MONEY-803-40", 803.40m, "803.40");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Amount_sold_as_100_is_written_100_00_in_the_sale_and_the_read_back()
++    {
++        await AssertWrittenWithTwoDecimalPlaces("GET1-MONEY-100", 100m, "100.00");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Amount_sold_as_527_180_is_written_527_18_in_the_sale_and_the_read_back()
++    {
++        await AssertWrittenWithTwoDecimalPlaces("GET1-MONEY-527-180", 527.180m, "527.18");
++    }
++
++    // The request carries the amount at the scale given (100 → "100", 527.180 → "527.180").
++    private async Task AssertWrittenWithTwoDecimalPlaces(string reference, decimal amount, string expectedText)
++    {
++        using var client = _factory.CreateClient();
++        var sold = new SellPolicyRequestBuilder(reference).WithAmount(amount).Build();
++
++        using var created = await client.PostPolicy(sold);
++        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
++        var createdBody = await created.ReadJson();
++        AssertMoneyText(createdBody, expectedText, "201 body");
++
++        using var read = await client.GetAsync(created.LocationPath(), TestContext.Current.CancellationToken);
++        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
++        var readBody = await read.ReadJson();
++        AssertMoneyText(readBody, expectedText, "read-back");
++        PolicyResponseAssert.ReadsBackAsSold(readBody, sold, reference, new DateOnly(2027, 11, 7), "Pending");
++    }
++
++    private static void AssertMoneyText(JsonElement policy, string expectedText, string where)
++    {
++        var term = Assert.Single(policy.Member("terms").EnumerateArray());
++        var payment = Assert.Single(policy.Member("payments").EnumerateArray());
++
++        Assert.Equal(
++            (where, expectedText, expectedText, expectedText),
++            (where, policy.Member("amount").GetRawText(), term.Member("amount").GetRawText(), payment.Member("amount").GetRawText()));
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/RetrieveCurrentTermTests.cs b/tests/Uinsure.Policies.Api.Tests/RetrieveCurrentTermTests.cs
+new file mode 100644
+index 0000000..0c1c438
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/RetrieveCurrentTermTests.cs
+@@ -0,0 +1,170 @@
++using System.Net;
++using System.Text.Json;
++using Uinsure.Policies.Api.Tests.Builders;
++using Uinsure.Policies.Api.Tests.Support;
++using Uinsure.Policies.Domain.Policies;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// GET-1: the policy-level startDate, endDate and amount (and currentTermNumber) are the current term's, the
++// term in force on UK today, or the latest term when today is outside them all; terms[] holds the history.
++// Only a renewal makes a second term, and renewals are F4's, so each policy is seeded through the app's
++// IPolicyRepository (PolicyBuilder, PolicySeeder) and read back over HTTP:
++//   term 1: 2026-03-02 to 2027-03-01, 486.20 by Card;
++//   term 2: 2027-03-02 to 2028-03-01, 512.75 by DirectDebit (unpaid in the RENEW-3b-shaped row).
++// Each side of the term boundary is its own test. The end dates are literals.
++public sealed class RetrieveCurrentTermTests : IClassFixture<PoliciesApiFactory>
++{
++    private static readonly DateOnly Term1Start = new(2026, 3, 2);
++    private static readonly DateOnly Term1End = new(2027, 3, 1);
++    private static readonly DateOnly Term2Start = new(2027, 3, 2);
++    private static readonly DateOnly Term2End = new(2028, 3, 1);
++
++    private readonly PoliciesApiFactory _factory;
++
++    public RetrieveCurrentTermTests(PoliciesApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Today_inside_the_first_of_two_terms_shows_the_first_term()
++    {
++        var policy = await SeedTwoPaidTermsAndReadAt("GET1-TERM1-TODAY", TestClock.Now);
++
++        PolicyResponseAssert.ShowsCurrentTerm(policy, 1, Term1Start, Term1End, 486.20m);
++        Assert.Equal("Active", policy.Member("status").GetString());
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Last_day_of_the_first_term_still_shows_the_first_term()
++    {
++        var policy = await SeedTwoPaidTermsAndReadAt("GET1-TERM1-LAST", new DateTimeOffset(2027, 3, 1, 12, 0, 0, TimeSpan.Zero));
++
++        PolicyResponseAssert.ShowsCurrentTerm(policy, 1, Term1Start, Term1End, 486.20m);
++        Assert.Equal("Active", policy.Member("status").GetString());
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task First_day_of_the_second_term_shows_the_second_term()
++    {
++        var policy = await SeedTwoPaidTermsAndReadAt("GET1-TERM2-FIRST", new DateTimeOffset(2027, 3, 2, 12, 0, 0, TimeSpan.Zero));
++
++        PolicyResponseAssert.ShowsCurrentTerm(policy, 2, Term2Start, Term2End, 512.75m);
++        Assert.Equal("Active", policy.Member("status").GetString());
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Day_after_the_latest_term_shows_the_latest_term_and_is_Expired()
++    {
++        var policy = await SeedTwoPaidTermsAndReadAt("GET1-AFTER-LATEST", new DateTimeOffset(2028, 3, 2, 12, 0, 0, TimeSpan.Zero));
++
++        PolicyResponseAssert.ShowsCurrentTerm(policy, 2, Term2Start, Term2End, 512.75m);
++        Assert.Equal("Expired", policy.Member("status").GetString());
++    }
++
++    // An unpaid term (a renewal without auto-renew) has a null paymentReference and no payment.
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Unpaid_second_term_reads_back_with_no_payment_reference_and_no_payment()
++    {
++        const string reference = "GET1-UNPAID-T2";
++        await _factory.Seed(new PolicyBuilder(reference)
++            .WithAutoRenew(false)
++            .WithTerms(
++                new Term(Term1Start, 486.20m, new Payment("PAY-GET1-UNPAID-T1", PaymentMethod.Card, 486.20m)),
++                new Term(Term2Start, 512.75m, null))
++            .Build());
++        using var client = _factory.CreateClient();
++
++        using var read = await client.GetPolicy(reference);
++
++        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
++        var policy = await read.ReadJson();
++        ReadsBackTheSeededPolicy(policy, reference, autoRenew: false);
++        AssertTerms(policy, "PAY-GET1-UNPAID-T1", null);
++        var payment = Assert.Single(policy.Member("payments").EnumerateArray());
++        AssertPayment(payment, "PAY-GET1-UNPAID-T1", "Card", 486.20m);
++        PolicyResponseAssert.ShowsCurrentTerm(policy, 1, Term1Start, Term1End, 486.20m);
++    }
++
++    // Seeds both terms paid, moves the clock to readAt and reads the policy back whole: the stored values,
++    // both terms in order and both payments, whatever the current term is.
++    private async Task<JsonElement> SeedTwoPaidTermsAndReadAt(string reference, DateTimeOffset readAt)
++    {
++        var term1Payment = $"PAY-{reference}-1";
++        var term2Payment = $"PAY-{reference}-2";
++        await _factory.Seed(new PolicyBuilder(reference)
++            .WithTerms(
++                new Term(Term1Start, 486.20m, new Payment(term1Payment, PaymentMethod.Card, 486.20m)),
++                new Term(Term2Start, 512.75m, new Payment(term2Payment, PaymentMethod.DirectDebit, 512.75m)))
++            .Build());
++        using var client = _factory.CreateClient();
++
++        _factory.Clock.SetUtcNow(readAt);
++        using var read = await client.GetPolicy(reference);
++
++        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
++        var policy = await read.ReadJson();
++        ReadsBackTheSeededPolicy(policy, reference, autoRenew: true);
++        AssertTerms(policy, term1Payment, term2Payment);
++        var payments = policy.Member("payments").EnumerateArray().ToArray();
++        Assert.Equal(2, payments.Length);
++        AssertPayment(payments[0], term1Payment, "Card", 486.20m);
++        AssertPayment(payments[1], term2Payment, "DirectDebit", 512.75m);
++        return policy;
++    }
++
++    // The PolicyBuilder defaults as stored: BuyToLet, Mary Jackson born 1984-04-09, 31 Deansgate, Floor 4, M3 2BA.
++    private static void ReadsBackTheSeededPolicy(JsonElement policy, string reference, bool autoRenew)
++    {
++        PolicyResponseAssert.HasTheContractShape(policy);
++        Assert.Equal(reference, policy.Member("reference").GetString());
++        Assert.Equal("BuyToLet", policy.Member("type").GetString());
++        Assert.Equal(autoRenew, policy.Member("autoRenew").GetBoolean());
++
++        var holder = Assert.Single(policy.Member("policyholders").EnumerateArray());
++        Assert.Equal("Mary", holder.Member("firstName").GetString());
++        Assert.Equal("Jackson", holder.Member("lastName").GetString());
++        Assert.Equal(new DateOnly(1984, 4, 9), holder.GetDate("dateOfBirth"));
++
++        var property = policy.Member("property");
++        Assert.Equal("31 Deansgate", property.Member("addressLine1").GetString());
++        Assert.Equal("Floor 4", property.Member("addressLine2").GetString());
++        Assert.Equal(JsonValueKind.Null, property.Member("addressLine3").ValueKind);
++        Assert.Equal("M3 2BA", property.Member("postcode").GetString());
++
++        PolicyResponseAssert.HasNoClaimsRefundsOrCancellation(policy);
++    }
++
++    // terms[] is the whole history, oldest first, numbered from 1.
++    private static void AssertTerms(JsonElement policy, string term1Payment, string? term2Payment)
++    {
++        var terms = policy.Member("terms").EnumerateArray().ToArray();
++        Assert.Equal(2, terms.Length);
++        AssertTerm(terms[0], 1, Term1Start, Term1End, 486.20m, term1Payment);
++        AssertTerm(terms[1], 2, Term2Start, Term2End, 512.75m, term2Payment);
++    }
++
++    private static void AssertTerm(JsonElement term, int number, DateOnly start, DateOnly end, decimal amount, string? paymentReference)
++    {
++        Assert.Equal(number, term.Member("termNumber").GetInt32());
++        Assert.Equal(start, term.GetDate("startDate"));
++        Assert.Equal(end, term.GetDate("endDate"));
++        Assert.Equal(amount, term.Member("amount").GetDecimal());
++        Assert.Equal(paymentReference, term.Member("paymentReference").GetString());
++    }
++
++    private static void AssertPayment(JsonElement payment, string reference, string method, decimal amount)
++    {
++        Assert.Equal(reference, payment.Member("reference").GetString());
++        Assert.Equal(method, payment.Member("type").GetString());
++        Assert.Equal(amount, payment.Member("amount").GetDecimal());
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/RetrieveNotFoundTests.cs b/tests/Uinsure.Policies.Api.Tests/RetrieveNotFoundTests.cs
+new file mode 100644
+index 0000000..a2e8d81
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/RetrieveNotFoundTests.cs
+@@ -0,0 +1,81 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Builders;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// GET-1: a reference with no policy is a 404 /problems/get-1 naming the reference, after the route reference
++// is trimmed and upper-cased. A reference that fails the SELL-1 pattern is not a 400 on a GET: no such policy
++// can exist, so it is the same 404 (api.md conventions). The instance is the request path as sent.
++public sealed class RetrieveNotFoundTests : IClassFixture<PoliciesApiFactory>
++{
++    private readonly PoliciesApiFactory _factory;
++
++    public RetrieveNotFoundTests(PoliciesApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Unknown_reference_answers_404_get_1_naming_the_reference()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetPolicy("GET1-UNKNOWN");
++
++        await ProblemAssert.NotFound(response, "/policies/GET1-UNKNOWN", "GET1-UNKNOWN");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Unknown_lower_case_reference_answers_404_naming_the_normalised_reference()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetPolicy("get1-unknown-lc");
++
++        await ProblemAssert.NotFound(response, "/policies/get1-unknown-lc", "GET1-UNKNOWN-LC");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Reference_that_fails_the_sell_1_pattern_answers_404_not_400()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetPolicy("GET1_BAD");
++
++        await ProblemAssert.NotFound(response, "/policies/GET1_BAD", "GET1_BAD");
++    }
++
++    // The 404 is for the reference asked for, not any reference: a sold policy next to it changes nothing.
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Reference_one_character_longer_than_a_sold_one_answers_404()
++    {
++        using var client = _factory.CreateClient();
++        await client.SellAndReadBack(new SellPolicyRequestBuilder("GET1-NEAR").Build(), "GET1-NEAR");
++
++        using var response = await client.GetPolicy("GET1-NEARX");
++
++        await ProblemAssert.NotFound(response, "/policies/GET1-NEARX", "GET1-NEARX");
++    }
++
++    // Shape row of the contract for E2: an unbound query key is a 400 with errors[key], before the lookup,
++    // even for a policy that exists. Shape is not a numbered rule, so no Rule trait.
++    [Fact]
++    public async Task Unknown_query_parameter_on_a_get_is_rejected_with_400()
++    {
++        using var client = _factory.CreateClient();
++        await client.SellAndReadBack(new SellPolicyRequestBuilder("GET-QUERY").Build(), "GET-QUERY");
++
++        using var response = await client.GetAsync("/policies/GET-QUERY?colour=red", TestContext.Current.CancellationToken);
++
++        var errors = await ProblemAssert.ValidationErrors(response, "/policies/GET-QUERY");
++        ProblemAssert.HasError(errors, "colour");
++        Assert.Equal("Unknown query parameter.", errors.Member("colour")[0].GetString());
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/RetrieveResponseShapeTests.cs b/tests/Uinsure.Policies.Api.Tests/RetrieveResponseShapeTests.cs
+new file mode 100644
+index 0000000..ea67742
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/RetrieveResponseShapeTests.cs
+@@ -0,0 +1,69 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Builders;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// GET-1: the full PolicyResponse of the API contract. A sold policy reads back with every value it was sold
++// with and the members F2 adds (status, currentTermNumber, hasClaims, refunds, claims, cancellation), and
++// no member outside the contract. The sale's 201 body is the same PolicyResponse. Distinctive sells values
++// that are neither the builder defaults nor the api.md example; it starts on 2026-11-16 and ends on 2027-11-15.
++public sealed class RetrieveResponseShapeTests : IClassFixture<PoliciesApiFactory>
++{
++    private static readonly DateOnly DistinctiveEnd = new(2027, 11, 15);
++
++    private readonly PoliciesApiFactory _factory;
++
++    public RetrieveResponseShapeTests(PoliciesApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Sold_policy_reads_back_in_full_with_status_current_term_and_empty_history()
++    {
++        using var client = _factory.CreateClient();
++        var sold = SellPolicyRequestBuilder.Distinctive("GET1-FULL").Build();
++
++        var policy = await client.SellAndReadBack(sold, "GET1-FULL");
++
++        PolicyResponseAssert.ReadsBackAsSold(policy, sold, "GET1-FULL", DistinctiveEnd, "Pending");
++        PolicyResponseAssert.ShowsCurrentTerm(policy, 1, new DateOnly(2026, 11, 16), DistinctiveEnd, 412.34m);
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Sale_201_body_is_the_full_policy_response_and_equals_the_read_back()
++    {
++        using var client = _factory.CreateClient();
++        var sold = SellPolicyRequestBuilder.Distinctive("GET1-POST-BODY").Build();
++
++        using var created = await client.PostPolicy(sold);
++        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
++        var createdBody = await created.ReadJson();
++        using var read = await client.GetAsync(created.LocationPath(), TestContext.Current.CancellationToken);
++        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
++        var readBody = await read.ReadJson();
++
++        PolicyResponseAssert.ReadsBackAsSold(createdBody, sold, "GET1-POST-BODY", DistinctiveEnd, "Pending");
++        Assert.Equal(createdBody.GetRawText(), readBody.GetRawText());
++    }
++
++    // The route reference is trimmed and upper-cased before the lookup.
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Lower_case_route_reference_with_spaces_reads_back_the_policy_in_full()
++    {
++        using var client = _factory.CreateClient();
++        var sold = SellPolicyRequestBuilder.Distinctive("GET1-LOWER").Build();
++        await client.SellAndReadBack(sold, "GET1-LOWER");
++
++        using var read = await client.GetPolicy(" get1-lower ");
++
++        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
++        PolicyResponseAssert.ReadsBackAsSold(await read.ReadJson(), sold, "GET1-LOWER", DistinctiveEnd, "Pending");
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/RetrieveStatusTests.cs b/tests/Uinsure.Policies.Api.Tests/RetrieveStatusTests.cs
+new file mode 100644
+index 0000000..bdfad2d
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/RetrieveStatusTests.cs
+@@ -0,0 +1,117 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Builders;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// GET-1 status: derived from UK today on each request, never stored. Pending before the first start, Active
++// from the start to the end inclusive, Expired after the end (Cancelled is F3's). Each side of each boundary
++// is its own test: the policy is sold on TestClock.Today, then the clock moves to the day under test and the
++// policy is read back whole. A policy sold to start 2026-11-08 ends on 2027-11-07; one sold to start today
++// (2026-10-17) ends on 2027-10-16, which is in BST, so 23:30 UTC that day is already 17 October in the UK.
++public sealed class RetrieveStatusTests : IClassFixture<PoliciesApiFactory>
++{
++    private static readonly DateOnly FutureStart = new(2026, 11, 8);
++    private static readonly DateOnly FutureStartEnd = new(2027, 11, 7);
++    private static readonly DateOnly TodayStartEnd = new(2027, 10, 16);
++
++    private readonly PoliciesApiFactory _factory;
++
++    public RetrieveStatusTests(PoliciesApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Policy_sold_to_start_in_the_future_reads_back_Pending()
++    {
++        using var client = _factory.CreateClient();
++        var sold = new SellPolicyRequestBuilder("GET1-PENDING").WithStartDate(FutureStart).Build();
++
++        var policy = await client.SellAndReadBack(sold, "GET1-PENDING");
++
++        PolicyResponseAssert.ReadsBackAsSold(policy, sold, "GET1-PENDING", FutureStartEnd, "Pending");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Policy_sold_to_start_today_reads_back_Active()
++    {
++        using var client = _factory.CreateClient();
++        var sold = new SellPolicyRequestBuilder("GET1-ACTIVE-TODAY").WithStartDate(TestClock.Today).Build();
++
++        var policy = await client.SellAndReadBack(sold, "GET1-ACTIVE-TODAY");
++
++        PolicyResponseAssert.ReadsBackAsSold(policy, sold, "GET1-ACTIVE-TODAY", TodayStartEnd, "Active");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Status_on_the_day_before_the_start_is_Pending()
++    {
++        await AssertStatusOn("GET1-START-MINUS-1", FutureStart, FutureStartEnd, new DateTimeOffset(2026, 11, 7, 12, 0, 0, TimeSpan.Zero), "Pending");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Status_on_the_start_date_is_Active()
++    {
++        await AssertStatusOn("GET1-START-DAY", FutureStart, FutureStartEnd, new DateTimeOffset(2026, 11, 8, 12, 0, 0, TimeSpan.Zero), "Active");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Status_on_the_end_date_is_Active()
++    {
++        await AssertStatusOn("GET1-END-DAY", FutureStart, FutureStartEnd, new DateTimeOffset(2027, 11, 7, 12, 0, 0, TimeSpan.Zero), "Active");
++    }
++
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Status_on_the_day_after_the_end_date_is_Expired()
++    {
++        await AssertStatusOn("GET1-END-PLUS-1", FutureStart, FutureStartEnd, new DateTimeOffset(2027, 11, 8, 12, 0, 0, TimeSpan.Zero), "Expired");
++    }
++
++    // GMT control: 2027-11-07 is after the clocks go back, so 23:30 UTC is still 7 November in the UK.
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Status_at_23_30_UTC_on_an_end_date_in_GMT_is_Active()
++    {
++        await AssertStatusOn("GET1-END-GMT", FutureStart, FutureStartEnd, new DateTimeOffset(2027, 11, 7, 23, 30, 0, TimeSpan.Zero), "Active");
++    }
++
++    // BST: at 23:30 UTC on 2027-10-16 the UK date is already 2027-10-17, the day after the end.
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Status_at_23_30_UTC_on_an_end_date_in_BST_is_Expired_as_the_UK_date_is_the_next_day()
++    {
++        await AssertStatusOn("GET1-END-BST", TestClock.Today, TodayStartEnd, new DateTimeOffset(2027, 10, 16, 23, 30, 0, TimeSpan.Zero), "Expired");
++    }
++
++    // BST control: at 22:59 UTC on 2027-10-16 it is 23:59 in the UK, still the end date.
++    [Fact]
++    [Trait("Rule", "GET-1")]
++    public async Task Status_at_22_59_UTC_on_an_end_date_in_BST_is_Active()
++    {
++        await AssertStatusOn("GET1-END-BST-CTRL", TestClock.Today, TodayStartEnd, new DateTimeOffset(2027, 10, 16, 22, 59, 0, TimeSpan.Zero), "Active");
++    }
++
++    // Sold on TestClock.Today, read back whole at the instant under test: the one term is the current term
++    // whatever the status, because a policy outside every term shows its latest.
++    private async Task AssertStatusOn(string reference, DateOnly start, DateOnly expectedEnd, DateTimeOffset readAt, string expectedStatus)
++    {
++        using var client = _factory.CreateClient();
++        var sold = new SellPolicyRequestBuilder(reference).WithStartDate(start).Build();
++        await client.SellAndReadBack(sold, reference);
++
++        _factory.Clock.SetUtcNow(readAt);
++        using var read = await client.GetPolicy(reference);
++
++        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
++        PolicyResponseAssert.ReadsBackAsSold(await read.ReadJson(), sold, reference, expectedEnd, expectedStatus);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/PolicyResponseAssert.cs b/tests/Uinsure.Policies.Api.Tests/Support/PolicyResponseAssert.cs
+new file mode 100644
+index 0000000..2ef24e5
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/PolicyResponseAssert.cs
+@@ -0,0 +1,85 @@
++using System.Text.Json;
++using System.Text.Json.Nodes;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// The full PolicyResponse of the API contract (GET-1), read back. It extends the F1 read-back
++// (SoldPolicyAssert) with the members F2 adds: status, currentTermNumber, hasClaims, refunds, claims and
++// cancellation, and it pins the member set of every object, so a field missing, renamed or extra fails.
++// Status and the end date are the test's own literals, never derived here.
++internal static class PolicyResponseAssert
++{
++    private static readonly string[] PolicyMembers =
++    [
++        "reference", "type", "status", "currentTermNumber", "startDate", "endDate", "amount", "hasClaims",
++        "autoRenew", "policyholders", "property", "terms", "payments", "refunds", "claims", "cancellation",
++    ];
++
++    private static readonly string[] PolicyholderMembers = ["firstName", "lastName", "dateOfBirth"];
++    private static readonly string[] PropertyMembers = ["addressLine1", "addressLine2", "addressLine3", "postcode"];
++    private static readonly string[] TermMembers = ["termNumber", "startDate", "endDate", "amount", "paymentReference"];
++    private static readonly string[] PaymentMembers = ["reference", "type", "amount"];
++
++    // A sold, one-term policy read back whole: every value sold, its term and payment, the derived status,
++    // term 1 as the current term, no claims, no refunds and no cancellation.
++    public static void ReadsBackAsSold(JsonElement policy, JsonObject sold, string expectedReference, DateOnly expectedEndDate, string expectedStatus)
++    {
++        HasTheContractShape(policy);
++        SoldPolicyAssert.ReadsBackAsSold(policy, sold, expectedReference, expectedEndDate);
++        Assert.Equal(expectedStatus, policy.Member("status").GetString());
++        Assert.Equal(1, policy.Member("currentTermNumber").GetInt32());
++        HasNoClaimsRefundsOrCancellation(policy);
++    }
++
++    // The policy-level view of the current term (GET-1): its number, dates and amount.
++    public static void ShowsCurrentTerm(JsonElement policy, int termNumber, DateOnly start, DateOnly end, decimal amount)
++    {
++        Assert.Equal(termNumber, policy.Member("currentTermNumber").GetInt32());
++        Assert.Equal(start, policy.GetDate("startDate"));
++        Assert.Equal(end, policy.GetDate("endDate"));
++        Assert.Equal(amount, policy.Member("amount").GetDecimal());
++    }
++
++    // A sold policy has no claim (hasClaims false at sale), no refund and no cancellation.
++    public static void HasNoClaimsRefundsOrCancellation(JsonElement policy)
++    {
++        Assert.False(policy.Member("hasClaims").GetBoolean());
++        Assert.Equal(JsonValueKind.Array, policy.Member("refunds").ValueKind);
++        Assert.Empty(policy.Member("refunds").EnumerateArray());
++        Assert.Equal(JsonValueKind.Array, policy.Member("claims").ValueKind);
++        Assert.Empty(policy.Member("claims").EnumerateArray());
++        Assert.Equal(JsonValueKind.Null, policy.Member("cancellation").ValueKind);
++    }
++
++    // Exactly the contract's members on the policy, each policyholder, the property, each term and each
++    // payment. Refund, claim and cancellation members are F3's, asserted where those exist.
++    public static void HasTheContractShape(JsonElement policy)
++    {
++        HasMembers(policy, PolicyMembers, "policy");
++        HasMembers(policy.Member("property"), PropertyMembers, "property");
++        foreach (var holder in policy.Member("policyholders").EnumerateArray())
++        {
++            HasMembers(holder, PolicyholderMembers, "policyholder");
++        }
++
++        foreach (var term in policy.Member("terms").EnumerateArray())
++        {
++            HasMembers(term, TermMembers, "term");
++        }
++
++        foreach (var payment in policy.Member("payments").EnumerateArray())
++        {
++            HasMembers(payment, PaymentMembers, "payment");
++        }
++    }
++
++    private static void HasMembers(JsonElement element, string[] expected, string what)
++    {
++        Assert.Equal(JsonValueKind.Object, element.ValueKind);
++        var actual = element.EnumerateObject().Select(member => member.Name).Order(StringComparer.Ordinal).ToArray();
++        Assert.True(
++            expected.Order(StringComparer.Ordinal).SequenceEqual(actual),
++            $"The {what} members are [{string.Join(", ", actual)}]; the contract has [{string.Join(", ", expected)}].");
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/PolicySeeder.cs b/tests/Uinsure.Policies.Api.Tests/Support/PolicySeeder.cs
+new file mode 100644
+index 0000000..dfdf860
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/PolicySeeder.cs
+@@ -0,0 +1,19 @@
++using Microsoft.Extensions.DependencyInjection;
++using Uinsure.Policies.Domain.Policies;
++using Uinsure.Policies.Services;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// Stores a policy through the app's own IPolicyRepository, in a scope of its own as a request would, so the
++// test reads back over HTTP exactly what Persistence stored. Used only where no endpoint can make the state.
++internal static class PolicySeeder
++{
++    public static async Task Seed(this PoliciesApiFactory factory, Policy policy)
++    {
++        using var scope = factory.Services.CreateScope();
++        var repository = scope.ServiceProvider.GetRequiredService<IPolicyRepository>();
++        repository.Add(policy);
++        await repository.SaveChanges(TestContext.Current.CancellationToken);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs b/tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs
+index 6cc4fb4..f29176b 100644
+--- a/tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs
++++ b/tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs
+@@ -28,9 +28,22 @@ internal static class ProblemAssert
+         return problem;
+     }
+ 
++    // GET-1: a 404 for a reference with no policy. It short-circuits before every rule, so it carries no
++    // violations[]; the detail and the reference extension name the normalised reference.
++    public static async Task<JsonElement> NotFound(HttpResponseMessage response, string instance, string normalisedReference)
++    {
++        var problem = await RuleProblem(response, HttpStatusCode.NotFound, "GET-1", "Policy not found", instance);
++
++        Assert.Equal($"No policy with reference '{normalisedReference}'.", problem.Member("detail").GetString());
++        Assert.Equal(normalisedReference, problem.Member("reference").GetString());
++        Assert.False(problem.TryGetProperty("violations", out _));
++        return problem;
++    }
++
+     // The members every rule problem carries: type /problems/{rule-id lower-case}, title, status, detail,
+-    // instance (the request path), ruleId and traceId.
+-    public static async Task<JsonElement> RuleProblem(HttpResponseMessage response, HttpStatusCode status, string ruleId, string title)
++    // instance (the request path: /policies for a sale, /policies/{reference} as sent for a GET), ruleId
++    // and traceId.
++    public static async Task<JsonElement> RuleProblem(HttpResponseMessage response, HttpStatusCode status, string ruleId, string title, string instance = "/policies")
+     {
+         Assert.Equal(status, response.StatusCode);
+         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+@@ -40,7 +53,7 @@ internal static class ProblemAssert
+         Assert.Equal(title, problem.GetProperty("title").GetString());
+         Assert.Equal((int)status, problem.GetProperty("status").GetInt32());
+         Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("detail").GetString()));
+-        Assert.Equal("/policies", problem.GetProperty("instance").GetString());
++        Assert.Equal(instance, problem.GetProperty("instance").GetString());
+         Assert.Equal(ruleId, problem.GetProperty("ruleId").GetString());
+         Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+         return problem;
+@@ -71,7 +84,7 @@ internal static class ProblemAssert
+ 
+     // A 400 shape error: ValidationProblemDetails with a non-empty errors map and a traceId, no ruleId.
+     // Returns the errors map.
+-    public static async Task<JsonElement> ValidationErrors(HttpResponseMessage response)
++    public static async Task<JsonElement> ValidationErrors(HttpResponseMessage response, string instance = "/policies")
+     {
+         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+@@ -79,7 +92,7 @@ internal static class ProblemAssert
+         var problem = await response.ReadJson();
+         Assert.Equal(400, problem.GetProperty("status").GetInt32());
+         Assert.Equal("One or more validation errors occurred.", problem.GetProperty("title").GetString());
+-        Assert.Equal("/policies", problem.GetProperty("instance").GetString());
++        Assert.Equal(instance, problem.GetProperty("instance").GetString());
+         Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+         Assert.False(problem.TryGetProperty("ruleId", out _));
+ 
+diff --git a/tests/Uinsure.Policies.Domain.Tests/PolicyStatusTests.cs b/tests/Uinsure.Policies.Domain.Tests/PolicyStatusTests.cs
+index 6946154..0233027 100644
+--- a/tests/Uinsure.Policies.Domain.Tests/PolicyStatusTests.cs
++++ b/tests/Uinsure.Policies.Domain.Tests/PolicyStatusTests.cs
+@@ -10,7 +10,7 @@ namespace Uinsure.Policies.Domain.Tests;
+ // one-term policy sold to start 2026-11-01 (TestClock.Today + 15) is covered from 2026-11-01 to
+ // 2027-10-31 inclusive. The two-term rows (finding A1/I5) restore that term followed by 2027-11-01 to
+ // 2028-10-31, so Pending is shown to measure from the first term's start and Expired from the latest term's
+-// end. Untraited until F2 adds the GET-1 traits.
++// end. Traited GET-1 in F2.
+ public sealed class PolicyStatusTests
+ {
+     private static readonly DateOnly Start = TestClock.Today.AddDays(15);
+@@ -20,6 +20,7 @@ public sealed class PolicyStatusTests
+         new Term(new DateOnly(2027, 11, 1), 561.09m, new Payment("PAY-DOM-0042-R1", PaymentMethod.DirectDebit, 561.09m)));
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_the_sale_day_before_the_start_is_Pending()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -28,6 +29,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_the_day_before_the_start_is_Pending()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -36,6 +38,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_the_start_day_is_Active()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -44,6 +47,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_the_end_day_is_Active()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -52,6 +56,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_the_day_after_the_end_is_Expired()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -60,6 +65,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_the_day_before_the_first_start_of_two_terms_is_Pending()
+     {
+         var policy = TwoTermPolicy();
+@@ -68,6 +74,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_a_day_inside_the_first_of_two_terms_is_Active()
+     {
+         var policy = TwoTermPolicy();
+@@ -76,6 +83,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_the_start_day_of_the_second_of_two_terms_is_Active()
+     {
+         var policy = TwoTermPolicy();
+@@ -84,6 +92,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_a_day_inside_the_second_of_two_terms_is_Active()
+     {
+         var policy = TwoTermPolicy();
+@@ -92,6 +101,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_the_end_day_of_the_second_of_two_terms_is_Active()
+     {
+         var policy = TwoTermPolicy();
+@@ -100,6 +110,7 @@ public sealed class PolicyStatusTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Status_on_the_day_after_the_end_of_two_terms_is_Expired()
+     {
+         var policy = TwoTermPolicy();
+diff --git a/tests/Uinsure.Policies.Domain.Tests/PolicyTermsTests.cs b/tests/Uinsure.Policies.Domain.Tests/PolicyTermsTests.cs
+index 23e95ad..72aaefa 100644
+--- a/tests/Uinsure.Policies.Domain.Tests/PolicyTermsTests.cs
++++ b/tests/Uinsure.Policies.Domain.Tests/PolicyTermsTests.cs
+@@ -9,7 +9,7 @@ namespace Uinsure.Policies.Domain.Tests;
+ // term if today is outside them all. A one-term policy sold to start 2026-11-01 (TestClock.Today + 15) is
+ // covered from 2026-11-01 to 2027-10-31 inclusive. The two-term rows (finding A1/I5) restore that term
+ // followed by 2027-11-01 to 2028-10-31, so the first and latest terms differ and each member is pinned to the
+-// right one. Untraited until F2 adds the GET-1 traits.
++// right one. Traited GET-1 in F2.
+ public sealed class PolicyTermsTests
+ {
+     private static readonly DateOnly Start = TestClock.Today.AddDays(15);
+@@ -19,6 +19,7 @@ public sealed class PolicyTermsTests
+         new Term(new DateOnly(2027, 11, 1), 561.09m, new Payment("PAY-DOM-0042-R1", PaymentMethod.DirectDebit, 561.09m)));
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Latest_term_of_a_one_term_policy_is_its_only_term()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -32,6 +33,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Current_term_on_the_day_before_the_start_is_the_latest_term()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -42,6 +44,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Current_term_on_the_start_day_is_the_term_covering_it()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -52,6 +55,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Current_term_on_the_end_day_is_the_term_covering_it()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -62,6 +66,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Current_term_on_the_day_after_the_end_is_the_latest_term()
+     {
+         var policy = new PolicyBuilder().WithStartDate(Start).Build();
+@@ -72,6 +77,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Latest_term_of_a_two_term_policy_is_the_second_term()
+     {
+         var policy = TwoTermPolicy();
+@@ -84,6 +90,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Current_term_on_a_day_inside_the_first_of_two_terms_is_the_first_term()
+     {
+         var policy = TwoTermPolicy();
+@@ -94,6 +101,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Current_term_on_the_end_day_of_the_first_of_two_terms_is_the_first_term()
+     {
+         var policy = TwoTermPolicy();
+@@ -104,6 +112,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Current_term_on_the_start_day_of_the_second_of_two_terms_is_the_second_term()
+     {
+         var policy = TwoTermPolicy();
+@@ -114,6 +123,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Current_term_before_the_first_start_of_two_terms_is_the_latest_term()
+     {
+         var policy = TwoTermPolicy();
+@@ -124,6 +134,7 @@ public sealed class PolicyTermsTests
+     }
+ 
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public void Current_term_after_the_end_of_two_terms_is_the_latest_term()
+     {
+         var policy = TwoTermPolicy();
+diff --git a/tests/Uinsure.Policies.Services.Tests/PolicyServiceGetDetailsTests.cs b/tests/Uinsure.Policies.Services.Tests/PolicyServiceGetDetailsTests.cs
+index 41a5673..1171ade 100644
+--- a/tests/Uinsure.Policies.Services.Tests/PolicyServiceGetDetailsTests.cs
++++ b/tests/Uinsure.Policies.Services.Tests/PolicyServiceGetDetailsTests.cs
+@@ -11,7 +11,7 @@ namespace Uinsure.Policies.Services.Tests;
+ // PolicyService.Get answers with the domain's view on UK today: the status is Policy.StatusOn(today) and the
+ // current term Policy.CurrentTerm(today), the term covering today, else the latest. The domain's boundaries are
+ // proven in Domain.Tests; these prove the service asks the domain, with today in Europe/London. At 23:30 UTC on
+-// 30 June 2027 (BST) the UK date is already 1 July. Untraited until F2 adds the GET-1 traits.
++// 30 June 2027 (BST) the UK date is already 1 July. Traited GET-1 in F2.
+ public sealed class PolicyServiceGetDetailsTests
+ {
+     private static readonly DateTimeOffset BstLateEvening = TestClock.Utc(2027, 6, 30, 23, 30);
+@@ -27,6 +27,7 @@ public sealed class PolicyServiceGetDetailsTests
+ 
+     // The one term runs from 2026-11-08 to 2027-11-07; today is 2026-10-17.
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public async Task Get_before_the_start_date_returns_Pending()
+     {
+         var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-PEND").Build());
+@@ -39,6 +40,7 @@ public sealed class PolicyServiceGetDetailsTests
+ 
+     // The one term runs from 2026-11-08 to 2027-11-07; today is moved on to 2027-11-08.
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public async Task Get_the_day_after_the_end_date_returns_Expired()
+     {
+         var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-EXP").Build());
+@@ -52,6 +54,7 @@ public sealed class PolicyServiceGetDetailsTests
+ 
+     // Terms 2025-10-01 to 2026-09-30 and 2026-10-01 to 2027-09-30; today (2026-10-17) is in the second.
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public async Task Get_of_a_policy_with_two_terms_returns_the_term_covering_today_as_current()
+     {
+         var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-TWO")
+@@ -67,6 +70,7 @@ public sealed class PolicyServiceGetDetailsTests
+ 
+     // The one term runs from 2026-07-01 to 2027-06-30: the UTC date is its last day, the UK date the day after.
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public async Task Get_at_23_30_UTC_in_BST_on_the_UTC_date_of_the_end_returns_Expired()
+     {
+         var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-BSTEXP")
+@@ -82,6 +86,7 @@ public sealed class PolicyServiceGetDetailsTests
+     // Terms 2026-07-01 to 2027-06-30 and 2027-07-01 to 2028-06-30: the UTC date is in the first, the UK date
+     // in the second.
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public async Task Get_at_23_30_UTC_in_BST_returns_the_term_starting_on_the_UK_date_as_current()
+     {
+         var policy = await Store(new StoredPolicyBuilder("F1B-SVC-GET-BSTCUR")
+diff --git a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDetailsTests.cs b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDetailsTests.cs
+index 3040653..3c4823e 100644
+--- a/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDetailsTests.cs
++++ b/tests/Uinsure.Policies.Services.Tests/PolicyServiceSellDetailsTests.cs
+@@ -7,8 +7,8 @@ using Xunit;
+ namespace Uinsure.Policies.Services.Tests;
+ 
+ // The details a sale answers with come from the domain, on the UK today the sale was made on: the status is
+-// Policy.StatusOn(today) and the current term Policy.CurrentTerm(today), never a placeholder. Untraited until
+-// F2 adds the GET-1 traits.
++// Policy.StatusOn(today) and the current term Policy.CurrentTerm(today), never a placeholder. Traited GET-1 in
++// F2.
+ public sealed class PolicyServiceSellDetailsTests
+ {
+     private readonly RecordingPolicyRepository _repository = new();
+@@ -21,6 +21,7 @@ public sealed class PolicyServiceSellDetailsTests
+ 
+     // The default sale starts on 2026-11-08, 22 days after today (2026-10-17).
+     [Fact]
++    [Trait("Rule", "GET-1")]
+     public async Task Sale_starting_after_today_is_returned_as_Pending_with_the_sold_term_as_current()
+     {
+         var result = await _service.Sell(new SellPolicyBuilder("F1B-SVC-SELL-PEND").Build(), TestContext.Current.CancellationToken);
+diff --git a/tests/postman/Uinsure.Policies.postman_collection.json b/tests/postman/Uinsure.Policies.postman_collection.json
+index b25e465..42fc3a8 100644
+--- a/tests/postman/Uinsure.Policies.postman_collection.json
++++ b/tests/postman/Uinsure.Policies.postman_collection.json
+@@ -2655,6 +2655,873 @@
+           ]
+         }
+       ]
++    },
++    {
++      "name": "F2 Retrieve",
++      "description": "GET-1: retrieve a policy by reference. Each GET sells its own policy first (pre-request) and reads it back whole: the full PolicyResponse members, status Pending (future start) or Active (start today), term 1 as the current term, and no claims, refunds or cancellation. Unknown references are 404 /problems/get-1. Money is written with exactly 2 decimal places in the 201 body and the read-back (raw text checked). Status Expired and the current term of a two-term policy need a fake clock or a renewal: integration-test only. Also: the extreme negative amounts (-1e27, decimal.MinValue) are the 422 SELL-7.",
++      "event": [
++        {
++          "listen": "prerequest",
++          "script": {
++            "type": "text/javascript",
++            "exec": [
++              "// F2: dates from the real UK today (Postman can't fake time) and a fresh reference per request.",
++              "const pad = n => String(n).padStart(2, '0');",
++              "const ukToday = (() => {",
++              "    try {",
++              "        const text = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });",
++              "        if (/^\\d{4}-\\d{2}-\\d{2}$/.test(text)) { return text; }",
++              "    } catch (e) { /* no time-zone data: fall back to the machine's local date */ }",
++              "    const now = new Date();",
++              "    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());",
++              "})();",
++              "const parts = iso => iso.split('-').map(Number);",
++              "const utcIso = (y, m, d) => new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);",
++              "const addDays = (iso, n) => { const [y, m, d] = parts(iso); return utcIso(y, m, d + n); };",
++              "const addYears = (iso, n) => { const [y, m, d] = parts(iso); return utcIso(y + n, m, d); };",
++              "// SELL-3: start + 1 year - 1 day; a 29 Feb start ends on 28 Feb of the next year.",
++              "const endFor = iso => { const [y, m, d] = parts(iso); return m === 2 && d === 29 ? utcIso(y + 1, 2, 28) : addDays(addYears(iso, 1), -1); };",
++              "pm.variables.set('today', ukToday);",
++              "pm.variables.set('todayEnd', endFor(ukToday));",
++              "// The default body matches the integration builders' defaults (start today + 22, Katherine Johnson",
++              "// born 1981-08-26, 48 Quay St, Unit 5, M3 4LZ, 527.18).",
++              "const start = addDays(ukToday, 22);",
++              "pm.variables.set('start', start);",
++              "pm.variables.set('startEnd', endFor(start));",
++              "// A non-default start (today + 30) for the sale whose every value is read back.",
++              "const start30 = addDays(ukToday, 30);",
++              "pm.variables.set('start30', start30);",
++              "pm.variables.set('start30End', endFor(start30));",
++              "const reference = 'F2-' + Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 1296).toString(36).toUpperCase().padStart(2, '0');",
++              "pm.variables.set('reference', reference);",
++              "pm.variables.set('referenceLower', reference.toLowerCase());",
++              "// The sales a GET request makes in its own pre-request script before it reads the policy back.",
++              "const holder = { firstName: 'Katherine', lastName: 'Johnson', dateOfBirth: '1981-08-26' };",
++              "const property = { addressLine1: '48 Quay St', addressLine2: 'Unit 5', addressLine3: null, postcode: 'M3 4LZ' };",
++              "const sale = startDate => JSON.stringify({ reference, type: 'Household', startDate, amount: 527.18, autoRenew: true, paymentMethod: 'DirectDebit', policyholders: [holder], property });",
++              "pm.variables.set('defaultSale', sale(start));",
++              "pm.variables.set('todaySale', sale(ukToday));",
++              "// Every value differs from the builder defaults and the api.md example, so only a stored sale reads back as it.",
++              "pm.variables.set('distinctiveSale', JSON.stringify({",
++              "    reference, type: 'BuyToLet', startDate: start30, amount: 412.34, autoRenew: false, paymentMethod: 'Card',",
++              "    policyholders: [",
++              "        { firstName: 'Grace', lastName: 'Hopper', dateOfBirth: '1990-04-12' },",
++              "        { firstName: 'Alan', lastName: 'Turing', dateOfBirth: '1992-06-23' }",
++              "    ],",
++              "    property: { addressLine1: '7 Canal St', addressLine2: 'Flat 3', addressLine3: 'Ancoats', postcode: 'M4 6BX' }",
++              "}));"
++            ]
++          }
++        }
++      ],
++      "item": [
++        {
++          "name": "happy path",
++          "item": [
++            {
++              "name": "GET-1 · sold policy reads back in full → 200",
++              "event": [
++                {
++                  "listen": "prerequest",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
++                      "pm.sendRequest({",
++                      "    url: pm.variables.get('baseUrl') + '/policies',",
++                      "    method: 'POST',",
++                      "    header: { 'Content-Type': 'application/json' },",
++                      "    body: { mode: 'raw', raw: pm.variables.get('distinctiveSale') }",
++                      "}, function (err, res) {",
++                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
++                      "});"
++                    ]
++                  }
++                },
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const sameMembers = (object, expected) => pm.expect(Object.keys(object).sort()).to.eql(expected.slice().sort());",
++                      "const assertContractShape = policy => {",
++                      "    sameMembers(policy, [\"reference\", \"type\", \"status\", \"currentTermNumber\", \"startDate\", \"endDate\", \"amount\", \"hasClaims\", \"autoRenew\", \"policyholders\", \"property\", \"terms\", \"payments\", \"refunds\", \"claims\", \"cancellation\"]);",
++                      "    sameMembers(policy.property, [\"addressLine1\", \"addressLine2\", \"addressLine3\", \"postcode\"]);",
++                      "    policy.policyholders.forEach(holder => sameMembers(holder, [\"firstName\", \"lastName\", \"dateOfBirth\"]));",
++                      "    policy.terms.forEach(term => sameMembers(term, [\"termNumber\", \"startDate\", \"endDate\", \"amount\", \"paymentReference\"]));",
++                      "    policy.payments.forEach(payment => sameMembers(payment, [\"reference\", \"type\", \"amount\"]));",
++                      "};",
++                      "// Every value sold, read back, with the one term as the current term and no claims, refunds or cancellation.",
++                      "const assertReadsBackAsSold = (policy, sold, end, status) => {",
++                      "    pm.expect(policy.reference).to.eql(sold.reference);",
++                      "    pm.expect(policy.type).to.eql(sold.type);",
++                      "    pm.expect(policy.status).to.eql(status);",
++                      "    pm.expect(policy.currentTermNumber).to.eql(1);",
++                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
++                      "    pm.expect(policy.endDate).to.eql(end);",
++                      "    pm.expect(policy.amount).to.eql(sold.amount);",
++                      "    pm.expect(policy.hasClaims).to.eql(false);",
++                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
++                      "    pm.expect(policy.property).to.eql(sold.property);",
++                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
++                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
++                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
++                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
++                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
++                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
++                      "    pm.expect(policy.refunds).to.eql([]);",
++                      "    pm.expect(policy.claims).to.eql([]);",
++                      "    pm.expect(policy.cancellation).to.eql(null);",
++                      "};",
++                      "pm.test(\"GET-1 · the policy was sold first (POST → 201)\", function () {",
++                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
++                      "});",
++                      "pm.test(\"GET-1 · sold policy answers 200 with exactly the contract's members\", function () {",
++                      "    pm.response.to.have.status(200);",
++                      "    assertContractShape(pm.response.json());",
++                      "});",
++                      "pm.test(\"GET-1 · reads back every value sold, Pending before its start, with term 1 current\", function () {",
++                      "    const sold = JSON.parse(pm.variables.get(\"distinctiveSale\"));",
++                      "    assertReadsBackAsSold(pm.response.json(), sold, pm.variables.get(\"start30End\"), \"Pending\");",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/policies/{{reference}}",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies", "{{reference}}"]
++                }
++              }
++            },
++            {
++              "name": "GET-1 · start today reads back Active → 200",
++              "event": [
++                {
++                  "listen": "prerequest",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
++                      "pm.sendRequest({",
++                      "    url: pm.variables.get('baseUrl') + '/policies',",
++                      "    method: 'POST',",
++                      "    header: { 'Content-Type': 'application/json' },",
++                      "    body: { mode: 'raw', raw: pm.variables.get('todaySale') }",
++                      "}, function (err, res) {",
++                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
++                      "});"
++                    ]
++                  }
++                },
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const sameMembers = (object, expected) => pm.expect(Object.keys(object).sort()).to.eql(expected.slice().sort());",
++                      "const assertContractShape = policy => {",
++                      "    sameMembers(policy, [\"reference\", \"type\", \"status\", \"currentTermNumber\", \"startDate\", \"endDate\", \"amount\", \"hasClaims\", \"autoRenew\", \"policyholders\", \"property\", \"terms\", \"payments\", \"refunds\", \"claims\", \"cancellation\"]);",
++                      "    sameMembers(policy.property, [\"addressLine1\", \"addressLine2\", \"addressLine3\", \"postcode\"]);",
++                      "    policy.policyholders.forEach(holder => sameMembers(holder, [\"firstName\", \"lastName\", \"dateOfBirth\"]));",
++                      "    policy.terms.forEach(term => sameMembers(term, [\"termNumber\", \"startDate\", \"endDate\", \"amount\", \"paymentReference\"]));",
++                      "    policy.payments.forEach(payment => sameMembers(payment, [\"reference\", \"type\", \"amount\"]));",
++                      "};",
++                      "// Every value sold, read back, with the one term as the current term and no claims, refunds or cancellation.",
++                      "const assertReadsBackAsSold = (policy, sold, end, status) => {",
++                      "    pm.expect(policy.reference).to.eql(sold.reference);",
++                      "    pm.expect(policy.type).to.eql(sold.type);",
++                      "    pm.expect(policy.status).to.eql(status);",
++                      "    pm.expect(policy.currentTermNumber).to.eql(1);",
++                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
++                      "    pm.expect(policy.endDate).to.eql(end);",
++                      "    pm.expect(policy.amount).to.eql(sold.amount);",
++                      "    pm.expect(policy.hasClaims).to.eql(false);",
++                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
++                      "    pm.expect(policy.property).to.eql(sold.property);",
++                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
++                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
++                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
++                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
++                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
++                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
++                      "    pm.expect(policy.refunds).to.eql([]);",
++                      "    pm.expect(policy.claims).to.eql([]);",
++                      "    pm.expect(policy.cancellation).to.eql(null);",
++                      "};",
++                      "pm.test(\"GET-1 · the policy was sold first (POST → 201)\", function () {",
++                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
++                      "});",
++                      "pm.test(\"GET-1 · a policy starting today answers 200 Active, with term 1 current\", function () {",
++                      "    pm.response.to.have.status(200);",
++                      "    const policy = pm.response.json();",
++                      "    assertContractShape(policy);",
++                      "    assertReadsBackAsSold(policy, JSON.parse(pm.variables.get(\"todaySale\")), pm.variables.get(\"todayEnd\"), \"Active\");",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/policies/{{reference}}",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies", "{{reference}}"]
++                }
++              }
++            },
++            {
++              "name": "GET-1 · start today+22 reads back Pending → 200",
++              "event": [
++                {
++                  "listen": "prerequest",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
++                      "pm.sendRequest({",
++                      "    url: pm.variables.get('baseUrl') + '/policies',",
++                      "    method: 'POST',",
++                      "    header: { 'Content-Type': 'application/json' },",
++                      "    body: { mode: 'raw', raw: pm.variables.get('defaultSale') }",
++                      "}, function (err, res) {",
++                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
++                      "});"
++                    ]
++                  }
++                },
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const sameMembers = (object, expected) => pm.expect(Object.keys(object).sort()).to.eql(expected.slice().sort());",
++                      "const assertContractShape = policy => {",
++                      "    sameMembers(policy, [\"reference\", \"type\", \"status\", \"currentTermNumber\", \"startDate\", \"endDate\", \"amount\", \"hasClaims\", \"autoRenew\", \"policyholders\", \"property\", \"terms\", \"payments\", \"refunds\", \"claims\", \"cancellation\"]);",
++                      "    sameMembers(policy.property, [\"addressLine1\", \"addressLine2\", \"addressLine3\", \"postcode\"]);",
++                      "    policy.policyholders.forEach(holder => sameMembers(holder, [\"firstName\", \"lastName\", \"dateOfBirth\"]));",
++                      "    policy.terms.forEach(term => sameMembers(term, [\"termNumber\", \"startDate\", \"endDate\", \"amount\", \"paymentReference\"]));",
++                      "    policy.payments.forEach(payment => sameMembers(payment, [\"reference\", \"type\", \"amount\"]));",
++                      "};",
++                      "// Every value sold, read back, with the one term as the current term and no claims, refunds or cancellation.",
++                      "const assertReadsBackAsSold = (policy, sold, end, status) => {",
++                      "    pm.expect(policy.reference).to.eql(sold.reference);",
++                      "    pm.expect(policy.type).to.eql(sold.type);",
++                      "    pm.expect(policy.status).to.eql(status);",
++                      "    pm.expect(policy.currentTermNumber).to.eql(1);",
++                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
++                      "    pm.expect(policy.endDate).to.eql(end);",
++                      "    pm.expect(policy.amount).to.eql(sold.amount);",
++                      "    pm.expect(policy.hasClaims).to.eql(false);",
++                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
++                      "    pm.expect(policy.property).to.eql(sold.property);",
++                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
++                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
++                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
++                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
++                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
++                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
++                      "    pm.expect(policy.refunds).to.eql([]);",
++                      "    pm.expect(policy.claims).to.eql([]);",
++                      "    pm.expect(policy.cancellation).to.eql(null);",
++                      "};",
++                      "pm.test(\"GET-1 · the policy was sold first (POST → 201)\", function () {",
++                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
++                      "});",
++                      "pm.test(\"GET-1 · a policy starting today+22 answers 200 Pending, with term 1 current\", function () {",
++                      "    pm.response.to.have.status(200);",
++                      "    const policy = pm.response.json();",
++                      "    assertContractShape(policy);",
++                      "    assertReadsBackAsSold(policy, JSON.parse(pm.variables.get(\"defaultSale\")), pm.variables.get(\"startEnd\"), \"Pending\");",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/policies/{{reference}}",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies", "{{reference}}"]
++                }
++              }
++            },
++            {
++              "name": "GET-1 · lower-case reference finds the policy → 200",
++              "event": [
++                {
++                  "listen": "prerequest",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
++                      "pm.sendRequest({",
++                      "    url: pm.variables.get('baseUrl') + '/policies',",
++                      "    method: 'POST',",
++                      "    header: { 'Content-Type': 'application/json' },",
++                      "    body: { mode: 'raw', raw: pm.variables.get('defaultSale') }",
++                      "}, function (err, res) {",
++                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
++                      "});"
++                    ]
++                  }
++                },
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const sameMembers = (object, expected) => pm.expect(Object.keys(object).sort()).to.eql(expected.slice().sort());",
++                      "const assertContractShape = policy => {",
++                      "    sameMembers(policy, [\"reference\", \"type\", \"status\", \"currentTermNumber\", \"startDate\", \"endDate\", \"amount\", \"hasClaims\", \"autoRenew\", \"policyholders\", \"property\", \"terms\", \"payments\", \"refunds\", \"claims\", \"cancellation\"]);",
++                      "    sameMembers(policy.property, [\"addressLine1\", \"addressLine2\", \"addressLine3\", \"postcode\"]);",
++                      "    policy.policyholders.forEach(holder => sameMembers(holder, [\"firstName\", \"lastName\", \"dateOfBirth\"]));",
++                      "    policy.terms.forEach(term => sameMembers(term, [\"termNumber\", \"startDate\", \"endDate\", \"amount\", \"paymentReference\"]));",
++                      "    policy.payments.forEach(payment => sameMembers(payment, [\"reference\", \"type\", \"amount\"]));",
++                      "};",
++                      "// Every value sold, read back, with the one term as the current term and no claims, refunds or cancellation.",
++                      "const assertReadsBackAsSold = (policy, sold, end, status) => {",
++                      "    pm.expect(policy.reference).to.eql(sold.reference);",
++                      "    pm.expect(policy.type).to.eql(sold.type);",
++                      "    pm.expect(policy.status).to.eql(status);",
++                      "    pm.expect(policy.currentTermNumber).to.eql(1);",
++                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
++                      "    pm.expect(policy.endDate).to.eql(end);",
++                      "    pm.expect(policy.amount).to.eql(sold.amount);",
++                      "    pm.expect(policy.hasClaims).to.eql(false);",
++                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
++                      "    pm.expect(policy.property).to.eql(sold.property);",
++                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
++                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
++                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
++                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
++                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
++                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
++                      "    pm.expect(policy.refunds).to.eql([]);",
++                      "    pm.expect(policy.claims).to.eql([]);",
++                      "    pm.expect(policy.cancellation).to.eql(null);",
++                      "};",
++                      "pm.test(\"GET-1 · the policy was sold first (POST → 201)\", function () {",
++                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
++                      "});",
++                      "pm.test(\"GET-1 · the route reference is upper-cased before the lookup: 200 for the sold policy\", function () {",
++                      "    pm.response.to.have.status(200);",
++                      "    const policy = pm.response.json();",
++                      "    pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
++                      "    assertContractShape(policy);",
++                      "    assertReadsBackAsSold(policy, JSON.parse(pm.variables.get(\"defaultSale\")), pm.variables.get(\"startEnd\"), \"Pending\");",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/policies/{{referenceLower}}",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies", "{{referenceLower}}"]
++                }
++              }
++            },
++            {
++              "name": "GET-1 · amount 1000000.00 is written 1000000.00 → 201",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
++                      "const amounts = text => (text.match(/\"amount\":\\s*-?[0-9][0-9.eE+-]*/g) || []).map(match => match.replace(/\"amount\":\\s*/, \"\"));",
++                      "pm.test(\"GET-1 · amount 1000000.00 is written 1000000.00 in the 201 body\", function () {",
++                      "    pm.response.to.have.status(201);",
++                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
++                      "    pm.expect(amounts(pm.response.text())).to.eql([\"1000000.00\", \"1000000.00\", \"1000000.00\"]);",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
++                      "    pm.test(\"GET-1 · amount 1000000.00 is written 1000000.00 in the read-back\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(200);",
++                      "        pm.expect(amounts(res.text())).to.eql([\"1000000.00\", \"1000000.00\", \"1000000.00\"]);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 1000000.00,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            },
++            {
++              "name": "GET-1 · amount 803.40 is written 803.40 → 201",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
++                      "const amounts = text => (text.match(/\"amount\":\\s*-?[0-9][0-9.eE+-]*/g) || []).map(match => match.replace(/\"amount\":\\s*/, \"\"));",
++                      "pm.test(\"GET-1 · amount 803.40 is written 803.40 in the 201 body\", function () {",
++                      "    pm.response.to.have.status(201);",
++                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
++                      "    pm.expect(amounts(pm.response.text())).to.eql([\"803.40\", \"803.40\", \"803.40\"]);",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
++                      "    pm.test(\"GET-1 · amount 803.40 is written 803.40 in the read-back\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(200);",
++                      "        pm.expect(amounts(res.text())).to.eql([\"803.40\", \"803.40\", \"803.40\"]);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 803.40,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            },
++            {
++              "name": "GET-1 · amount 100 is written 100.00 → 201",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
++                      "const amounts = text => (text.match(/\"amount\":\\s*-?[0-9][0-9.eE+-]*/g) || []).map(match => match.replace(/\"amount\":\\s*/, \"\"));",
++                      "pm.test(\"GET-1 · amount 100 is written 100.00 in the 201 body\", function () {",
++                      "    pm.response.to.have.status(201);",
++                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
++                      "    pm.expect(amounts(pm.response.text())).to.eql([\"100.00\", \"100.00\", \"100.00\"]);",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
++                      "    pm.test(\"GET-1 · amount 100 is written 100.00 in the read-back\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(200);",
++                      "        pm.expect(amounts(res.text())).to.eql([\"100.00\", \"100.00\", \"100.00\"]);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 100,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            },
++            {
++              "name": "GET-1 · amount 527.180 is written 527.18 → 201",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
++                      "const amounts = text => (text.match(/\"amount\":\\s*-?[0-9][0-9.eE+-]*/g) || []).map(match => match.replace(/\"amount\":\\s*/, \"\"));",
++                      "pm.test(\"GET-1 · amount 527.180 is written 527.18 in the 201 body\", function () {",
++                      "    pm.response.to.have.status(201);",
++                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
++                      "    pm.expect(amounts(pm.response.text())).to.eql([\"527.18\", \"527.18\", \"527.18\"]);",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
++                      "    pm.test(\"GET-1 · amount 527.180 is written 527.18 in the read-back\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(200);",
++                      "        pm.expect(amounts(res.text())).to.eql([\"527.18\", \"527.18\", \"527.18\"]);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.180,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            }
++          ]
++        },
++        {
++          "name": "rule violations",
++          "item": [
++            {
++              "name": "GET-1 · unknown reference → 404",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"GET-1 · an unknown reference answers 404 /problems/get-1\", function () {",
++                      "    pm.response.to.have.status(404);",
++                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
++                      "    const problem = pm.response.json();",
++                      "    const reference = pm.variables.get(\"reference\");",
++                      "    pm.expect(problem.type).to.eql(\"/problems/get-1\");",
++                      "    pm.expect(problem.title).to.eql(\"Policy not found\");",
++                      "    pm.expect(problem.status).to.eql(404);",
++                      "    pm.expect(problem.detail).to.eql(\"No policy with reference '\" + reference + \"'.\");",
++                      "    pm.expect(problem.instance).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
++                      "    pm.expect(problem.ruleId).to.eql(\"GET-1\");",
++                      "    pm.expect(problem.reference).to.eql(reference);",
++                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(problem).to.not.have.property(\"violations\");",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/policies/{{reference}}",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies", "{{reference}}"]
++                }
++              }
++            },
++            {
++              "name": "GET-1 · unknown lower-case reference is named upper-cased → 404",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"GET-1 · an unknown lower-case reference answers 404 /problems/get-1\", function () {",
++                      "    pm.response.to.have.status(404);",
++                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
++                      "    const problem = pm.response.json();",
++                      "    const reference = pm.variables.get(\"reference\");",
++                      "    pm.expect(problem.type).to.eql(\"/problems/get-1\");",
++                      "    pm.expect(problem.title).to.eql(\"Policy not found\");",
++                      "    pm.expect(problem.status).to.eql(404);",
++                      "    pm.expect(problem.detail).to.eql(\"No policy with reference '\" + reference + \"'.\");",
++                      "    pm.expect(problem.instance).to.eql(\"/policies/\" + pm.variables.get(\"referenceLower\"));",
++                      "    pm.expect(problem.ruleId).to.eql(\"GET-1\");",
++                      "    pm.expect(problem.reference).to.eql(reference);",
++                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(problem).to.not.have.property(\"violations\");",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/policies/{{referenceLower}}",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies", "{{referenceLower}}"]
++                }
++              }
++            },
++            {
++              "name": "GET-1 · reference failing the SELL-1 pattern → 404",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"GET-1 · a reference with an underscore answers 404 /problems/get-1\", function () {",
++                      "    pm.response.to.have.status(404);",
++                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
++                      "    const problem = pm.response.json();",
++                      "    const reference = pm.variables.get(\"reference\") + \"_X\";",
++                      "    pm.expect(problem.type).to.eql(\"/problems/get-1\");",
++                      "    pm.expect(problem.title).to.eql(\"Policy not found\");",
++                      "    pm.expect(problem.status).to.eql(404);",
++                      "    pm.expect(problem.detail).to.eql(\"No policy with reference '\" + reference + \"'.\");",
++                      "    pm.expect(problem.instance).to.eql(\"/policies/\" + pm.variables.get(\"reference\") + \"_X\");",
++                      "    pm.expect(problem.ruleId).to.eql(\"GET-1\");",
++                      "    pm.expect(problem.reference).to.eql(reference);",
++                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(problem).to.not.have.property(\"violations\");",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/policies/{{reference}}_X",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies", "{{reference}}_X"]
++                }
++              }
++            },
++            {
++              "name": "SHAPE · unknown query parameter on GET → 400",
++              "event": [
++                {
++                  "listen": "prerequest",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "// Sell the policy this request reads back; the test script checks the sale answered 201.",
++                      "pm.sendRequest({",
++                      "    url: pm.variables.get('baseUrl') + '/policies',",
++                      "    method: 'POST',",
++                      "    header: { 'Content-Type': 'application/json' },",
++                      "    body: { mode: 'raw', raw: pm.variables.get('defaultSale') }",
++                      "}, function (err, res) {",
++                      "    pm.variables.set('saleStatus', err ? 'error' : String(res.code));",
++                      "});"
++                    ]
++                  }
++                },
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"SHAPE · the policy was sold first (POST → 201)\", function () {",
++                      "    pm.expect(pm.variables.get(\"saleStatus\")).to.eql(\"201\");",
++                      "});",
++                      "pm.test(\"SHAPE · unknown query parameter answers 400 with errors.colour and no ruleId\", function () {",
++                      "    pm.response.to.have.status(400);",
++                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
++                      "    const problem = pm.response.json();",
++                      "    pm.expect(problem.title).to.eql(\"One or more validation errors occurred.\");",
++                      "    pm.expect(problem.instance).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
++                      "    pm.expect(problem).to.not.have.property(\"ruleId\");",
++                      "    pm.expect(problem.errors).to.have.property(\"colour\");",
++                      "    pm.expect(problem.errors.colour).to.eql([\"Unknown query parameter.\"]);",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/policies/{{reference}}?colour=red",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies", "{{reference}}"],
++                  "query": [
++                    {
++                      "key": "colour",
++                      "value": "red"
++                    }
++                  ]
++                }
++              }
++            },
++            {
++              "name": "SELL-7 · amount -1e27 → 422",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"SELL-7 · amount -1e27 answers 422 /problems/sell-7\", function () {",
++                      "    pm.response.to.have.status(422);",
++                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
++                      "    const problem = pm.response.json();",
++                      "    pm.expect(problem.type).to.eql(\"/problems/sell-7\");",
++                      "    pm.expect(problem.title).to.eql(\"Policy amount must be greater than zero\");",
++                      "    pm.expect(problem.ruleId).to.eql(\"SELL-7\");",
++                      "    pm.expect(problem.instance).to.eql(\"/policies\");",
++                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(problem.violations.map(v => v.ruleId)).to.eql([\"SELL-7\"]);",
++                      "    pm.expect(problem.amount).to.eql(-1e27);",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(pm.variables.get(\"reference\")), function (err, res) {",
++                      "    pm.test(\"SELL-7 · nothing was stored (GET → 404)\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(404);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": -1000000000000000000000000000,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            },
++            {
++              "name": "SELL-7 · amount decimal.MinValue → 422",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"SELL-7 · amount decimal.MinValue answers 422 /problems/sell-7\", function () {",
++                      "    pm.response.to.have.status(422);",
++                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
++                      "    const problem = pm.response.json();",
++                      "    pm.expect(problem.type).to.eql(\"/problems/sell-7\");",
++                      "    pm.expect(problem.title).to.eql(\"Policy amount must be greater than zero\");",
++                      "    pm.expect(problem.ruleId).to.eql(\"SELL-7\");",
++                      "    pm.expect(problem.instance).to.eql(\"/policies\");",
++                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
++                      "    pm.expect(problem.violations.map(v => v.ruleId)).to.eql([\"SELL-7\"]);",
++                      "    pm.expect(pm.response.text()).to.include('\"amount\":-79228162514264337593543950335');",
++                      "});",
++                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(pm.variables.get(\"reference\")), function (err, res) {",
++                      "    pm.test(\"SELL-7 · nothing was stored (GET → 404)\", function () {",
++                      "        pm.expect(err).to.eql(null);",
++                      "        pm.expect(res.code).to.eql(404);",
++                      "    });",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "POST",
++                "header": [
++                  {
++                    "key": "Content-Type",
++                    "value": "application/json"
++                  }
++                ],
++                "body": {
++                  "mode": "raw",
++                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": -79228162514264337593543950335,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
++                  "options": {
++                    "raw": {
++                      "language": "json"
++                    }
++                  }
++                },
++                "url": {
++                  "raw": "{{baseUrl}}/policies",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["policies"]
++                }
++              }
++            }
++          ]
++        }
++      ]
+     }
+   ]
+ }
+diff --git a/tests/rule-coverage.pending.txt b/tests/rule-coverage.pending.txt
+index 605dae2..24e1177 100644
+--- a/tests/rule-coverage.pending.txt
++++ b/tests/rule-coverage.pending.txt
+@@ -1,4 +1,3 @@
+-GET-1
+ CANCEL-1a
+ CANCEL-1b
+ CANCEL-1c
