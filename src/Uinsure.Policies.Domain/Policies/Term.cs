@@ -2,12 +2,8 @@ namespace Uinsure.Policies.Domain.Policies;
 
 public sealed class Term
 {
-    // For EF Core to materialise a stored term.
-    private Term()
-    {
-    }
-
-    internal Term(DateOnly start, decimal amount, Payment? payment)
+    // Public so that Persistence can rebuild a stored term for Policy.Restore; End always follows from Start.
+    public Term(DateOnly start, decimal amount, Payment? payment)
     {
         Start = start;
         End = EndFor(start);

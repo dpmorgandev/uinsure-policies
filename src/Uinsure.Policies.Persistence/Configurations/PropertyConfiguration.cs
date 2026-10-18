@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Uinsure.Policies.Domain.Policies;
+using Uinsure.Policies.Persistence.Records;
 
 namespace Uinsure.Policies.Persistence.Configurations;
 
-internal sealed class PropertyConfiguration : IEntityTypeConfiguration<Property>
+internal sealed class PropertyConfiguration : IEntityTypeConfiguration<PropertyRecord>
 {
-    public void Configure(EntityTypeBuilder<Property> builder)
+    public void Configure(EntityTypeBuilder<PropertyRecord> builder)
     {
-        builder.Property<int>("Id");
-        builder.HasKey("Id");
+        builder.ToTable("Property");
+        builder.HasKey(p => p.Id);
         builder.Property(p => p.AddressLine1).HasMaxLength(200).IsRequired();
         builder.Property(p => p.AddressLine2).HasMaxLength(200);
         builder.Property(p => p.AddressLine3).HasMaxLength(200);
