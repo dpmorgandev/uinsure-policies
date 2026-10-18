@@ -214,7 +214,7 @@ nodes:
       - {id: t4, role: tester, step: red, layer: domain, rules: [GET-1], title: "Domain.Tests: status Pending, Active, Expired from today; current term = the term in force today, else the latest", status: done}
       - {id: t5, role: builder, step: green, layer: domain, rules: [GET-1], title: "Policy derives status and the current term from DateOnly today", status: skipped}
       - {id: t6, role: builder, step: green, layer: services, rules: [GET-1], title: "PolicyService.Get: normalised reference, UK today, null for not found", status: done}
-      - {id: t7, role: builder, step: green, layer: persistence, rules: [GET-1], title: "GetByReference loads terms, policyholders, property and payments (refunds and claims arrive in F3)", status: pending}
+      - {id: t7, role: builder, step: green, layer: persistence, rules: [GET-1], title: "GetByReference loads terms, policyholders, property and payments (refunds and claims arrive in F3)", status: done}
       - {id: t8, role: builder, step: green, layer: api, rules: [GET-1], title: "Real GET: response contract per api-contract, 404 problem body; money formatted to exactly 2 dp in every response (POST and GET); global unknown-query-parameter filter (400, api-contract E2); whole acceptance suite green", status: pending}
       - {id: t9, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
       - {id: t10, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
