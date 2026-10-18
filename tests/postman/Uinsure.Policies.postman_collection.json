@@ -92,10 +92,14 @@
               "const addYears = (iso, n) => { const [y, m, d] = parts(iso); return utcIso(y + n, m, d); };",
               "// SELL-3: start + 1 year - 1 day; a 29 Feb start ends on 28 Feb of the next year.",
               "const endFor = iso => { const [y, m, d] = parts(iso); return m === 2 && d === 29 ? utcIso(y + 1, 2, 28) : addDays(addYears(iso, 1), -1); };",
-              "const start = addDays(ukToday, 15);",
+              "// The default body matches the integration builders' defaults (start today + 22, 527.18, Katherine Johnson",
+              "// born 1981-08-26, 48 Quay St, Unit 5, M3 4LZ), none of which is the api.md example's value.",
+              "const start = addDays(ukToday, 22);",
               "pm.variables.set('today', ukToday);",
+              "pm.variables.set('todayEnd', endFor(ukToday));",
               "pm.variables.set('yesterday', addDays(ukToday, -1));",
               "pm.variables.set('todayPlus60', addDays(ukToday, 60));",
+              "pm.variables.set('todayPlus60End', endFor(addDays(ukToday, 60)));",
               "pm.variables.set('todayPlus61', addDays(ukToday, 61));",
               "pm.variables.set('start', start);",
               "pm.variables.set('startEnd', endFor(start));",
@@ -342,6 +346,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"todayEnd\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SELL-2 · start today answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
@@ -352,6 +374,7 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "        pm.expect(policy.startDate).to.eql(pm.variables.get(\"today\"));",
                       "    });",
                       "});"
@@ -369,7 +392,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{today}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{today}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -392,6 +415,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"todayPlus60End\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SELL-2 · start today+60 answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
@@ -402,6 +443,7 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "        pm.expect(policy.startDate).to.eql(pm.variables.get(\"todayPlus60\"));",
                       "    });",
                       "});"
@@ -419,7 +461,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{todayPlus60}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{todayPlus60}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -442,7 +484,25 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
-                      "pm.test(\"SELL-3 · start today+15 answers 201 with Location /policies/{reference}\", function () {",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"startEnd\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
+                      "pm.test(\"SELL-3 · start today+22 answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
                       "});",
@@ -452,6 +512,7 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "        pm.expect(policy.endDate).to.eql(pm.variables.get(\"startEnd\"));",
                       "        pm.expect(policy.terms).to.have.lengthOf(1);",
                       "        pm.expect(policy.terms[0].endDate).to.eql(pm.variables.get(\"startEnd\"));",
@@ -471,7 +532,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -494,6 +555,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"startEnd\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SELL-4 · 3 policyholders answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
@@ -504,7 +583,8 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
-                      "        pm.expect(policy.policyholders.map(h => h.lastName)).to.eql([\"Lovelace\", \"Babbage\", \"Somerville\"]);",
+                      "        assertReadsBackAsSold(policy);",
+                      "        pm.expect(policy.policyholders.map(h => h.lastName)).to.eql([\"Johnson\", \"Babbage\", \"Somerville\"]);",
                       "    });",
                       "});"
                     ]
@@ -521,7 +601,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Charles\",\n      \"lastName\": \"Babbage\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Mary\",\n      \"lastName\": \"Somerville\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    },\n    {\n      \"firstName\": \"Charles\",\n      \"lastName\": \"Babbage\",\n      \"dateOfBirth\": \"1991-12-26\"\n    },\n    {\n      \"firstName\": \"Mary\",\n      \"lastName\": \"Somerville\",\n      \"dateOfBirth\": \"1980-12-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -544,6 +624,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"startEnd\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SELL-5 · 16th birthday on the start date answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
@@ -554,6 +652,7 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "        pm.expect(policy.policyholders[0].dateOfBirth).to.eql(pm.variables.get(\"dob16OnStart\"));",
                       "    });",
                       "});"
@@ -571,7 +670,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"{{dob16OnStart}}\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"{{dob16OnStart}}\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -594,6 +693,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"startEnd\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SELL-6 · payment for the full amount answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
@@ -604,6 +721,7 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "        pm.expect(policy.payments).to.have.lengthOf(1);",
                       "        pm.expect(policy.payments[0].type).to.eql(\"Card\");",
                       "        pm.expect(policy.payments[0].amount).to.eql(389.5);",
@@ -625,7 +743,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 389.5,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"Card\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 389.5,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"Card\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -648,6 +766,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"startEnd\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SELL-7 · amount 0.01 answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
@@ -658,6 +794,7 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "        pm.expect(policy.amount).to.eql(0.01);",
                       "    });",
                       "});"
@@ -675,7 +812,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 0.01,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 0.01,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -698,6 +835,24 @@
                     "type": "text/javascript",
                     "exec": [
                       "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "// Every value sold, read back: an echo of the reference or a canned body cannot match them.",
+                      "const assertReadsBackAsSold = policy => {",
+                      "    const sold = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
+                      "    const end = pm.variables.get(\"startEnd\");",
+                      "    pm.expect(policy.type).to.eql(sold.type);",
+                      "    pm.expect(policy.startDate).to.eql(sold.startDate);",
+                      "    pm.expect(policy.endDate).to.eql(end);",
+                      "    pm.expect(policy.amount).to.eql(sold.amount);",
+                      "    pm.expect(policy.autoRenew).to.eql(sold.autoRenew);",
+                      "    pm.expect(policy.property).to.eql(sold.property);",
+                      "    pm.expect(policy.policyholders).to.eql(sold.policyholders);",
+                      "    pm.expect(policy.terms).to.have.lengthOf(1);",
+                      "    pm.expect(policy.terms[0]).to.include({ termNumber: 1, startDate: sold.startDate, endDate: end, amount: sold.amount });",
+                      "    pm.expect(policy.payments).to.have.lengthOf(1);",
+                      "    pm.expect(policy.payments[0]).to.include({ type: sold.paymentMethod, amount: sold.amount });",
+                      "    pm.expect(policy.payments[0].reference).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(policy.terms[0].paymentReference).to.eql(policy.payments[0].reference);",
+                      "};",
                       "pm.test(\"SHAPE · postcode of 8 characters answers 201 with Location /policies/{reference}\", function () {",
                       "    pm.response.to.have.status(201);",
                       "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
@@ -708,6 +863,7 @@
                       "        pm.expect(res.code).to.eql(200);",
                       "        const policy = res.json();",
                       "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "        assertReadsBackAsSold(policy);",
                       "        pm.expect(policy.property.postcode).to.eql(\"SW1A 1AA\");",
                       "    });",
                       "});"
@@ -725,7 +881,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"SW1A 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"SW1A 1AA\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -827,7 +983,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 500,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 500,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -851,10 +1007,10 @@
                     "exec": [
                       "// Sell the first policy, so this request is the duplicate.",
                       "const first = {",
-                      "    reference: pm.variables.get(\"reference\"), type: \"Household\", startDate: pm.variables.get(\"start\"), amount: 365.00,",
+                      "    reference: pm.variables.get(\"reference\"), type: \"Household\", startDate: pm.variables.get(\"start\"), amount: 527.18,",
                       "    autoRenew: true, paymentMethod: \"DirectDebit\",",
-                      "    policyholders: [{ firstName: \"Ada\", lastName: \"Lovelace\", dateOfBirth: \"1985-12-10\" }],",
-                      "    property: { addressLine1: \"1 High St\", addressLine2: null, addressLine3: null, postcode: \"M1 1AA\" }",
+                      "    policyholders: [{ firstName: \"Katherine\", lastName: \"Johnson\", dateOfBirth: \"1981-08-26\" }],",
+                      "    property: { addressLine1: \"48 Quay St\", addressLine2: \"Unit 5\", addressLine3: null, postcode: \"M3 4LZ\" }",
                       "};",
                       "pm.sendRequest({",
                       "    url: pm.variables.get(\"baseUrl\") + \"/policies\",",
@@ -898,7 +1054,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{referenceLower}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{referenceLower}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -949,7 +1105,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"S1\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"S1\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1000,7 +1156,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference21}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference21}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1045,7 +1201,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"SELL1_UNDERSCORE\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"SELL1_UNDERSCORE\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1100,7 +1256,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{todayPlus61}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{todayPlus61}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1155,7 +1311,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{yesterday}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{yesterday}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1209,7 +1365,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{todayPlus61}}\",\n  \"amount\": 0,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Charles\",\n      \"lastName\": \"Babbage\",\n      \"dateOfBirth\": \"{{dob16DayAfterPlus61}}\"\n    },\n    {\n      \"firstName\": \"Mary\",\n      \"lastName\": \"Somerville\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Alan\",\n      \"lastName\": \"Turing\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{todayPlus61}}\",\n  \"amount\": 0,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    },\n    {\n      \"firstName\": \"Charles\",\n      \"lastName\": \"Babbage\",\n      \"dateOfBirth\": \"{{dob16DayAfterPlus61}}\"\n    },\n    {\n      \"firstName\": \"Mary\",\n      \"lastName\": \"Somerville\",\n      \"dateOfBirth\": \"1981-08-26\"\n    },\n    {\n      \"firstName\": \"Alan\",\n      \"lastName\": \"Turing\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1260,7 +1416,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  },\n  \"endDate\": \"{{startEnd}}\"\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  },\n  \"endDate\": \"{{startEnd}}\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1314,7 +1470,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1368,7 +1524,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Charles\",\n      \"lastName\": \"Babbage\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Mary\",\n      \"lastName\": \"Somerville\",\n      \"dateOfBirth\": \"1985-12-10\"\n    },\n    {\n      \"firstName\": \"Alan\",\n      \"lastName\": \"Turing\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    },\n    {\n      \"firstName\": \"Charles\",\n      \"lastName\": \"Babbage\",\n      \"dateOfBirth\": \"1981-08-26\"\n    },\n    {\n      \"firstName\": \"Mary\",\n      \"lastName\": \"Somerville\",\n      \"dateOfBirth\": \"1981-08-26\"\n    },\n    {\n      \"firstName\": \"Alan\",\n      \"lastName\": \"Turing\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1422,7 +1578,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"{{dob16DayAfterStart}}\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"{{dob16DayAfterStart}}\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1473,7 +1629,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1527,7 +1683,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 0,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 0,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1581,7 +1737,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": -1,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": -1,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1682,7 +1838,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  },\n  \"colour\": \"red\"\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  },\n  \"colour\": \"red\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1733,7 +1889,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  },\n  \"hasClaims\": false\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  },\n  \"hasClaims\": false\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1784,7 +1940,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1835,7 +1991,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"01/11/2026\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"01/11/2026\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1886,7 +2042,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Flat\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Flat\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1937,7 +2093,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": 0,\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": 0,\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1988,7 +2144,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": 1,\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": 1,\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2039,7 +2195,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"SW1A 1AAA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"SW1A 1AAA\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2090,7 +2246,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\",\n      \"dateOfBirth\": \"1981-08-26\"\n    }\n  ],\n  \"property\": {\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2141,7 +2297,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 527.18,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Katherine\",\n      \"lastName\": \"Johnson\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"48 Quay St\",\n    \"addressLine2\": \"Unit 5\",\n    \"addressLine3\": null,\n    \"postcode\": \"M3 4LZ\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
