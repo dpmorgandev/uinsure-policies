@@ -67,7 +67,9 @@ public sealed class SellReferenceTests : IClassFixture<PoliciesApiFactory>
     public async Task Duplicate_reference_is_rejected_with_409_and_the_original_policy_is_unchanged()
     {
         using var client = _factory.CreateClient();
-        await client.SellAndReadBack(new SellPolicyRequestBuilder("SELL1-DUP").WithAmount(365.00m).Build(), "SELL1-DUP");
+        var original = SellPolicyRequestBuilder.Distinctive("SELL1-DUP").WithAmount(412.34m).Build();
+        var sold = await client.SellAndReadBack(original, "SELL1-DUP");
+        SoldPolicyAssert.ReadsBackAsSold(sold, original, "SELL1-DUP", new DateOnly(2027, 11, 15));
 
         using var duplicate = await client.PostPolicy(new SellPolicyRequestBuilder("SELL1-DUP").WithAmount(500.00m).Build());
 
@@ -75,7 +77,9 @@ public sealed class SellReferenceTests : IClassFixture<PoliciesApiFactory>
         Assert.Equal("SELL1-DUP", problem.GetProperty("reference").GetString());
         using var read = await client.GetPolicy("SELL1-DUP");
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
-        Assert.Equal(365.00m, (await read.ReadJson()).GetProperty("amount").GetDecimal());
+        var afterDuplicate = await read.ReadJson();
+        Assert.Equal(412.34m, afterDuplicate.GetProperty("amount").GetDecimal());
+        SoldPolicyAssert.ReadsBackAsSold(afterDuplicate, original, "SELL1-DUP", new DateOnly(2027, 11, 15));
     }
 
     [Fact]
