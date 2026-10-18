@@ -11,7 +11,7 @@ import {
 
 const BASE = 'origin/main';
 const TDD = ['scaffold', 'red', 'stub', 'green', 'refactor'];
-const EVENT = /^(setup|state\(\w+\)|gate\.[a-z0-9.-]+|pause1|verdict\((reviewer|security),(PASS|FAIL),[^)]+\)|findings\([^)]+\)|attempt\+\+|steer\(D\d+,(pause1|pause2|pr-comment)\)|investigation\.opened\(inv-\d{3}\)|escalated|trace\.rendered\((ok|incomplete)\)|pr\(\d+\)|pr\.comment(\.fixed)?(\([^)]*\))?|signoff\([0-9a-f]{7,40}\)|merged\([0-9a-f]{7,40}\)|archived)$/;
+const EVENT = /^(setup|state\(\w+\)|gate\.[a-z0-9.-]+|pause1|verdict\((reviewer|security),(PASS|FAIL),[^)]+\)|findings\([^)]+\)|attempt\+\+|steer\(D\d+,(pause1|pause2|pr-comment)\)|investigation\.opened\(inv-\d{3}\)|escalated|trace\.rendered\((ok|incomplete)\)|reconciled\([^)]+\)|pr\(\d+\)|pr\.comment(\.fixed)?(\([^)]*\))?|signoff\([0-9a-f]{7,40}\)|merged\([0-9a-f]{7,40}\)|archived)$/;
 const GATE_KEYS = ['cmd', 'exit', 'expect', 'ok', 'head'];
 
 function fail(message) {
@@ -115,6 +115,11 @@ export function gather(root, plan, nodeId) {
     loop: readJsonl(join(dir, 'loop.jsonl')),
     verdicts,
     findings: readDir(join(dir, 'findings'), '.md').map((f) => f.replace(/\.md$/, '')),
+    // <round>/<id> for every finding in findings/<round>.md (ids read from the investigator's JSON body)
+    findingIds: readDir(join(dir, 'findings'), '.md').flatMap((f) => {
+      const round = f.replace(/\.md$/, '');
+      return [...readFileSync(join(dir, 'findings', f), 'utf8').matchAll(/"id"\s*:\s*"(\w+)"/g)].map((m) => `${round}/${m[1]}`);
+    }),
     markers: testMarkers(root),
     qa: qaSteps(root, plan, nodeId),
     reqIds: requirementIds(readFileSync(join(root, 'docs', 'requirements.md'), 'utf8')),
@@ -142,7 +147,9 @@ export function completeness(t, { archive = false } = {}) {
   const rounds = new Set(t.verdicts.map((v) => v.file.split('-')[0]));
   for (const round of rounds) {
     const pair = ['reviewer', 'security'].map((a) => t.verdicts.find((v) => v.file === `${round}-${a}.json`));
-    if (pair.some((v) => !v)) r.push(`review round ${round} lacks a reviewer + security verdict pair`);
+    // A lost verdict file passes only when a reconciled(<file>) event says so, pointing at the evidence.
+    const reconciled = (a) => t.loop.some((e) => e.event === `reconciled(${round}-${a}.json)`);
+    if (['reviewer', 'security'].some((a, i) => !pair[i] && !reconciled(a))) r.push(`review round ${round} lacks a reviewer + security verdict pair`);
     for (const v of pair.filter(Boolean)) {
       if (v.verdict?.verdict === 'FAIL' && !t.findings.includes(round)) r.push(`FAIL verdict ${v.file} has no findings/${round}.md`);
       if (v.agent === 'reviewer' && v.verdict?.verdict === 'PASS') {
@@ -155,7 +162,7 @@ export function completeness(t, { archive = false } = {}) {
     const steer = /^steer\((D\d+),/.exec(e.event ?? '');
     if (steer && !t.findings.includes(steer[1])) r.push(`steer ${steer[1]} has no findings/${steer[1]}.md`);
   }
-  const knownIds = new Set([...t.findings, ...t.verdicts.flatMap((v) => (v.verdict?.findings ?? []).map((f) => f.id))]);
+  const knownIds = new Set([...t.findings, ...(t.findingIds ?? []), ...t.verdicts.flatMap((v) => (v.verdict?.findings ?? []).map((f) => f.id))]);
   for (const c of t.commits) for (const id of c.fixes) if (!knownIds.has(id)) r.push(`Fixes-Finding ${id} in ${c.sha.slice(0, 7)} resolves to nothing`);
   for (const id of rules) {
     if (!t.markers[id]) r.push(`rule ${id} has no test marker`);

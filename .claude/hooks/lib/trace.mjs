@@ -99,7 +99,7 @@ export function currentAttempt(dir) {
 
 // Round id for the next verdict or findings file: D<n> after an unanswered steer, else A<attempt>.
 // Verdicts are always A<attempt>, so reviewer and security share one round per dispatch. Findings take
-// D<n> when a steer is the latest event since the last attempt++ or verdict, otherwise A<attempt>.
+// D<n> when a steer is the latest event since the last attempt++ or verdict, otherwise the FAIL's round.
 export function currentRound(dir, kind = 'findings') {
   if (kind === 'verdict') return `A${currentAttempt(dir)}`;
   const events = readJsonl(join(dir, 'loop.jsonl'));
@@ -109,12 +109,18 @@ export function currentRound(dir, kind = 'findings') {
     if (steer) return steer[1];
     if (e.event === 'attempt++' || (e.event ?? '').startsWith('verdict(')) break;
   }
-  return `A${currentAttempt(dir)}`;
+  // The investigator runs after attempt++, so the FAIL it diagnoses belongs to the attempt before.
+  return `A${Math.max(currentAttempt(dir) - 1, 1)}`;
 }
 
 // Recorded verbatim; the caller (gate-subagent.mjs) has already validated the verdict.
+// A verdict is a receipt, so it is never overwritten: a second review in the same round (a re-review after
+// integrate, say) is written as <round>.2-<agent>.json, then .3, and so on.
 export function writeVerdict(dir, { round, agent, agentId, plan, node, attempt, verdict }) {
-  const file = join(dir, 'verdicts', `${round}-${agent}.json`);
+  const at = (r) => join(dir, 'verdicts', `${r}-${agent}.json`);
+  let n = 1;
+  while (existsSync(at(n === 1 ? round : `${round}.${n}`))) n++;
+  const file = at(n === 1 ? round : `${round}.${n}`);
   mkdirSync(dirname(file), { recursive: true });
   const record = { v: 1, ts: nowIso(), plan, node, attempt, agent, agent_id: agentId, verdict };
   writeFileSync(file, JSON.stringify(record, null, 2) + '\n');
@@ -124,7 +130,7 @@ export function writeVerdict(dir, { round, agent, agentId, plan, node, attempt, 
 export function writeFindings(dir, { round, agentId, plan, node, attempt, source, findings, body }) {
   const file = join(dir, 'findings', `${round}.md`);
   mkdirSync(dirname(file), { recursive: true });
-  const ids = String(findings?.source_ref ?? '').split(/[,\s]+/).filter(Boolean);
+  const ids = (findings?.findings ?? []).map((f) => f.id).filter(Boolean);
   const prints = (findings?.findings ?? []).map((f) => f.fingerprint).filter(Boolean);
   const front = [
     '---',
