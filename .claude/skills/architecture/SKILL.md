@@ -85,11 +85,12 @@ each returned alone → then every 422 rule is collected, and none returns early
 | `ViolationKind.BusinessRule` | 422 | + `ruleId` (first in `RuleIds.Order`) + `violations: [{ruleId, detail}]` |
 | `PersistenceConflictException(DuplicateReference)` | 409 | as SELL-1 |
 | `PersistenceConflictException(Concurrency)` | 409 | `type: /problems/concurrency`, no `ruleId`, detail asks to retry |
+| Transport: `BadHttpRequestException` · non-HTTPS outside Development (not `/health/*`) · rate limiter | its 413/408/400 · 400 · 429 + `Retry-After` | no `ruleId`; fixed title/detail, never the exception message (Warning) · `/problems/https-required` · `/problems/rate-limited` |
 | any other exception | 500 | generic `detail` + `traceId`; exception to logs only; no stack trace outside Development |
 
-- RFC 9457 body: `type` = `/problems/{rule-id lower-case, "/" → "-"}`, `title`, `status`, `detail`,
-  `instance`, `ruleId`, `traceId`, plus `RuleViolation.Extensions`. `ProblemCatalog` maps status, type and
-  title in one place. `ResultExtensions` builds the response in one place.
+- RFC 9457 body: `type` = `/problems/{rule-id lower-case, "/" → "-"}`, `title`, `status`, `detail`, `instance`,
+  `ruleId`, `traceId`, plus `RuleViolation.Extensions`. `ProblemCatalog` maps status, type and title in one
+  place; `ResultExtensions` builds the response in one place.
 - Controllers are `[ApiController]`, `sealed`, `: ControllerBase` and `[Route("policies")]`. Public action
   signatures use only `Contracts` types and `ActionResult`, never Domain types.
 - **Strict input → 400.**
@@ -97,8 +98,7 @@ each returned alone → then every 422 rule is collected, and none returns early
     camelCase, strict numbers. `DateOnly` is `yyyy-MM-dd`.
   - `RejectUnknownQueryParametersFilter` is global: an unbound query key (case-insensitive) gives `errors[key]`.
   - Required DTO members are nullable and `[Required]`.
-  - The reference (body and route), after trim and upper-casing, must match `^[A-Z0-9-]{3,20}$`.
-    Postcode max 8. Claim `description` max 500.
+  - Reference (body and route), trimmed and upper-cased, matches `^[A-Z0-9-]{3,20}$`. Postcode ≤ 8; claim `description` ≤ 500.
   - The cancel body is optional: `[FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)]`.
 
 ## Persistence

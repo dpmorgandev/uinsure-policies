@@ -321,6 +321,9 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
 | `ViolationKind.BusinessRule` | 422 | ProblemDetails + `ruleId` (first in `RuleIds.Order`) + `violations: [{ruleId, detail}]` |
 | `PersistenceConflictException(DuplicateReference)` | 409 | as SELL-1 (unique-index race backstop) |
 | `PersistenceConflictException(Concurrency)` | 409 | `type: /problems/concurrency`, no `ruleId`, detail asks the client to retry |
+| `BadHttpRequestException` (body over 64 KB, too slow, truncated) | its `StatusCode` (413, 408, 400) | fixed title and detail per status, no `ruleId`, never the exception message; logged at Warning (api-contract H4) |
+| request not over HTTPS, outside Development, not `/health/*` | 400 | `type: /problems/https-required`, no `ruleId` (api-contract H1) |
+| rate limiter rejection | 429 + `Retry-After` | `type: /problems/rate-limited`, no `ruleId` (api-contract H5) |
 | any other exception | 500 | generic `detail` + `traceId`; full exception to logs only; no stack trace outside Development |
 
 - RFC 9457 body: `type` = `/problems/{rule-id lower-case, "/" → "-"}` (so `RENEW-1/2` → `/problems/renew-1-2`), `title`, `status`, `detail`, `instance`, `ruleId`, `traceId`, plus `RuleViolation.Extensions`. The exact payloads are owned by `api-contract`.

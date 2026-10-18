@@ -243,6 +243,10 @@ Every error is `application/problem+json` (RFC 9457) with `type`, `title`, `stat
 | E6 | COULD-3 (explicit) | 422 | `/problems/could-3` | Cheque not allowed for auto-renewal | Policy 'HH-0001' auto-renews, so its renewal cannot be paid by Cheque. | `paymentMethod` |
 | E6 | COULD-3 (defaulted from RENEW-3a) | 422 | `/problems/could-3` | as above | The current term was paid by Cheque, which cannot pay an auto-renewal; send a `paymentMethod` of Card or DirectDebit. | `paymentMethod` |
 | E1, E3, E5, E6 | concurrency (`DbUpdateConcurrencyException`) | 409 | `/problems/concurrency` | The policy was changed by another request | Retry the request. | — (no `ruleId`) |
+| any (not `/health/*`), outside Development | transport: request not over HTTPS (after forwarded headers) | 400 | `/problems/https-required` | HTTPS required | This API accepts HTTPS requests only. | — (no `ruleId`) |
+| E1, E3, E5, E6 | transport: body over 64 KB (`BadHttpRequestException`) | 413 | default | Request body too large | The request body is too large. (no limit figure) | — (no `ruleId`) |
+| E1, E3, E5, E6 | transport: body too slow or truncated (`BadHttpRequestException`) | its `StatusCode` (408, 400) | default | fixed per status | fixed per status; never the exception message | — (no `ruleId`) |
+| any (not `/health/*`) | rate limit exceeded (per client IP) | 429 + `Retry-After` | `/problems/rate-limited` | Too many requests | Too many requests. Retry after the number of seconds in the Retry-After header. | — (no `ruleId`) |
 | any | unhandled | 500 | default | An error occurred while processing your request. | generic; full details in logs only | `traceId` |
 
 ### Success-path rows (rules with no error path)
@@ -425,6 +429,38 @@ With a single violation, `detail` is that violation's detail, the rule-specific 
   - **COULD-3:** a *defaulted* Cheque is rejected like an explicit one with a 422, and the detail asks for a different method.
 - **Q7 → strict input.** Unknown JSON fields (`UnmappedMemberHandling.Disallow`) and unknown query parameters (an action filter) both return 400 with an `errors` entry. The aim is that a typo never silently becomes a default.
 - **Q8 → superseded by architecture's SELL-1 ruling:** trim and upper-case the reference, then require `^[A-Z0-9-]{3,20}$`.
+
+## Rulings (David, 2026-10-18): transport hardening (F1 steer D1)
+
+The F0b security P2s (S1 HTTPS/HSTS, S2 body limit) were addressed in F1, with rate limiting added. Verified
+against Microsoft Learn on 2026-10-18 ([enforcing SSL](https://learn.microsoft.com/en-us/aspnet/core/security/enforcing-ssl?view=aspnetcore-10.0),
+[rate limiting](https://learn.microsoft.com/en-us/aspnet/core/performance/rate-limit?view=aspnetcore-10.0),
+[App Service ASP.NET Core](https://learn.microsoft.com/en-us/azure/app-service/configure-language-dotnetcore?pivots=platform-linux)).
+
+- **H1 → reject plain HTTP, don't redirect.** Learn: API clients "might not understand or obey redirects from
+  HTTP to HTTPS, and they might send information over HTTP"; APIs should not listen on HTTP or should answer
+  400. Outside Development, a request that isn't HTTPS (judged after forwarded headers) gets 400
+  `/problems/https-required`. `/health/*` is exempt, because the App Service health probe's scheme is
+  unverified. HSTS is on outside Development (it skips loopback by default). No `UseHttpsRedirection()`.
+  Transport itself is App Service's `httpsOnly: true` and `minTlsVersion: '1.2'` (infrastructure).
+- **H2 → forwarded headers, trusted from App Service's private ranges only.** App Service terminates TLS at
+  its load balancer, so the app sees HTTP from the balancer's address. `UseForwardedHeaders()` runs first, with
+  `XForwardedFor | XForwardedProto`, the known networks 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16 (Learn's
+  App Service guidance), and the default forward limit of 1. Never `ASPNETCORE_FORWARDEDHEADERS_ENABLED`: it
+  trusts any proxy, so a client could spoof its IP past the rate limiter.
+- **H3 → a 64 KB request body limit, server-wide** (Kestrel `MaxRequestBodySize = 65536`). An oversized body is
+  413, not 500.
+- **H4 → `BadHttpRequestException` keeps its own status.** It is a client error (400, 408, 413), answered as
+  ProblemDetails with a fixed title and detail per status. The exception message (which names the byte limit)
+  and the limit figure never reach the body. It's logged at Warning, not Error, so a client can't flood the
+  error logs.
+- **H5 → rate limiting, per client IP, built-in middleware (no package).** A global fixed-window limiter
+  (default 100 requests per 60 s) and a stricter `writes` policy on every POST (default 10 per 60 s), both
+  from the `RateLimiting` configuration section, with no queue. Rejections are 429 (the framework default is
+  503) with `Retry-After` and a `/problems/rate-limited` body. `/health/*` is exempt. The client IP is never
+  logged (it's personal data). Stated limits, for the README: counters are in memory per instance; IP is a
+  crude identity behind NAT; the production answer at scale is the edge (Front Door WAF rate-limit rules or
+  API Management `rate-limit-by-key`), which this infrastructure doesn't build.
 
 ## Open questions
 
