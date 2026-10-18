@@ -31,21 +31,27 @@ public sealed class SellPaymentTests : IClassFixture<PoliciesApiFactory>
         Assert.False(string.IsNullOrWhiteSpace(payment.GetProperty("reference").GetString()));
     }
 
+    // A non-default method and amount, so the linked payment can only be the one the sale created.
     [Fact]
     [Trait("Rule", "SELL-6")]
     public async Task Term_1_links_to_the_sale_payment_by_its_reference()
     {
         using var client = _factory.CreateClient();
-        var body = new SellPolicyRequestBuilder("SELL6-TERM-LINK").Build();
+        var body = new SellPolicyRequestBuilder("SELL6-TERM-LINK").WithPaymentMethod("Card").WithAmount(412.34m).Build();
 
         var policy = await client.SellAndReadBack(body, "SELL6-TERM-LINK");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL6-TERM-LINK", new DateOnly(2027, 10, 31));
         var payment = Assert.Single(policy.GetProperty("payments").EnumerateArray());
         var term = Assert.Single(policy.GetProperty("terms").EnumerateArray());
+        Assert.Equal("Card", payment.GetProperty("type").GetString());
+        Assert.Equal(412.34m, payment.GetProperty("amount").GetDecimal());
+        Assert.False(string.IsNullOrWhiteSpace(payment.GetProperty("reference").GetString()));
         Assert.Equal(payment.GetProperty("reference").GetString(), term.GetProperty("paymentReference").GetString());
     }
 
-    // Each payment method is an equivalent input to the same behaviour.
+    // Each payment method is an equivalent input to the same behaviour. A non-default amount, so even the
+    // DirectDebit row (the default method) reads back only what the sale stored.
     [Theory]
     [Trait("Rule", "SELL-6")]
     [InlineData("Card", "SELL6-CARD")]
@@ -54,10 +60,11 @@ public sealed class SellPaymentTests : IClassFixture<PoliciesApiFactory>
     public async Task Payment_is_recorded_with_the_method_the_request_carries(string method, string reference)
     {
         using var client = _factory.CreateClient();
-        var body = new SellPolicyRequestBuilder(reference).WithPaymentMethod(method).Build();
+        var body = new SellPolicyRequestBuilder(reference).WithPaymentMethod(method).WithAmount(412.34m).Build();
 
         var policy = await client.SellAndReadBack(body, reference);
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, reference, new DateOnly(2027, 10, 31));
         var payment = Assert.Single(policy.GetProperty("payments").EnumerateArray());
         Assert.Equal(method, payment.GetProperty("type").GetString());
     }
