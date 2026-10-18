@@ -1,0 +1,646 @@
+0bb34bde24f3ae64ecc1b67e46e563f53398c049 docs(context): F0b trail tail and f0b-done-merged snapshot
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+186eb36af651a25e8a8fe4ffaea727f670767f84 plan(build/F1): pending → in_progress
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b5209f9c2e4699209a17c3b6a1139d44d01f9b53 test(SELL-1): red: unique, normalised reference; 409 on duplicate, 400 off-pattern
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+cbaf5d6ad86702de054723d0969a961fb8a9f3d0 test(SELL-2): red: start date from UK today to today + 60, no backdating
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+aa8bedfd16bb3dd7eedbb551e57674a3005c872c test(SELL-3): red: end date is start + 1 year - 1 day; 29 Feb start ends 28 Feb
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-3
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+a4b46cf47030698c5425d515247a129021e4c735 test(SELL-4): red: 1 to 3 policyholders, otherwise 422
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-4
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+64cdf0a625eb36d53375ee7bdf1da716666fec16 test(SELL-5): red: every policyholder 16 or older on the start date
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-5
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3e3d23736316807185c4c4ef7741fc209fb3130f test(SELL-6): red: one payment for the full amount with a generated reference
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-6
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e6bde8d3fb084cb96eab99549dd2a857d1511d8b test(SELL-7): red: amount greater than zero; every 422 rule reported together
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-7
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d7b15b35c648defaa9ea99f8373834898fa432a4 test(F1): red: Sell 400 shape rows and round-trip plumbing
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+553a000683e87a59bbe5e25a7ac1473962ac0d8a plan(build/F1): t1 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7e513c5dd7a8790c1700587cf7ba790bb53f584c feat(F1): stub controller
+Agent: builder
+Plan: build
+Node: F1
+Rule: none
+TDD: stub
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+53555d366cf3d24582a9034537cee03132dd864c plan(build/F1): t2 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+aa86da1b24087e354700bb76badd106b40d4e91a plan(build/F1): in_progress → paused_acceptance
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+270d06880a7560979683900aeba20ee3900d9f42 plan(build/F1): paused_acceptance → in_progress
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3c725d6142a8012e44891239cf65fc820061e43d test(F1): red: fix D1 I1
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D1/I1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+82cee0eb724de03dbcfd8f9b647470bd6bc7e072 test(F1): red: fix D1 I2
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D1/I2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3278083dd82f3f661f72816ce95e55c6db2bce57 test(F1): red: fix D1 I3
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D1/I3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+dc6fee6c7533e049e62a1b77e716482bc5d5af65 test(F1): red: fix D1 I6
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D1/I6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ac130689f07989beba842917ae28c9ceda5421f2 test(F1): red: fix D1 I5
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D1/I5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5fb093fe13f7740c823407b8698f216af375f819 test(F1): red: fix D1 I7
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D1/I7
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5dbc66e1d86b23853fd5983a712e11e1ea61dc1f fix(none): transport hardening: HTTPS reject, body limit, 413/408/400 problems, forwarded headers, rate limits, launch profiles
+Agent: builder
+Plan: build
+Node: F1
+Rule: none
+TDD: green
+Fixes-Finding: I1
+Fixes-Finding: I2
+Fixes-Finding: I3
+Fixes-Finding: I4
+Fixes-Finding: I5
+Fixes-Finding: I6
+Fixes-Finding: I7
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+88e451770407751a60842d2b40869da635a68f14 plan(build/F1): in_progress → paused_acceptance
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e8b7e08068a1ebd2444a5211558556d60cec8456 plan(build/F1): paused_acceptance → in_progress
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+0a0c766c6e1b2b89a143c975031e13d538312e80 test(SELL-1): red: fix D2 I1
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-1
+TDD: red
+Fixes-Finding: D2/I1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+166ae250cf0b41229700407e0ce4d57f90d32507 test(SELL-1): red: fix D2 I7
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-1
+TDD: red
+Fixes-Finding: D2/I7
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+297efbf5cadc67322eab32e67ae1b4fc55326cd9 test(SELL-5): red: fix D2 I2
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-5
+TDD: red
+Fixes-Finding: D2/I2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+27ea37c9b56f0ed7adf467564fb846a965a7e248 test(SELL-3): red: fix D2 I3
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-3
+TDD: red
+Fixes-Finding: D2/I3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+0968ea2784433d6652b477736c239a1d64216c1c test(SELL-4): red: fix D2 I4
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-4
+TDD: red
+Fixes-Finding: D2/I4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b5760b27169920b9b8df5aaf955a7712239806fa test(SELL-6): red: fix D2 I5
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-6
+TDD: red
+Fixes-Finding: D2/I5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+158c030412ee69a95b5ac529702e306574ee5c18 test(F1): red: fix D2 I6
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D2/I6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e98c7fd9e796b9a633b2f4caa8a362db6936c7d9 test(F1): red: fix D2 I9
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D2/I9
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+78d7efb49cc069811520c77f8d9a4cf3e61080ee test(F1): red: fix D2 I10
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D2/I10
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+4f89c3f732b4fbea0f97c541c90a2bf11e7a2b6c test(F1): red: fix D2 I9 builder defaults
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D2/I9
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+40e435b9a3849c3ce6c7d845fbd3270a47132f8f test(F1): red: fix D2 I10 holder defaults
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D2/I10
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+977641c59807ef933587dbcde13091c2d4411f1a test(SELL-2): red: fix D2 I11
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-2
+TDD: red
+Fixes-Finding: D2/I11
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ed5e0e990863039f973f2602c39a44da3531c01f test(SELL-3): red: fix D2 I11
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-3
+TDD: red
+Fixes-Finding: D2/I11
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+654741a2b13c86dc39a01aa024af1ec3f22ff483 test(SELL-5): red: fix D2 I11
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-5
+TDD: red
+Fixes-Finding: D2/I11
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+bf8de212638648bd9348dc894f684c8406bc7f26 test(SELL-6): red: fix D2 I11
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-6
+TDD: red
+Fixes-Finding: D2/I11
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d94c91d95a1ed0a81d862682bebbc808c1ca7fcd test(SELL-7): red: fix D2 I11
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-7
+TDD: red
+Fixes-Finding: D2/I11
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e1922c76a6dedaaf01d989670df3b3fef1d0ea58 test(F1): red: fix D2 I11
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D2/I11
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+60f14c7bcededc99743dfeadb6914895a4ca638c test(F1): red: fix D2 I12
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: D2/I12
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+468d75237ac70f9e17979086c90c36cd50ec8650 plan(build/F1): t3 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+caba58fe946f164e9ad9dbf958e42c52da8e39a8 test(SELL-1): red: reference normalised by trim and invariant upper-case
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3d042a1d61a7bd770fe0bcbe357536f20295ff72 test(SELL-2): red: start date from today to today + 60 in the domain
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+6f570b32ea70c5d4b523bc6499e9245170296d1f test(SELL-3): red: term end is start + 1 year - 1 day, 29 Feb start ends 28 Feb
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-3
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c60662bfbf16ea70f53d1dca722e234711ad8ca8 test(SELL-4): red: 1 to 3 policyholders in the domain
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-4
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+522e08148bc09c3f0c0686b312179287f3e934dd test(SELL-5): red: every policyholder 16 or older on the start date in the domain
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-5
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+55dc6421ba0f239987172af35bf51cba7ae595c7 test(SELL-6): red: a payment for the full amount on the sold term in the domain
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-6
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+de98107be460544b1806f93decea01647ffe70f9 test(SELL-7): red: amount greater than zero, every 422 rule collected in the domain
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-7
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+942e943cb44c481639263c8ac8f31a7c4339832f plan(build/F1): t4 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+727fcc35f234affb7e3035a7f428072b2c154eac feat(SELL-2): green: domain Policy.Sell enforces SELL-1..7, collecting every violation
+Agent: builder
+Plan: build
+Node: F1
+Rule: SELL-1
+Rule: SELL-2
+Rule: SELL-3
+Rule: SELL-4
+Rule: SELL-5
+Rule: SELL-6
+Rule: SELL-7
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+88042edbed51550902f7d3f2142c8fbb88bda8ca plan(build/F1): t5 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+9aef6b0fe9dacc6d134172be5bf70b6031075096 plan(build/F1): tasks amended: builder services stub before services red
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+22f63b4e2f189111b06609838fe1bb6c268bc3ba feat(F1): stub services
+Agent: builder
+Plan: build
+Node: F1
+Rule: none
+TDD: stub
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+4aef3eede0f5c05b152716ec883c0e366f613f21 plan(build/F1): t6 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+603097041a917ad62462140123984a99cf34f903 test(SELL-2): red: PolicyService.Sell measures the window from UK today, read once (BST/GMT)
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5a333835ada887255b7bea7571dd3b50e6425af8 test(SELL-6): red: PolicyService.Sell generates a PAY- payment reference and stores the full-amount payment
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-6
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+52dcded41766d76c3a3336e52a83e42a6424ce5b plan(build/F1): t7 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+12c95bdada60e5ca3c43c04c8037bdcc6872924d feat(SELL-2): green: services PolicyService.Sell with UK today and PAY- payment reference
+Agent: builder
+Plan: build
+Node: F1
+Rule: SELL-2
+Rule: SELL-6
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+45cef686f1f509d1ca9dc145a425fc8bc3f44e19 plan(build/F1): t8 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7e6442ee7b6afa8dfea9c6b3157db5511695fde0 feat(SELL-1): green: persistence policy mapping, unique reference index, duplicate conflict
+Agent: builder
+Plan: build
+Node: F1
+Rule: SELL-1
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+e8a6a6148b4027cb9d83be8928f9e20c5e6b4ac7 plan(build/F1): t9 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7b3ebb3a0ed89099d7adc66420226935cda24898 feat(SELL-1): green: api controller to PolicyService, problem mapping, full F1 read-back
+Agent: builder
+Plan: build
+Node: F1
+Rule: SELL-1
+Rule: SELL-2
+Rule: SELL-3
+Rule: SELL-4
+Rule: SELL-5
+Rule: SELL-6
+Rule: SELL-7
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+078f78d20658033afc9c111630fa1e550a0fe4b1 plan(build/F1): t10 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f7c26652c5cfebd46ee4a621170c087b5a26c9b4 refactor(SELL-1): drop duplicate fields in PolicyService, order Program usings
+Agent: builder
+Plan: build
+Node: F1
+Rule: none
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+95963ab43f1065b9fa9068c3ee1a1325d35c97d8 plan(build/F1): t11 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+762c994606128d2f85a5f0eb9634eea384e0b82c plan(build/F1): t12 pending → done
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+547eb5f5adea73e5d6f14ca3e94d6633a1bd0ccb plan(build/F1): attempt 1 → 2
+Agent: main
+Plan: build
+Node: F1
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5877c17c64b384a86254dc6005e88e18133f2944 test(SELL-1): red: fix I2 duplicate returns SELL-1 alone before any 422 rule
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-1
+TDD: red
+Fixes-Finding: I2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e32b2eae6bbf60551878738c4a7007308253fe40 test(SELL-1): red: fix I3 a duplicate that races past the service check gets 409 from the unique index
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-1
+TDD: red
+Fixes-Finding: I3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3d98950523d1d1f659eb867ee5850668260a31bb test(SELL-1): red: fix I4 the race-path 409 has the service-path SELL-1 body
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-1
+TDD: red
+Fixes-Finding: I4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+008d6c6ad500e5db58109fcd2315a5361a4ffdda test(F1): red: fix I6 name and address lengths are capped at their column sizes
+Agent: tester
+Plan: build
+Node: F1
+Rule: none
+TDD: red
+Fixes-Finding: I6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b730655f10200e08919a22d9d3189f1b6dabaa4a test(SELL-5): red: fix I7 an extreme date of birth is a SELL-5 422, not a throw
+Agent: tester
+Plan: build
+Node: F1
+Rule: SELL-5
+TDD: red
+Fixes-Finding: I7
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+59bab9f157c13a0528c17909c56b9654739d8627 fix(GET-1): remove status and current-term derivation from PolicyService
+Agent: builder
+Plan: build
+Node: F1
+Rule: GET-1
+TDD: green
+Fixes-Finding: A1/I1
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+029823a8efa2021b6090279a2366e76ad05c4735 fix(SELL-1): race-path 409 is the same SELL-1 result as the service check
+Agent: builder
+Plan: build
+Node: F1
+Rule: SELL-1
+TDD: green
+Fixes-Finding: A1/I4
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+0e00c6a67a4a85947eed06175ccc14c6a13ad060 fix(SELL-4): load policyholders and terms in sale order
+Agent: builder
+Plan: build
+Node: F1
+Rule: SELL-4
+TDD: green
+Fixes-Finding: A1/I5
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+9aed9bee4f272e0bc549c9bce6d998786950c19e fix(SELL-5): cap name and address lengths at their column sizes
+Agent: builder
+Plan: build
+Node: F1
+Rule: SELL-5
+TDD: green
+Fixes-Finding: A1/I6
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+23238d0f1371111da493d0c783dd5101db54c13c fix(SELL-5): age check is defined for every bindable date pair
+Agent: builder
+Plan: build
+Node: F1
+Rule: SELL-5
+TDD: green
+Fixes-Finding: A1/I7
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+

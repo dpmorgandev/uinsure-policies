@@ -1,0 +1,78 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T17:05:34Z",
+  "plan": "build",
+  "node": "F1",
+  "attempt": 1,
+  "agent": "security",
+  "agent_id": "aaa3d611fe9722c19",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F1",
+    "attempt": 1,
+    "base_sha": "4cf3d0e07d1819efaab118d52a39e5f4c27bc466",
+    "head_sha": "762c994606128d2f85a5f0eb9634eea384e0b82c",
+    "diff_fingerprint": "63b96c7d6cb77ec2bd87fe3e656ab3260f911264",
+    "verdict": "FAIL",
+    "gate_refs": [
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.vulnerable",
+      "gate.green",
+      "gate.refactor",
+      "gate.run"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET:sql",
+      "NET:money",
+      "NET:packages",
+      "NET:secrets",
+      "NET:logging"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API4:2023",
+        "severity": "P1",
+        "file": "src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs",
+        "line": 63,
+        "what": "firstName, lastName and addressLine1-3 have no max length on the DTO, but the EF columns cap them at 100 and 200. Only postcode has [MaxLength(8)].",
+        "why": "API4 row: string max lengths must be on both the DTO and the EF column. The EF columns are HasMaxLength(100/200) and the DTO has nothing, so overlong input is not a 400. On SQL Server (the evidence target) it fails at SaveChanges as a truncation DbUpdateException, which is not a unique violation, so the client gets a 500. On SQLite (the runtime) HasMaxLength is not enforced, so strings up to the 64 KB body limit are stored and echoed back. The Domain tests have no case for this.",
+        "route_to": "builder"
+      },
+      {
+        "id": "S2",
+        "rule_id": "API4:2023",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Domain/Policies/Policy.cs",
+        "line": 83,
+        "what": "DateOfBirth.AddYears(16) throws ArgumentOutOfRangeException for a dateOfBirth of year 9984 or later. The request becomes a generic 500 logged at Error.",
+        "why": "Client-controlled input reaches an unguarded date calculation. No body or stack trace leaks, but the client can force 500s and Error log noise, which is an availability and hygiene weakness. Guard the add (for example by comparing against start.AddYears(-16)), or reject implausible dates of birth. No test covers the extreme date.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "API1:2023 n/a: no auth or tenancy; the reference is the only key and is client-chosen. Out of scope.",
+      "API2:2023 n/a: authentication is out of scope.",
+      "API5:2023 n/a: no roles. POST /claims would be an admin function in real life.",
+      "API7:2023 n/a: no HttpClient or WebRequest anywhere in src/ (grep clean).",
+      "API10:2023 n/a: no upstream APIs; pricing is client-supplied.",
+      "API3 met: SellPolicyRequest, PolicyholderDto and PropertyDto are separate from the domain and EF types; there is no [FromBody] on an entity. The request cannot set endDate, hasClaims, payment reference, cancellation or version. PolicyResponse and TermResponse expose no Version or internal Id. Unknown members are rejected via UnmappedMemberHandling.Disallow.",
+      "API4 is in the findings, not rules_covered. Met parts: Kestrel MaxRequestBodySize is 65536 server-wide, and BadHttpRequestException keeps its own status with a fixed title and detail, logged at Warning. The writes and global per-IP fixed-window limiters have QueueLimit 0, a 429 with Retry-After and a /problems/rate-limited body, and /health/* is exempt via DisableRateLimiting. Forwarded headers are limited to XFF and XFP, trusting only 10/8, 172.16/12 and 192.168/16 with the defaults cleared; ASPNETCORE_FORWARDEDHEADERS_ENABLED does not appear. Postcode is 8 on both DTO and EF. No list endpoint exists. Policyholders is not capped on the DTO: the cap is the SELL-4 422 in the domain, and the 64 KB body bounds the work, so this is not a finding.",
+      "API6 met for F1: there is no refund, cancel, renew or quote path yet. Policy.Version is an EF IsConcurrencyToken, and DbUpdateConcurrencyException maps to a 409 /problems/concurrency. A duplicate reference is a service-level 409 with a unique-index backstop mapped to 409. Re-check when F3 and F4 add refunds.",
+      "API8 met: no UseDeveloperExceptionPage, and the 500 and BadHttpRequestException bodies carry fixed text with no exception message or stack trace. UseHsts and the 400 /problems/https-required check run only outside Development, with /health exempt and no UseHttpsRedirection. OpenAPI and Scalar sit inside the Development-only branch. No connection strings or secrets are in the diff.",
+      "API9 met: the routes are POST /policies and GET /policies/{reference}, and gate.stubs found no NotImplementedException in src/. No canned controller values remain.",
+      "NET: no FromSqlRaw, ExecuteSqlRaw or SqlQueryRaw (EF LINQ only). Money is decimal throughout with HasPrecision(18,2); there is no double or float. No Money.Round exists yet and F1 does no rounding, so a client amount with more than 2 decimals is stored as sent on SQLite but rounded on SQL Server; the request has no scale or upper bound, so settle this before refunds (F3+). No csproj or package changes, and gate.vulnerable reports no vulnerable packages across the 8 projects. Logging: the Error, Warning and Warning calls log method, path, status code and reason only, with no names, dates of birth, postcodes or bodies. The exception object is logged at Warning for BadHttpRequestException, and its message holds only the byte limit.",
+      "The Migrations designer and snapshot files were skimmed for column types only (decimal(18,2), nvarchar lengths), not reviewed line by line. The test and trace files in the diff were not security-reviewed beyond a grep for max-length and extreme-date coverage."
+    ]
+  }
+}

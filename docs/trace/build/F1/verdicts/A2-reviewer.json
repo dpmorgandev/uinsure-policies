@@ -1,0 +1,92 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T17:38:50Z",
+  "plan": "build",
+  "node": "F1",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "a9016a00096116964",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F1",
+    "attempt": 2,
+    "base_sha": "4cf3d0e07d1819efaab118d52a39e5f4c27bc466",
+    "head_sha": "23238d0f1371111da493d0c783dd5101db54c13c",
+    "diff_fingerprint": "1e2bdf4bf007c3f4a3d2b9c190b9ed5e69d79498",
+    "verdict": "PASS",
+    "gate_refs": [
+      "loop.jsonl:3 gate.red (t1 acceptance red, head 117c8c8)",
+      "loop.jsonl:22 gate.stub (strict, head 60f14c7)",
+      "loop.jsonl:23 gate.red (t4 domain, head de98107)",
+      "loop.jsonl:24 gate.green (t5 domain, head 727fcc3)",
+      "loop.jsonl:26 gate.red (t7 services, head 5a33383)",
+      "loop.jsonl:27 gate.green (t8 services, head 12c95bd)",
+      "loop.jsonl:28 gate.green (t9 persistence, head 7e6442e)",
+      "loop.jsonl:29 gate.green (t10 api, head 7b3ebb3)",
+      "loop.jsonl:42 findings A1 (David's rulings: I1 status deferred to F2, I6 caps 100/200)",
+      "loop.jsonl:43 gate.finding-red (A1 round, head b730655; packet gates.jsonl:1)",
+      "loop.jsonl:44 gate.finding-green (A1 fix, head 23238d0; packet gates.jsonl:2)",
+      "loop.jsonl:45 gate.build (head 23238d0)",
+      "loop.jsonl:46 gate.test (277/277, head 23238d0)",
+      "loop.jsonl:47 gate.scope (head 23238d0)",
+      "loop.jsonl:48 gate.stubs (head 23238d0)",
+      "loop.jsonl:49 gate.run (head 23238d0)",
+      "loop.jsonl:50 gate.vulnerable (head 23238d0)"
+    ],
+    "rules_covered": [
+      "SELL-1",
+      "SELL-2",
+      "SELL-3",
+      "SELL-4",
+      "SELL-5",
+      "SELL-6",
+      "SELL-7"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "SELL-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Services/PolicyService.cs",
+        "line": 43,
+        "what": "Services logic with no Services.Tests unit test: the new catch that turns PersistenceConflictException(DuplicateReference) into the SELL-1 result. Only Api.Tests SellDuplicateRaceTests covers it.",
+        "why": "tdd-outside-in step 4 asks for red Services.Tests wherever Services has logic. The red API test 3d98950 came before the fix 029823a and drives the real unique index, so the behaviour is proven. RecordingPolicyRepository could throw from SaveChanges for a cheap unit-level guard. Not blocking.",
+        "route_to": "tester"
+      },
+      {
+        "id": "R2",
+        "rule_id": "GET-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Domain/Policies/PolicyStatus.cs",
+        "line": 3,
+        "what": "PolicyStatus is no longer referenced anywhere in src/ or tests/ now that 59bab9f removed the status derivation. It is an unused type until F2.",
+        "why": "The code-quality slop list counts unused members as dead code. The architecture folder tree names PolicyStatus, and F2 (GET-1 Status row) will use it, so leaving it or deferring it to F2 are both defensible. It should be a deliberate choice, not a leftover.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "SELL-5",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs",
+        "line": 63,
+        "what": "The fix commit 9aed9be (DTO length caps 100/200) carries 'Rule: SELL-5', but the caps are a rule-less 400 shape row, and its red commit 008d6c6 says 'Rule: none'.",
+        "why": "The requirements-trace order and integrity rule: the trailers are the requirement trail. A wrong Rule trailer points SELL-5's trace at an unrelated change. The orchestrator recorded this in gate.finding-green (loop.jsonl:44). Trace accuracy only, with no behaviour impact.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "A1 round TDD order, from trailers.txt: the finding reds 5877c17 (I2), e32b2ea (I3), 3d98950 (I4), 008d6c6 (I6) and b730655 (I7) all come before the fixes 59bab9f (I1), 029823a (I4), 0e00c6a (I5), 9aed9be (I6) and 23238d0 (I7). Each fix carries Fixes-Finding A1/I<n>. gate.finding-red (loop.jsonl:43) records 0 asserts removed and 8 failing tests, exactly the rows expected red at HEAD. I2 and I3 were green on arrival and proven by mutation (M1 and M2). gate.finding-green (loop.jsonl:44) shows the fix diff touches only src/**, so no test was edited to match the code.",
+      "I1 (R1 from A1): PolicyService.Details now returns the policy and Terms[0] only, with a why-comment that defers status and multi-term current-term to F2. PolicyDetails is (Policy, Term), and PolicyResponse has no status member. This matches David's ruling. Services holds no status rule.",
+      "I2 (R2 from A1): the duplicate check runs before Policy.Sell (PolicyService.cs:15). PolicyServiceSellDuplicateTests and SellReferenceTests.Duplicate_reference_with_a_body_that_breaks_SELL_2_and_SELL_7_is_rejected_with_409_alone assert SELL-1 alone, with no violations[], and that nothing is added or saved.",
+      "I3 and I4 (R3, R4 from A1): DuplicateRaceApiFactory wraps the app's real IPolicyRepository. SellDuplicateRaceTests reaches the real SQLite unique index (2067), and the race 409 now comes out of PolicyService as the same SELL-1 RuleViolation and goes through ResultExtensions and ProblemCatalog. The test checks the body member by member against the service-path 409, excluding only traceId. UnexpectedExceptionHandler now writes only the concurrency 409 (/problems/concurrency, no ruleId), as api.md requires.",
+      "I5 (R5 from A1), read in code because it is untestable on SQLite: PolicyRepository.GetByReference uses Include(...OrderBy(EF.Property<int>(_, \"Id\"))) on Policyholders and Terms, and those collections are no longer auto-included. Property and the Term's Payment stay auto-included. Ordering by an int key is not a SQL money comparison.",
+      "I6 (S1 from A1): [MaxLength(100)] on FirstName and LastName and [MaxLength(200)] on AddressLine1 to AddressLine3 match the EF columns. SellShapeTests has a test on each side of each cap: 100/101 and 200/201, the accepted side with a full SoldPolicyAssert read-back and the rejected side asserting errors[field] and nothing stored.",
+      "I7 (S2 from A1): IsOldEnough compares years first and calls AddYears only in the birthday year, where the result year equals start.Year, so it can't overflow. The 16th-birthday and 29 Feb Domain tests are unchanged. New tests: DOB 9999-12-31 (Domain), start 0001-01-01 (Domain, SELL-2 and SELL-5 both reported) and DOB 9984-01-01 (Api, 422 SELL-5).",
+      "HEAD sweep: src/ has no NotImplementedException, no banned time API, no Math.Round or decimal.Round, and no catch (Exception). Guid.NewGuid appears only in src (Policy.Version and the payment reference), as the architecture allows. tests/ has no Guid.NewGuid, no Random and no Skip. gate.test reports 277/277, including RuleCoverageTests.",
+      "Limitation: I run no commands, so I compared test files between their red commits and HEAD through the packet diff and the gate receipts (loop.jsonl:18, 21 and 43), not with a per-commit diff."
+    ]
+  }
+}

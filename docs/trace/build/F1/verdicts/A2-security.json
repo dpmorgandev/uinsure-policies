@@ -1,0 +1,61 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T17:37:49Z",
+  "plan": "build",
+  "node": "F1",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "ac046c96d4d73f469",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F1",
+    "attempt": 2,
+    "base_sha": "4cf3d0e07d1819efaab118d52a39e5f4c27bc466",
+    "head_sha": "23238d0f1371111da493d0c783dd5101db54c13c",
+    "diff_fingerprint": "1e2bdf4bf007c3f4a3d2b9c190b9ed5e69d79498",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.finding-red",
+      "gate.finding-green",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.vulnerable"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET:sql",
+      "NET:money",
+      "NET:packages",
+      "NET:secrets",
+      "NET:logging"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "API1:2023 n/a: no auth or tenancy; the reference is the only key and is client-chosen. Out of scope.",
+      "API2:2023 n/a: authentication is out of scope.",
+      "API5:2023 n/a: no roles. POST /claims would be an admin function in real life.",
+      "API7:2023 n/a: no HttpClient or WebRequest anywhere in src/ (grep clean).",
+      "API10:2023 n/a: no upstream APIs; pricing is client-supplied.",
+      "A1 S1 (P1, name and address lengths) is fixed in 9aed9be. PolicyholderDto.FirstName and LastName now have [MaxLength(100)]. PropertyDto.AddressLine1-3 have [MaxLength(200)]. Postcode has [MaxLength(8)]. All match the EF HasMaxLength columns. The gate.finding-green receipt shows the five overlong rows that got 201 now return 400.",
+      "A1 S2 (P2, extreme date of birth) is fixed in 23238d0. Policy.IsOldEnough compares years first and calls AddYears only inside the birthday year, so no dateOfBirth or startDate can overflow. Start is bounded to today+60 anyway. The case is a SELL-5 422 instead of a 500.",
+      "API3 met: the request DTOs are separate from the domain and EF types. The client cannot set endDate, hasClaims, payment reference, cancellation or Version. Unknown JSON members are rejected via UnmappedMemberHandling.Disallow.",
+      "API4 met: Kestrel MaxRequestBodySize is 65536. BadHttpRequestException keeps its own 413, 408 or 400 with fixed text. The global and writes rate limiters return 429 with Retry-After. /health/* has DisableRateLimiting. Forwarded headers trust only the private ranges, with the defaults cleared and no ASPNETCORE_FORWARDEDHEADERS_ENABLED. Policyholders count is bounded by the SELL-4 422 and the 64 KB body. No list endpoint exists.",
+      "API6 met for F1: there is no refund, cancel, renew or quote path yet. Policy.Version is an EF concurrency token. A stale Version gives a 409 /problems/concurrency. The race-path duplicate reference now returns the same SELL-1 409 result as the service check (029823a). Re-check refund logic when F3 and F4 land.",
+      "API8 met: no UseDeveloperExceptionPage. The 500, 409 and BadHttpRequest bodies use fixed text with no exception message or stack trace. UseHsts and the 400 /problems/https-required check are in the non-Development branch, with /health exempt and no UseHttpsRedirection. OpenAPI and Scalar are Development only. No secrets or connection strings in src/.",
+      "API9 met: the routes are POST /policies and GET /policies/{reference}. gate.stubs found no NotImplementedException.",
+      "NET: no FromSqlRaw, ExecuteSqlRaw or SqlQueryRaw. Money is decimal with no double or float. The I5 ordering uses EF LINQ with EF.Property<int>(..., \"Id\"), not raw SQL. Packages are unchanged by this round and gate.vulnerable reports none vulnerable across 8 projects. Logging calls log method, path, status and reason only, with no personal data or bodies. The domain violation messages and the SELL-1 conflict body echo only the client's own reference and a policyholder index.",
+      "Carry-forward, not blocking: there is still no Money.Round and no scale or upper bound on amount, so a client amount with more than 2 decimals is stored as sent on SQLite but rounded on SQL Server. Settle this before refunds in F3+.",
+      "Scope of review: the files this round changed (SellPolicyRequest.cs, Policy.cs, PolicyService.cs, PolicyRepository.cs) and the Program.cs and error-handler controls were read at HEAD. The Migrations and the test files were not reviewed line by line."
+    ]
+  }
+}
