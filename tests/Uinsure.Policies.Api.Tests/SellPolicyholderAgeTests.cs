@@ -62,10 +62,18 @@ public sealed class SellPolicyholderAgeTests : IClassFixture<PoliciesApiFactory>
         var bornOn = new DateOnly(2010, 10, 25);
         var body = new SellPolicyRequestBuilder("SELL5-16-BY-START")
             .WithStartDate(Start)
-            .WithPolicyholders(new PolicyholderBuilder().WithDateOfBirth(bornOn))
+            .WithPolicyholders(new PolicyholderBuilder().WithName("Ada", "Lovelace").WithDateOfBirth(bornOn))
             .Build();
 
-        await client.SellAndReadBack(body, "SELL5-16-BY-START");
+        var policy = await client.SellAndReadBack(body, "SELL5-16-BY-START");
+
+        // The start date matches the canned example, so the date of birth carries the proof.
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL5-16-BY-START", new DateOnly(2027, 10, 31));
+        var holder = Assert.Single(policy.Member("policyholders").EnumerateArray());
+        Assert.Equal("Ada", holder.Member("firstName").GetString());
+        Assert.Equal("Lovelace", holder.Member("lastName").GetString());
+        Assert.Equal(new DateOnly(2010, 10, 25), holder.GetDate("dateOfBirth"));
+        Assert.Equal(new DateOnly(2026, 11, 1), policy.GetDate("startDate"));
     }
 
     // index is the policyholder's 1-based position, as in the contract's "Policyholder 2 (born …)" detail.
