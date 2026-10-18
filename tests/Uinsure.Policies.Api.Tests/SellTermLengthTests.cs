@@ -16,33 +16,53 @@ public sealed class SellTermLengthTests : IClassFixture<PoliciesApiFactory>
         _factory.ResetClock();
     }
 
+    // Start today + 30, a date neither the builder defaults nor the api.md example carry, so only a
+    // calculated end date can match.
     [Fact]
     [Trait("Rule", "SELL-3")]
     public async Task End_date_is_start_plus_one_year_minus_one_day()
     {
         using var client = _factory.CreateClient();
-        var body = new SellPolicyRequestBuilder("SELL3-ONE-YEAR").WithStartDate(new DateOnly(2026, 11, 1)).Build();
+        var body = new SellPolicyRequestBuilder("SELL3-ONE-YEAR").WithStartDate(new DateOnly(2026, 11, 16)).Build();
 
         var policy = await client.SellAndReadBack(body, "SELL3-ONE-YEAR");
 
+        Assert.Equal(new DateOnly(2026, 11, 16), policy.GetDate("startDate"));
+        Assert.Equal(new DateOnly(2027, 11, 15), policy.GetDate("endDate"));
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL3-ONE-YEAR", new DateOnly(2027, 11, 15));
+    }
+
+    // The api.md example row: 2026-11-01 ends on 2027-10-31.
+    [Fact]
+    [Trait("Rule", "SELL-3")]
+    public async Task Start_on_1_November_2026_ends_on_31_October_2027()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SELL3-CONTRACT-ROW").WithStartDate(new DateOnly(2026, 11, 1)).Build();
+
+        var policy = await client.SellAndReadBack(body, "SELL3-CONTRACT-ROW");
+
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL3-CONTRACT-ROW", new DateOnly(2027, 10, 31));
         Assert.Equal(new DateOnly(2026, 11, 1), policy.GetDate("startDate"));
         Assert.Equal(new DateOnly(2027, 10, 31), policy.GetDate("endDate"));
     }
 
+    // A non-default start and amount, so term 1's dates and amount can only come from the sale.
     [Fact]
     [Trait("Rule", "SELL-3")]
     public async Task Sale_creates_one_term_numbered_1_with_the_calculated_end_date()
     {
         using var client = _factory.CreateClient();
-        var body = new SellPolicyRequestBuilder("SELL3-TERM").WithStartDate(new DateOnly(2026, 11, 1)).WithAmount(365.00m).Build();
+        var body = new SellPolicyRequestBuilder("SELL3-TERM").WithStartDate(new DateOnly(2026, 11, 16)).WithAmount(412.34m).Build();
 
         var policy = await client.SellAndReadBack(body, "SELL3-TERM");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL3-TERM", new DateOnly(2027, 11, 15));
         var term = Assert.Single(policy.GetProperty("terms").EnumerateArray());
         Assert.Equal(1, term.GetProperty("termNumber").GetInt32());
-        Assert.Equal(new DateOnly(2026, 11, 1), term.GetDate("startDate"));
-        Assert.Equal(new DateOnly(2027, 10, 31), term.GetDate("endDate"));
-        Assert.Equal(365.00m, term.GetProperty("amount").GetDecimal());
+        Assert.Equal(new DateOnly(2026, 11, 16), term.GetDate("startDate"));
+        Assert.Equal(new DateOnly(2027, 11, 15), term.GetDate("endDate"));
+        Assert.Equal(412.34m, term.GetProperty("amount").GetDecimal());
     }
 
     // The term crosses 29 Feb 2028, so it is 366 days long and ends on 29 Feb.
