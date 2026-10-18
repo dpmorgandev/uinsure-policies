@@ -1,0 +1,50 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T00:29:14Z",
+  "plan": "build",
+  "node": "F0b",
+  "attempt": 0,
+  "agent": "reviewer",
+  "agent_id": "a1149b80f04778a3d",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F0b",
+    "attempt": 2,
+    "base_sha": "241998791e2cb5071bff7e04cf860714aee251a1",
+    "head_sha": "455afebc2bdcc17b994027173daad368b207fb8f",
+    "diff_fingerprint": "7fc579592aa8a8e6f63a5f965c36a9c6061127c3",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.finding-red@2026-10-18T00:24:24Z",
+      "gate.finding-green@2026-10-18T00:26:43Z",
+      "gate.run@2026-10-18T00:26:43Z",
+      "gate.build@2026-10-18T00:26:43Z",
+      "gate.test@2026-10-18T00:26:43Z",
+      "gate.no-stub@2026-10-18T00:26:43Z",
+      "gate.diff-scope@2026-10-18T00:26:43Z",
+      "gate.diff-scope.waived@2026-10-18T00:10:44Z",
+      "gate.red@2026-10-17T23:40:22Z",
+      "gate.stub@2026-10-17T23:48:21Z",
+      "gate.green(services)@2026-10-18T00:01:35Z",
+      "gate.green(persistence)@2026-10-18T00:05:45Z",
+      "gate.green(api)@2026-10-18T00:07:50Z",
+      "gate.refactor@2026-10-18T00:09:02Z"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "F0b has no rule IDs, so rules_covered and rules_missing are empty. I judged it against the acceptance list in docs/plans/active/build.dag.yaml:76-88 and the A1 findings I1-I7.",
+      "A1 R1/I1 (P0) is closed. src/Uinsure.Policies.Api/appsettings.Development.json sets Database:Provider=Sqlite and a relative 'Data Source=policies.development.db', with no absolute path and no secret. appsettings.json carries no database config, so Production still fails fast under ValidateOnStart. The real-process receipt gate.run at 455afeb shows live 200, ready 200, openapi 200 and scalar 302 on :5080. The dev DB sits in src/Uinsure.Policies.Api/ inside this worktree (one file per worktree), and .gitignore:7-9 ignores it.",
+      "A1 R2/I2 is closed. DevelopmentConfigurationTests boots Program in Development on the app's own appsettings, with only the clock swapped. gate.finding-red shows it failed with OptionsValidationException at 27cfe33 (the right reason) and passes at 455afeb.",
+      "A1 R3/I3 is closed. ApplicationInsightsEnabledTests checks the on branch: with a dummy all-zero key pointed at 127.0.0.1:1, telemetry types are registered and /health/live answers. gate.finding-red records a mutation check: the registration test failed with UseAzureMonitor removed, so together the on and off tests tell 'wired only when set' apart from 'never wired'.",
+      "A1 R8/I6 is closed. Directory.Build.props includes BannedSymbols.txt with no Exists() guard, and the comment now says why. BannedApiTests.BannedSymbols_file_is_included_for_src_projects_without_an_Exists_condition failed at red and passes at green.",
+      "A1 R9/I7 is closed. PoliciesApiFactory no longer calls EnsureCreated itself. Program's start-up EnsureSqliteCreated builds the schema once, on the factory's open in-memory connection, and HealthEndpointTests' ready-200 test guards it. If David reads tdd-outside-in's 'call EnsureCreated() once' as meaning inside the factory, that is a contract ruling, not a code defect.",
+      "TDD order for the fix round: test red 27cfe33 (Fixes-Finding A1/I1, I3, I6, I7) comes before fix green 455afeb (Fixes-Finding A1/I1, A1/I6). The green diff touches only Directory.Build.props and the two Api appsettings files (gate.finding-green), so no test was weakened, deleted or skipped after red. 74/74 pass and gate.no-stub finds no NotImplementedException in src/.",
+      "Standing rulings honoured, not re-raised: R5 (rebase-rewritten SHAs, reconciled at the trace step), R7 (DatabaseOptions as a string plus Validate), I4 (missing Rule trailers on six earlier commits, recorded in the trace, enforcement in a harness PR), I5 (verify-in-F0 receipts at t13, TrxReport out of scope) and the diff-scope waiver for the two docs/context snapshots.",
+      "Still open in later tasks, not a defect now: the Postman CLI run of the health collection (gate.run used curl) belongs to Pause 2, t15. 'Commit-on-main deny hook active' and 'loop ran end to end / PR merged' can't be checked from the packet (t10-t16 pending)."
+    ]
+  }
+}

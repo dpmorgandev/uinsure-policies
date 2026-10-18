@@ -1,0 +1,2648 @@
+diff --git a/BannedSymbols.txt b/BannedSymbols.txt
+new file mode 100644
+index 0000000..721fdf0
+--- /dev/null
++++ b/BannedSymbols.txt
+@@ -0,0 +1,15 @@
++P:System.DateTime.Now;Use UkCalendar.Today(TimeProvider) instead.
++P:System.DateTime.UtcNow;Use UkCalendar.Today(TimeProvider) instead.
++P:System.DateTime.Today;Use UkCalendar.Today(TimeProvider) instead.
++P:System.DateTimeOffset.Now;Use UkCalendar.Today(TimeProvider) instead.
++P:System.DateTimeOffset.UtcNow;Use UkCalendar.Today(TimeProvider) instead.
++M:System.TimeProvider.GetLocalNow;Use UkCalendar.Today(TimeProvider) instead.
++P:System.TimeZoneInfo.Local;Use UkCalendar.Today(TimeProvider) instead.
++M:System.Math.Round(System.Decimal);Use Money.Round instead.
++M:System.Math.Round(System.Decimal,System.Int32);Use Money.Round instead.
++M:System.Math.Round(System.Decimal,System.MidpointRounding);Use Money.Round instead.
++M:System.Math.Round(System.Decimal,System.Int32,System.MidpointRounding);Use Money.Round instead.
++M:System.Decimal.Round(System.Decimal);Use Money.Round instead.
++M:System.Decimal.Round(System.Decimal,System.Int32);Use Money.Round instead.
++M:System.Decimal.Round(System.Decimal,System.MidpointRounding);Use Money.Round instead.
++M:System.Decimal.Round(System.Decimal,System.Int32,System.MidpointRounding);Use Money.Round instead.
+diff --git a/Directory.Build.props b/Directory.Build.props
+new file mode 100644
+index 0000000..c82f765
+--- /dev/null
++++ b/Directory.Build.props
+@@ -0,0 +1,23 @@
++<Project>
++
++  <PropertyGroup>
++    <TargetFramework>net10.0</TargetFramework>
++    <Nullable>enable</Nullable>
++    <ImplicitUsings>enable</ImplicitUsings>
++    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
++    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
++  </PropertyGroup>
++
++  <!-- Test projects: exit code 8 (zero tests ran, e.g. a rule filter) is not a failure. -->
++  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
++    <TestingPlatformCommandLineArguments>--ignore-exit-code 8</TestingPlatformCommandLineArguments>
++  </PropertyGroup>
++
++  <!-- Every src project: banned APIs. The file is included unconditionally so a missing
++       BannedSymbols.txt fails the build instead of silently switching RS0030 off. -->
++  <ItemGroup Condition="!$(MSBuildProjectName.EndsWith('.Tests'))">
++    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
++    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
++  </ItemGroup>
++
++</Project>
+diff --git a/Directory.Packages.props b/Directory.Packages.props
+new file mode 100644
+index 0000000..731bdf2
+--- /dev/null
++++ b/Directory.Packages.props
+@@ -0,0 +1,24 @@
++<Project>
++
++  <PropertyGroup>
++    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <!-- Transitive pin: Microsoft.Data.SqlClient brings 9.0.11, which has advisories (NU1902/NU1903). -->
++    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
++    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
++    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
++    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" />
++    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.13" />
++    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
++    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.0" />
++    <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
++    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
++    <PackageVersion Include="xunit.v3" Version="4.0.2" />
++    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
++    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
++    <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
++  </ItemGroup>
++
++</Project>
+diff --git a/Uinsure.Policies.slnx b/Uinsure.Policies.slnx
+new file mode 100644
+index 0000000..48bb9ba
+--- /dev/null
++++ b/Uinsure.Policies.slnx
+@@ -0,0 +1,14 @@
++<Solution>
++  <Folder Name="/src/">
++    <Project Path="src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj" />
++    <Project Path="src/Uinsure.Policies.Domain/Uinsure.Policies.Domain.csproj" />
++    <Project Path="src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj" />
++    <Project Path="src/Uinsure.Policies.Services/Uinsure.Policies.Services.csproj" />
++  </Folder>
++  <Folder Name="/tests/">
++    <Project Path="tests/Uinsure.Policies.Api.Tests/Uinsure.Policies.Api.Tests.csproj" />
++    <Project Path="tests/Uinsure.Policies.Architecture.Tests/Uinsure.Policies.Architecture.Tests.csproj" />
++    <Project Path="tests/Uinsure.Policies.Domain.Tests/Uinsure.Policies.Domain.Tests.csproj" />
++    <Project Path="tests/Uinsure.Policies.Services.Tests/Uinsure.Policies.Services.Tests.csproj" />
++  </Folder>
++</Solution>
+diff --git a/docs/context/20261017-223127-f0a-done.md b/docs/context/20261017-223127-f0a-done.md
+new file mode 100644
+index 0000000..31917bc
+--- /dev/null
++++ b/docs/context/20261017-223127-f0a-done.md
+@@ -0,0 +1,61 @@
++---
++timestamp: 2026-10-17T22:31:27Z
++previous-context: 20261017-221833-f0a-t18-smoke.md
++checkpoint: true
++status: in-progress
++plan: build
++node: F0b
++phase: loop
++step: null
++attempt: null
++branch: main
++worktree: null
++head: 7831c91
++tests: 45/45
++next-action: Start a fresh session in the main checkout, /orient, then /feature build F0b (the first loop run)
++open-decisions: 0
++---
++
++## Summary
++F0a (Harness) is done: all 20 tasks, every probe recorded, and main locked by .githooks/main-locked (7831c91).
++The harness is live: guard hooks, settings deny/ask, git hooks, trace hook, and the 45-test self-test.
++Next is F0b, the walking skeleton and the first /feature run. This snapshot stays uncommitted on main until
++F0b's branch exists (context C8), because main no longer takes commits.
++
++## Completed since last snapshot
++- t18: context smoke tests S1–S9 (b6c03a4); snapshot f0a-t18-smoke (93839ef)
++- t19: F0a README with every probe result (5f88396)
++- Fixes: G7 reads the remote main's lock; render leaves F0a's README alone (01677e3)
++- t20: harness-lock provocation passed; main-locked committed and pushed; F0a done (7831c91)
++- Live G8 after the lock (not committable to main): a commit on main was denied by guard-bash.mjs
++  ("G8: main is locked"); the same commit, run where the guard can't see it, was refused by pre-commit,
++  HEAD unchanged. Live G7: a push to main was denied ("G7: nothing is pushed to main").
++- G6 with a compound command (after the lock, not committable to main): `git status -s && git push
++  --dry-run …` prompted in bypass. The first run was approved (a dry run, so no remote branch was
++  created); the second was denied by David, and the tool result showed the rejection. The ask rule
++  matches a push inside a compound command.
++
++## Current state
++main at 7831c91, pushed and locked. Harness self-test 45/45. 0 uncommitted before this snapshot. No
++worktrees. No blockers.
++
++## Next action
++Start a fresh Claude Code session in the main checkout, so every agent loads the real CLAUDE.md (it's read
++at session start; this session still carries the t4 probe marker). Run /orient, then /feature build F0b.
++Its first commit on feature/build/F0b should also commit this snapshot. F0b picks up the probes moved
++there: G2 compile-and-fail, G9 first loop commit, G11 build legs, G14 stale-verdict live, and each of the
++six agents' agent_type seen live.
++
++## Open decisions
++(none)
++
++## Decisions made
++- .claude/specs/guardrails.spec.md#decision
++- .claude/specs/orchestration.spec.md#decision
++- .claude/specs/planning.spec.md#decision
++- .claude/specs/traceability.spec.md#decision
++
++## Pointers
++- docs/plans/active/build.dag.yaml (F0a done; F0b pending, next)
++- docs/trace/build/F0a/README.md (every F0a probe and the acceptance list)
++- docs/readme-checklist.md (for F6)
+diff --git a/docs/context/20261017-223449-f0a-g6-compound-closed.md b/docs/context/20261017-223449-f0a-g6-compound-closed.md
+new file mode 100644
+index 0000000..5f3f603
+--- /dev/null
++++ b/docs/context/20261017-223449-f0a-g6-compound-closed.md
+@@ -0,0 +1,49 @@
++---
++timestamp: 2026-10-17T22:34:49Z
++previous-context: 20261017-223127-f0a-done.md
++checkpoint: false
++status: in-progress
++plan: build
++node: F0b
++phase: loop
++step: null
++attempt: null
++branch: main
++worktree: null
++head: 7831c91
++tests: 45/45
++next-action: Start a fresh session in the main checkout, /orient, then /feature build F0b (the first loop run)
++open-decisions: 0
++---
++
++## Summary
++F0a is done and main is locked (7831c91). Since the f0a-done snapshot, the last open F0a question is closed:
++the G6 ask rule fires for a push inside a compound command (receipt by denial). Nothing else changed.
++Both this snapshot and f0a-done stay uncommitted on main until F0b's branch exists (context C8).
++
++## Completed since last snapshot
++- G6 compound-command probe: `git status -s && git push --dry-run …` prompted in bypass; approved once (a
++  dry run, no remote branch created, confirmed with ls-remote), then denied by David (the receipt). Recorded
++  in the f0a-done snapshot (no commit: main is locked)
++
++## Current state
++main at 7831c91, pushed and locked. Harness self-test 45/45. 1 uncommitted before this snapshot: the
++f0a-done snapshot. No worktrees. No blockers.
++
++## Next action
++Start a fresh Claude Code session in the main checkout, so every agent loads the real CLAUDE.md. Run
++/orient, then /feature build F0b. F0b's first commit on feature/build/F0b also commits both uncommitted
++snapshots (f0a-done and this one).
++
++## Open decisions
++(none)
++
++## Decisions made
++- .claude/specs/guardrails.spec.md#decision
++- .claude/specs/orchestration.spec.md#decision
++- .claude/specs/planning.spec.md#decision
++
++## Pointers
++- docs/plans/active/build.dag.yaml (F0a done; F0b pending, next)
++- docs/trace/build/F0a/README.md
++- docs/context/20261017-223127-f0a-done.md (uncommitted; carries the post-lock G8, G7 and G6 receipts)
+diff --git a/docs/plans/active/build.dag.yaml b/docs/plans/active/build.dag.yaml
+index 556ba00..68e42ca 100644
+--- a/docs/plans/active/build.dag.yaml
++++ b/docs/plans/active/build.dag.yaml
+@@ -66,10 +66,10 @@ nodes:
+     rules: []
+     cuttable: false
+     budget: null
+-    status: pending
+-    attempt: 0
+-    branch: null
+-    worktree: null
++    status: in_progress
++    attempt: 2
++    branch: feature/build/F0b
++    worktree: .claude/worktrees/build-F0b
+     pr: null
+     qa: docs/qa/build-F0b.md
+     trace: docs/trace/build/F0b/
+@@ -87,21 +87,22 @@ nodes:
+       - "The commit-on-main deny hook is active from F0b start"
+       - "The loop ran end to end: both pauses, walkthrough.md, signed QA script, PR merged, trace complete"
+     tasks:
+-      - {id: t1, role: tester, step: red, layer: acceptance, rules: [], title: "Four test projects; architecture tests with a deliberate breach shown failing; health integration test on SQLite + FakeTimeProvider; UkCalendar BST/GMT tests; 500 problem-body and startup-without-App-Insights tests; RuleCoverageTests with every id pending; Postman health requests; throwing stubs", status: pending}
+-      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Four src projects, slnx, Directory.Build.props and Directory.Packages.props with verified versions; health routes answering with canned responses", status: pending}
+-      - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the health stub in Postman, read the tests; go or change", status: pending}
+-      - {id: t4, role: builder, step: green, layer: services, rules: [], title: "UkCalendar.Today(TimeProvider) in Europe/London; BannedApiAnalyzers with BannedSymbols.txt", status: pending}
+-      - {id: t5, role: builder, step: green, layer: persistence, rules: [], title: "PoliciesDbContext with the SQL Server / SQLite switch, initial migration, EnsureCreated for SQLite; idempotent script generates", status: pending}
+-      - {id: t6, role: builder, step: green, layer: api, rules: [], title: "Real health checks (live, ready with DB), RFC 9457 error mapping, OpenTelemetry only with the connection string, OpenAPI 3.1 + Scalar in Development", status: pending}
+-      - {id: t7, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
+-      - {id: t8, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
+-      - {id: t9, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+-      - {id: t10, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F0b.md", status: pending}
+-      - {id: t11, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
+-      - {id: t12, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
+-      - {id: t13, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
+-      - {id: t14, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md and the QA script", status: pending}
+-      - {id: t15, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
++      - {id: t1, role: builder, step: scaffold, layer: null, rules: [], title: "Uinsure.Policies.slnx listing the four src and four test projects; global.json; Directory.Build.props (test projects ignore exit code 8); Directory.Packages.props with verified versions; the four src csproj files with the architecture references; no .cs", status: done}
++      - {id: t2, role: tester, step: red, layer: acceptance, rules: [], title: "Four test projects; architecture tests with a deliberate breach shown failing; health integration test on SQLite + FakeTimeProvider; UkCalendar BST/GMT tests; 500 problem-body and startup-without-App-Insights tests; RuleCoverageTests with every id pending; Postman health requests; throwing stubs", status: done}
++      - {id: t3, role: builder, step: stub, layer: api, rules: [], title: "Health routes in src/Uinsure.Policies.Api answering with canned responses (callable; the health tests may stay red until persistence)", status: done}
++      - {id: t4, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the health stub in Postman, read the tests; go or change", status: done}
++      - {id: t5, role: builder, step: green, layer: services, rules: [], title: "UkCalendar.Today(TimeProvider) in Europe/London; BannedApiAnalyzers with BannedSymbols.txt; delete the deliberate layering breach in Domain", status: done}
++      - {id: t6, role: builder, step: green, layer: persistence, rules: [], title: "PoliciesDbContext with the SQL Server / SQLite switch, initial migration, EnsureCreated for SQLite; idempotent script generates", status: done}
++      - {id: t7, role: builder, step: green, layer: api, rules: [], title: "Real health checks (live, ready with DB), RFC 9457 error mapping, OpenTelemetry only with the connection string, OpenAPI 3.1 + Scalar in Development", status: done}
++      - {id: t8, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: done}
++      - {id: t9, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: done}
++      - {id: t10, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: done}
++      - {id: t11, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F0b.md", status: done}
++      - {id: t12, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: done}
++      - {id: t13, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
++      - {id: t14, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
++      - {id: t15, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md and the QA script", status: pending}
++      - {id: t16, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
+   - id: F1
+     title: Sell (+ bare GET)
+     kind: feature
+diff --git a/docs/qa/build-F0b.md b/docs/qa/build-F0b.md
+new file mode 100644
+index 0000000..67c1d46
+--- /dev/null
++++ b/docs/qa/build-F0b.md
+@@ -0,0 +1,91 @@
++# QA script — build / F0b — Walking skeleton
++
++Rule IDs: none (F0b has no rule IDs; each step is tagged with the acceptance item it checks, `[AC-n]`, numbered as in `docs/plans/active/build.dag.yaml`)
++Branch: feature/build/F0b   Worktree: .claude/worktrees/build-F0b
++Commit under test: c2d9902 (the QA-script commit after it adds only this file)
++API URL: http://localhost:5080   Environment: local (`tests/postman/local.postman_environment.json`)
++
++Commands are for PowerShell (the VS 2026 Developer PowerShell or a terminal), run from the worktree root.
++
++Acceptance items:
++
++- AC-1: four src projects with the architecture references; a deliberate layering breach fails the architecture tests
++- AC-2: health live/ready, with one WebApplicationFactory test on SQLite in-memory and FakeTimeProvider
++- AC-3: initial SQL Server migration and the idempotent script; EnsureCreated for SQLite
++- AC-4: banned DateTime APIs; UkCalendar across the BST/GMT change
++- AC-5: a 500 with a generic detail and traceId and no stack trace
++- AC-6: Azure Monitor only with APPLICATIONINSIGHTS_CONNECTION_STRING
++- AC-7: OpenAPI 3.1 and Scalar in Development only
++- AC-8: Postman CLI calls health
++- AC-9: the "verify in F0" items recorded in the trace
++- AC-10: RuleCoverageTests with every ID pending
++- AC-11: the commit-on-main deny hook
++- AC-12: the loop ran end to end
++
++## Preconditions
++
++- [ ] `dotnet test --solution Uinsure.Policies.slnx` is green in the worktree (passed / failed / skipped: __ / __ / __). Expected: 74 / 0 / 0.
++- [ ] Port 5080 is free (`netstat -ano | findstr :5080` prints nothing).
++- [ ] `APPLICATIONINSIGHTS_CONNECTION_STRING` is not set in the shell or the machine (`echo $env:APPLICATIONINSIGHTS_CONNECTION_STRING` prints an empty line).
++- [ ] You are using the Postman collection and the `local` environment from this branch (`tests/postman/`).
++
++### Starting the API (pick one; both give Development on http://localhost:5080)
++
++- **VS 2026:** open `Uinsure.Policies.slnx` and set `Uinsure.Policies.Api` as the startup project. Choose the
++  **Uinsure.Policies.Api** launch profile in the green ▶ drop-down, then press ▶. The browser opens
++  `http://localhost:5080/health/live`, which shows `Healthy`.
++- **CLI:** `dotnet run --project src/Uinsure.Policies.Api` (it uses the same launch profile, so it runs on port
++  5080 in Development). The console shows `Now listening on: http://localhost:5080` and `Hosting environment: Development`.
++
++With either one, the SQLite file is `src/Uinsure.Policies.Api/policies.development.db`. It belongs to this
++worktree and is gitignored.
++
++## Steps
++
++| # | Item | Postman request / test | Steps / input | Expected | Actual | Pass/Fail |
++|---|---|---|---|---|---|---|
++| 1 | [AC-2] | — | Start the API from **VS 2026** (green ▶, the `Uinsure.Policies.Api` profile). | The console shows `Now listening on: http://localhost:5080` and `Hosting environment: Development`. The browser shows `Healthy` at `/health/live`. | | |
++| 2 | [AC-2] | — | Stop it. Start it again with `dotnet run --project src/Uinsure.Policies.Api`. | It shows the same two console lines. There are no errors and no OptionsValidationException. | | |
++| 3 | [AC-2] | HEALTH · live → 200 | `curl.exe -i http://localhost:5080/health/live` | `200`, `Content-Type: text/plain`, body `Healthy` | | |
++| 4 | [AC-2] [AC-3] | HEALTH · ready (database answers) → 200 | `curl.exe -i http://localhost:5080/health/ready` | `200`, body `Healthy`. This is the DbContext check against the SQLite file that `EnsureCreated()` made at start-up. | | |
++| 5 | [AC-2] | covered by tests | `dotnet test --project tests/Uinsure.Policies.Api.Tests -- --filter-class "Uinsure.Policies.Api.Tests.HealthEndpointTests" --filter-class "Uinsure.Policies.Api.Tests.HealthWithUnreachableDatabaseTests"` | 4 passed. These are live/ready 200 on SQLite in-memory with `FakeTimeProvider`, ready **503** `Unhealthy` when the database can't be reached, and live still 200 in that case. | | |
++| 6 | [AC-8] | folder `F0b Walking skeleton` | Leave the API running from step 2. Run `postman collection run tests/postman/Uinsure.Policies.postman_collection.json -e tests/postman/local.postman_environment.json -i "F0b Walking skeleton"` | Both requests are `200 OK`. `Pass  HEALTH · live answers 200 Healthy` and `Pass  HEALTH · ready answers 200 Healthy when the database answers` print. The summary shows requests 2/0 failed and assertions 2/0 failed. The closing "Postman credentials are required…" line is only about cloud publishing and is not a failure. | | |
++| 7 | [AC-7] | — | In a browser, open `http://localhost:5080/openapi/v1.json`. | `200` JSON with `"openapi": "3.1.1"` and the title `Uinsure.Policies.Api \| v1`. | | |
++| 8 | [AC-7] | — | In a browser, open `http://localhost:5080/scalar`. | It redirects (`302` → `scalar/`) to the Scalar UI, which renders the v1 document. | | |
++| 9 | [AC-7] | — | Stop the API. Start it **outside Development**: `$env:ASPNETCORE_ENVIRONMENT="Production"; $env:Database__Provider="Sqlite"; $env:ConnectionStrings__Policies="Data Source=$env:TEMP\uinsure-qa-production.db"; dotnet run --project src/Uinsure.Policies.Api --no-launch-profile --urls http://localhost:5080`. Then request `/openapi/v1.json`, `/scalar` and `/scalar/`. | All three give `404`. `/health/live` and `/health/ready` still give `200`. (The Database settings are needed here because only `appsettings.Development.json` sets them; without them start-up fails on purpose: `Database:Provider must be Sqlite or SqlServer.`) Then stop the API and run `Remove-Item Env:ASPNETCORE_ENVIRONMENT, Env:Database__Provider, Env:ConnectionStrings__Policies`. | | |
++| 10 | [AC-7] | covered by tests | `dotnet test --project tests/Uinsure.Policies.Api.Tests -- --filter-class "Uinsure.Policies.Api.Tests.OpenApiDevelopmentTests" --filter-class "Uinsure.Policies.Api.Tests.OpenApiProductionTests"` | 4 passed | | |
++| 11 | [AC-5] | covered by tests | No route throws, so this can't be done by hand. The tests add a throwing path (`/test/unhandled-exception`) through `ThrowingEndpointStartupFilter` in a Production host. Run `dotnet test --project tests/Uinsure.Policies.Api.Tests -- --filter-class "Uinsure.Policies.Api.Tests.UnhandledExceptionTests"`. Read `tests/Uinsure.Policies.Api.Tests/UnhandledExceptionTests.cs`. | 3 passed. `Unhandled_exception_returns_500_problem_details_with_a_generic_detail_and_a_traceId` checks a `500` `application/problem+json` with `type`, `title`, `status`, a generic `detail`, `instance` and `traceId`, and no `ruleId`. `Unhandled_exception_response_reveals_no_exception_message_type_or_stack_trace_outside_Development` checks that the body has no sentinel message, no exception type name and no `   at ` frame. `Unhandled_exception_is_logged_with_the_exception` checks that the exception goes to the logs only. The handler is in `src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs`. | | |
++| 12 | [AC-6] | — | Use the shell from the preconditions, with no `APPLICATIONINSIGHTS_CONNECTION_STRING`. Start with `dotnet run --project src/Uinsure.Policies.Api` and call `/health/live`. | It starts normally, the log goes to the console, `/health/live` gives `200`, and no Azure Monitor or OpenTelemetry exporter error appears in the console. | | |
++| 13 | [AC-6] | covered by tests | `dotnet test --project tests/Uinsure.Policies.Api.Tests -- --filter-class "Uinsure.Policies.Api.Tests.ApplicationInsightsTests" --filter-class "Uinsure.Policies.Api.Tests.ApplicationInsightsEnabledTests"` | 4 passed. Without the setting, there's no `OpenTelemetry*` or `Azure.Monitor*` service and health gives 200. With it, both are registered and health still gives 200. Also read the one log template in `UnexpectedExceptionHandler.cs`. It holds only `{Method} {Path}`, with no PII. | | |
++| 14 | [AC-4] | covered by tests | `dotnet test --project tests/Uinsure.Policies.Services.Tests` | 10 passed. These are `UkCalendar` across BST and GMT, including `2027-06-30T23:30:00Z` → `2027-07-01` (BST) and `2027-01-15T23:30:00Z` → `2027-01-15` (GMT), and both clock-change days. | | |
++| 15 | [AC-4] | — | Banned API, by hand: `Set-Content src/Uinsure.Policies.Services/QaScratch.cs "namespace Uinsure.Policies.Services; internal static class QaScratch { internal static DateTime Stamp() => DateTime.Now; }"`, then `dotnet build Uinsure.Policies.slnx -warnaserror` | The build **fails** with `error RS0030` on `QaScratch.cs`: the symbol `DateTime.Now` is banned, "Use UkCalendar.Today(TimeProvider) instead." (VS also underlines it in red.) | | |
++| 16 | [AC-4] | — | Remove the scratch file: `Remove-Item src/Uinsure.Policies.Services/QaScratch.cs`. Then run `git status --short` and `dotnet build Uinsure.Policies.slnx -warnaserror`. | `git status` shows nothing under `src/`, and the build succeeds with 0 warnings and 0 errors. | | |
++| 17 | [AC-1] | covered by tests + red commit | Run `dotnet test --project tests/Uinsure.Policies.Architecture.Tests`. Then run `git show --stat 19c67f6`. | All Architecture tests pass at HEAD. In `19c67f6` (red), `DeliberateLayeringBreach.cs` in Domain uses `System.TimeProvider`, and the message records A1 failing on it. The breach is gone at HEAD (`src/Uinsure.Policies.Domain` has no `.cs` files). | | |
++| 18 | [AC-3] | — | `dotnet ef migrations script --idempotent --project src/Uinsure.Policies.Persistence --startup-project src/Uinsure.Policies.Api -o $env:TEMP\uinsure-migrate.sql` | It succeeds, and the file starts with `IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL`. (On this machine `dotnet-ef` is a **global** 9.0.9 tool and warns that it is older than the 10.0.13 runtime. There's no tool manifest in the repo, so pre-push's `dotnet tool restore` installs nothing. See the notes.) | | |
++| 19 | [AC-10] | covered by tests | Run `dotnet test --project tests/Uinsure.Policies.Architecture.Tests -- --filter-class "Uinsure.Policies.Architecture.Tests.RuleCoverageTests"`. Open `tests/rule-coverage.pending.txt`. | 11 passed, and the file lists all 30 rule IDs. | | |
++| 20 | [AC-9] | — | **At Pause 2** (the record isn't written yet): read the "verify in F0" receipts that t13 renders into `docs/trace/build/F0b/` and `walkthrough.md`. Finding A1/I5 deferred them to t13, and the reviewer accepted that in `verdicts/A1-reviewer.json`. | The receipts record xunit.v3 on Microsoft.Testing.Platform without Microsoft.NET.Test.Sdk; the Mvc.Testing, EF Core Sqlite and NetArchTest.eNhancedEdition versions; TrxReport recorded as out of scope; the BannedApi doc-IDs; and that Program needs `public partial class` (`Program.cs` ends with `public partial class Program;`). If any receipt is missing, AC-9 fails. | | |
++| 21 | [AC-11] | harness self-test | `node --test ".claude/hooks/__tests__/*.test.mjs"` | `ok … G8: commit on main with the marker deny; without allow; on a feature branch allow`, and `.githooks/main-locked` exists. **Known:** at this commit the run gives 52 passed and 2 failed (`validate-dag: a leading builder scaffold before red is accepted` and `validate-dag: red stays mandatory after a scaffold`). pre-push runs this self-test, so a push will fail until the harness fixes them. | | |
++| 22 | [AC-12] | — | Check the loop record: Pause 1 (t4) is done, `walkthrough.md` is rendered (t13), this script is signed below, and the PR is merged by you (t16). | Every item is present. Steps t13–t16 come after this script, so tick them at Pause 2. | | |
++
++## Exploratory notes / defects
++
++Each defect becomes a finding on this node's failure route, not a /plan-bug.
++
++- Found while preparing this script: the harness self-test fails 2 of 54 (step 21). This is harness scope, not F0b `src/`.
++- Found while preparing this script: `dotnet-ef` isn't pinned in a repo tool manifest, so the version depends on the machine (step 18).
++- 
++- 
++
++## Sign-off
++
++| | |
++|---|---|
++| Tester | David Morgan |
++| Date | |
++| Commit signed off | |
++| `dotnet test` result | __ / __ / __ (expected 74 / 0 / 0) |
++| Postman CLI result | requests __ / failed __; assertions __ / failed __ (expected 2/0, 2/0) |
++| Steps passed | __ / 22 |
++| Defects raised (finding ids) | |
++| Verdict | ☐ Accept F0b  ☐ Reject (findings above) |
++| Signature | |
+diff --git a/global.json b/global.json
+new file mode 100644
+index 0000000..1d364c6
+--- /dev/null
++++ b/global.json
+@@ -0,0 +1,9 @@
++{
++  "sdk": {
++    "version": "10.0.100",
++    "rollForward": "latestFeature"
++  },
++  "test": {
++    "runner": "Microsoft.Testing.Platform"
++  }
++}
+diff --git a/src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs b/src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs
+new file mode 100644
+index 0000000..35f4aaa
+--- /dev/null
++++ b/src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs
+@@ -0,0 +1,28 @@
++using Microsoft.AspNetCore.Diagnostics;
++using Microsoft.AspNetCore.Mvc;
++
++namespace Uinsure.Policies.Api.Errors;
++
++// Any exception no rule maps becomes a generic 500 problem. The exception goes to the logs only.
++internal sealed class UnexpectedExceptionHandler(
++    IProblemDetailsService problemDetails,
++    ILogger<UnexpectedExceptionHandler> logger) : IExceptionHandler
++{
++    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
++    {
++        logger.LogError(exception, "Unhandled exception on {Method} {Path}", httpContext.Request.Method, httpContext.Request.Path);
++
++        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
++        return await problemDetails.TryWriteAsync(new ProblemDetailsContext
++        {
++            HttpContext = httpContext,
++            ProblemDetails = new ProblemDetails
++            {
++                Status = StatusCodes.Status500InternalServerError,
++                Title = "An error occurred while processing your request.",
++                Type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
++                Detail = "An unexpected error occurred. Quote the traceId when reporting it.",
++            },
++        });
++    }
++}
+diff --git a/src/Uinsure.Policies.Api/Program.cs b/src/Uinsure.Policies.Api/Program.cs
+new file mode 100644
+index 0000000..c035ac6
+--- /dev/null
++++ b/src/Uinsure.Policies.Api/Program.cs
+@@ -0,0 +1,48 @@
++using Azure.Monitor.OpenTelemetry.AspNetCore;
++using Uinsure.Policies.Api.Errors;
++using Scalar.AspNetCore;
++using Uinsure.Policies.Persistence;
++
++var builder = WebApplication.CreateBuilder(args);
++
++builder.Services.AddControllers();
++builder.Services.AddSingleton(TimeProvider.System);
++builder.Services.AddPersistence(builder.Configuration);
++builder.Services.AddOpenApi();
++
++// RFC 9457 bodies: every problem response carries the request path and a traceId.
++builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
++{
++    context.ProblemDetails.Instance = context.HttpContext.Request.Path;
++    context.ProblemDetails.Extensions["traceId"] =
++        System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
++});
++
++builder.Services.AddExceptionHandler<UnexpectedExceptionHandler>();
++
++if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
++{
++    builder.Services.AddOpenTelemetry().UseAzureMonitor();
++}
++
++var app = builder.Build();
++
++app.Services.EnsureSqliteCreated();
++
++// Logs the exception server-side and answers a generic 500 problem; no message or stack trace in the body.
++app.UseExceptionHandler();
++app.UseAuthorization();
++
++if (app.Environment.IsDevelopment())
++{
++    app.MapOpenApi();
++    app.MapScalarApiReference();
++}
++
++app.MapControllers();
++app.MapHealthChecks("/health/live", new() { Predicate = _ => false });
++app.MapHealthChecks("/health/ready", new() { Predicate = check => check.Tags.Contains("ready") });
++
++app.Run();
++
++public partial class Program;
+diff --git a/src/Uinsure.Policies.Api/Properties/launchSettings.json b/src/Uinsure.Policies.Api/Properties/launchSettings.json
+new file mode 100644
+index 0000000..39a0c7b
+--- /dev/null
++++ b/src/Uinsure.Policies.Api/Properties/launchSettings.json
+@@ -0,0 +1,13 @@
++{
++  "profiles": {
++    "Uinsure.Policies.Api": {
++      "commandName": "Project",
++      "launchBrowser": true,
++      "launchUrl": "health/live",
++      "environmentVariables": {
++        "ASPNETCORE_ENVIRONMENT": "Development"
++      },
++      "applicationUrl": "http://localhost:5080"
++    }
++  }
++}
+diff --git a/src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj b/src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj
+new file mode 100644
+index 0000000..782fcc5
+--- /dev/null
++++ b/src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj
+@@ -0,0 +1,17 @@
++<Project Sdk="Microsoft.NET.Sdk.Web">
++
++  <ItemGroup>
++    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
++    <PackageReference Include="Scalar.AspNetCore" />
++    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
++    <!-- The startup project of `dotnet ef` (pre-push) must reference the Design package itself. -->
++    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\Uinsure.Policies.Services\Uinsure.Policies.Services.csproj" />
++    <ProjectReference Include="..\Uinsure.Policies.Persistence\Uinsure.Policies.Persistence.csproj" />
++    <ProjectReference Include="..\Uinsure.Policies.Domain\Uinsure.Policies.Domain.csproj" />
++  </ItemGroup>
++
++</Project>
+diff --git a/src/Uinsure.Policies.Api/appsettings.Development.json b/src/Uinsure.Policies.Api/appsettings.Development.json
+new file mode 100644
+index 0000000..e3a9375
+--- /dev/null
++++ b/src/Uinsure.Policies.Api/appsettings.Development.json
+@@ -0,0 +1,8 @@
++{
++  "Database": {
++    "Provider": "Sqlite"
++  },
++  "ConnectionStrings": {
++    "Policies": "Data Source=policies.development.db"
++  }
++}
+diff --git a/src/Uinsure.Policies.Api/appsettings.json b/src/Uinsure.Policies.Api/appsettings.json
+new file mode 100644
+index 0000000..10f68b8
+--- /dev/null
++++ b/src/Uinsure.Policies.Api/appsettings.json
+@@ -0,0 +1,9 @@
++{
++  "Logging": {
++    "LogLevel": {
++      "Default": "Information",
++      "Microsoft.AspNetCore": "Warning"
++    }
++  },
++  "AllowedHosts": "*"
++}
+diff --git a/src/Uinsure.Policies.Domain/Uinsure.Policies.Domain.csproj b/src/Uinsure.Policies.Domain/Uinsure.Policies.Domain.csproj
+new file mode 100644
+index 0000000..61718a1
+--- /dev/null
++++ b/src/Uinsure.Policies.Domain/Uinsure.Policies.Domain.csproj
+@@ -0,0 +1,3 @@
++<Project Sdk="Microsoft.NET.Sdk">
++
++</Project>
+diff --git a/src/Uinsure.Policies.Persistence/DatabaseOptions.cs b/src/Uinsure.Policies.Persistence/DatabaseOptions.cs
+new file mode 100644
+index 0000000..cdff2ca
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/DatabaseOptions.cs
+@@ -0,0 +1,18 @@
++namespace Uinsure.Policies.Persistence;
++
++public enum DatabaseProvider
++{
++    Sqlite,
++    SqlServer,
++}
++
++public sealed class DatabaseOptions
++{
++    // Kept as the configured text so a typo is reported at start-up instead of silently defaulting.
++    public string? Provider { get; set; }
++
++    public DatabaseProvider ProviderKind => Enum.Parse<DatabaseProvider>(Provider!, ignoreCase: true);
++
++    public static bool IsValid(DatabaseOptions options) =>
++        Enum.TryParse<DatabaseProvider>(options.Provider, ignoreCase: true, out var kind) && Enum.IsDefined(kind);
++}
+diff --git a/src/Uinsure.Policies.Persistence/Migrations/20261018000303_InitialCreate.Designer.cs b/src/Uinsure.Policies.Persistence/Migrations/20261018000303_InitialCreate.Designer.cs
+new file mode 100644
+index 0000000..7280c78
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/Migrations/20261018000303_InitialCreate.Designer.cs
+@@ -0,0 +1,29 @@
++﻿// <auto-generated />
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Infrastructure;
++using Microsoft.EntityFrameworkCore.Metadata;
++using Microsoft.EntityFrameworkCore.Migrations;
++using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
++using Uinsure.Policies.Persistence;
++
++#nullable disable
++
++namespace Uinsure.Policies.Persistence.Migrations
++{
++    [DbContext(typeof(PoliciesDbContext))]
++    [Migration("20261018000303_InitialCreate")]
++    partial class InitialCreate
++    {
++        /// <inheritdoc />
++        protected override void BuildTargetModel(ModelBuilder modelBuilder)
++        {
++#pragma warning disable 612, 618
++            modelBuilder
++                .HasAnnotation("ProductVersion", "10.0.13")
++                .HasAnnotation("Relational:MaxIdentifierLength", 128);
++
++            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
++#pragma warning restore 612, 618
++        }
++    }
++}
+diff --git a/src/Uinsure.Policies.Persistence/Migrations/20261018000303_InitialCreate.cs b/src/Uinsure.Policies.Persistence/Migrations/20261018000303_InitialCreate.cs
+new file mode 100644
+index 0000000..b941732
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/Migrations/20261018000303_InitialCreate.cs
+@@ -0,0 +1,22 @@
++﻿using Microsoft.EntityFrameworkCore.Migrations;
++
++#nullable disable
++
++namespace Uinsure.Policies.Persistence.Migrations
++{
++    /// <inheritdoc />
++    public partial class InitialCreate : Migration
++    {
++        /// <inheritdoc />
++        protected override void Up(MigrationBuilder migrationBuilder)
++        {
++
++        }
++
++        /// <inheritdoc />
++        protected override void Down(MigrationBuilder migrationBuilder)
++        {
++
++        }
++    }
++}
+diff --git a/src/Uinsure.Policies.Persistence/Migrations/PoliciesDbContextModelSnapshot.cs b/src/Uinsure.Policies.Persistence/Migrations/PoliciesDbContextModelSnapshot.cs
+new file mode 100644
+index 0000000..66e94e9
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/Migrations/PoliciesDbContextModelSnapshot.cs
+@@ -0,0 +1,26 @@
++﻿// <auto-generated />
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Infrastructure;
++using Microsoft.EntityFrameworkCore.Metadata;
++using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
++using Uinsure.Policies.Persistence;
++
++#nullable disable
++
++namespace Uinsure.Policies.Persistence.Migrations
++{
++    [DbContext(typeof(PoliciesDbContext))]
++    partial class PoliciesDbContextModelSnapshot : ModelSnapshot
++    {
++        protected override void BuildModel(ModelBuilder modelBuilder)
++        {
++#pragma warning disable 612, 618
++            modelBuilder
++                .HasAnnotation("ProductVersion", "10.0.13")
++                .HasAnnotation("Relational:MaxIdentifierLength", 128);
++
++            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
++#pragma warning restore 612, 618
++        }
++    }
++}
+diff --git a/src/Uinsure.Policies.Persistence/PersistenceServiceCollectionExtensions.cs b/src/Uinsure.Policies.Persistence/PersistenceServiceCollectionExtensions.cs
+new file mode 100644
+index 0000000..0dc925b
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/PersistenceServiceCollectionExtensions.cs
+@@ -0,0 +1,42 @@
++using Microsoft.EntityFrameworkCore;
++using Microsoft.Extensions.Configuration;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Options;
++
++namespace Uinsure.Policies.Persistence;
++
++public static class PersistenceServiceCollectionExtensions
++{
++    public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
++    {
++        services.AddOptions<DatabaseOptions>()
++            .Configure(options => options.Provider = configuration["Database:Provider"])
++            .Validate(DatabaseOptions.IsValid, "Database:Provider must be Sqlite or SqlServer.")
++            .ValidateOnStart();
++
++        services.AddDbContext<PoliciesDbContext>((serviceProvider, options) =>
++        {
++            var connectionString = configuration.GetConnectionString("Policies");
++            _ = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value.ProviderKind switch
++            {
++                DatabaseProvider.Sqlite => options.UseSqlite(connectionString),
++                DatabaseProvider.SqlServer => options.UseSqlServer(connectionString),
++                _ => throw new InvalidOperationException("Unknown database provider."),
++            };
++        });
++
++        services.AddHealthChecks().AddDbContextCheck<PoliciesDbContext>(tags: ["ready"]);
++
++        return services;
++    }
++
++    // Migrations are SQL Server only, so with Sqlite the schema is created from the model at start-up.
++    public static void EnsureSqliteCreated(this IServiceProvider services)
++    {
++        using var scope = services.CreateScope();
++        if (scope.ServiceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value.ProviderKind == DatabaseProvider.Sqlite)
++        {
++            scope.ServiceProvider.GetRequiredService<PoliciesDbContext>().Database.EnsureCreated();
++        }
++    }
++}
+diff --git a/src/Uinsure.Policies.Persistence/PoliciesDbContext.cs b/src/Uinsure.Policies.Persistence/PoliciesDbContext.cs
+new file mode 100644
+index 0000000..7b74cc2
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/PoliciesDbContext.cs
+@@ -0,0 +1,7 @@
++using Microsoft.EntityFrameworkCore;
++
++namespace Uinsure.Policies.Persistence;
++
++public sealed class PoliciesDbContext(DbContextOptions<PoliciesDbContext> options) : DbContext(options)
++{
++}
+diff --git a/src/Uinsure.Policies.Persistence/PoliciesDbContextFactory.cs b/src/Uinsure.Policies.Persistence/PoliciesDbContextFactory.cs
+new file mode 100644
+index 0000000..24f8270
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/PoliciesDbContextFactory.cs
+@@ -0,0 +1,16 @@
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Design;
++
++namespace Uinsure.Policies.Persistence;
++
++// Design-time only: `dotnet ef` uses this to make SQL Server migrations. The connection is never opened.
++internal sealed class PoliciesDbContextFactory : IDesignTimeDbContextFactory<PoliciesDbContext>
++{
++    public PoliciesDbContext CreateDbContext(string[] args)
++    {
++        var options = new DbContextOptionsBuilder<PoliciesDbContext>()
++            .UseSqlServer("Server=(local);Database=Policies;Trusted_Connection=True;TrustServerCertificate=True")
++            .Options;
++        return new PoliciesDbContext(options);
++    }
++}
+diff --git a/src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj b/src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj
+new file mode 100644
+index 0000000..12102b0
+--- /dev/null
++++ b/src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj
+@@ -0,0 +1,15 @@
++<Project Sdk="Microsoft.NET.Sdk">
++
++  <ItemGroup>
++    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
++    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
++    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
++    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\Uinsure.Policies.Services\Uinsure.Policies.Services.csproj" />
++    <ProjectReference Include="..\Uinsure.Policies.Domain\Uinsure.Policies.Domain.csproj" />
++  </ItemGroup>
++
++</Project>
+diff --git a/src/Uinsure.Policies.Services/Uinsure.Policies.Services.csproj b/src/Uinsure.Policies.Services/Uinsure.Policies.Services.csproj
+new file mode 100644
+index 0000000..549d1a7
+--- /dev/null
++++ b/src/Uinsure.Policies.Services/Uinsure.Policies.Services.csproj
+@@ -0,0 +1,7 @@
++<Project Sdk="Microsoft.NET.Sdk">
++
++  <ItemGroup>
++    <ProjectReference Include="..\Uinsure.Policies.Domain\Uinsure.Policies.Domain.csproj" />
++  </ItemGroup>
++
++</Project>
+diff --git a/src/Uinsure.Policies.Services/UkCalendar.cs b/src/Uinsure.Policies.Services/UkCalendar.cs
+new file mode 100644
+index 0000000..be71130
+--- /dev/null
++++ b/src/Uinsure.Policies.Services/UkCalendar.cs
+@@ -0,0 +1,9 @@
++namespace Uinsure.Policies.Services;
++
++public static class UkCalendar
++{
++    private static readonly TimeZoneInfo London = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
++
++    public static DateOnly Today(TimeProvider clock) =>
++        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), London).DateTime);
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/ApplicationInsightsEnabledTests.cs b/tests/Uinsure.Policies.Api.Tests/ApplicationInsightsEnabledTests.cs
+new file mode 100644
+index 0000000..109fd83
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/ApplicationInsightsEnabledTests.cs
+@@ -0,0 +1,43 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// The on branch of the Application Insights switch. With ApplicationInsightsTests (the off branch),
++// this tells "wired only when the connection string is set" apart from "never wired".
++public sealed class ApplicationInsightsEnabledTests : IClassFixture<ApplicationInsightsApiFactory>
++{
++    private readonly ApplicationInsightsApiFactory _factory;
++
++    public ApplicationInsightsEnabledTests(ApplicationInsightsApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public void OpenTelemetry_and_Azure_Monitor_services_are_registered_with_a_connection_string()
++    {
++        _ = _factory.Services;
++
++        Assert.Contains(_factory.RegisteredServiceTypes, IsTelemetryType);
++    }
++
++    [Fact]
++    public async Task App_starts_and_answers_health_with_an_Application_Insights_connection_string()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/health/live", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
++    }
++
++    private static bool IsTelemetryType(Type type)
++    {
++        var ns = type.Namespace ?? string.Empty;
++        return ns.StartsWith("OpenTelemetry", StringComparison.Ordinal) || ns.StartsWith("Azure.Monitor", StringComparison.Ordinal);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/ApplicationInsightsTests.cs b/tests/Uinsure.Policies.Api.Tests/ApplicationInsightsTests.cs
+new file mode 100644
+index 0000000..f0f1b2b
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/ApplicationInsightsTests.cs
+@@ -0,0 +1,42 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// Azure Monitor is wired only when APPLICATIONINSIGHTS_CONNECTION_STRING is set. Without it, the app
++// still starts (in Production, where it would otherwise be used) and registers no telemetry exporter.
++public sealed class ApplicationInsightsTests : IClassFixture<ProductionApiFactory>
++{
++    private readonly ProductionApiFactory _factory;
++
++    public ApplicationInsightsTests(ProductionApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public async Task App_starts_and_answers_health_without_an_Application_Insights_connection_string()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/health/live", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++    }
++
++    [Fact]
++    public void No_OpenTelemetry_or_Azure_Monitor_service_is_registered_without_a_connection_string()
++    {
++        _ = _factory.Services;
++
++        Assert.DoesNotContain(_factory.RegisteredServiceTypes, IsTelemetryType);
++    }
++
++    private static bool IsTelemetryType(Type type)
++    {
++        var ns = type.Namespace ?? string.Empty;
++        return ns.StartsWith("OpenTelemetry", StringComparison.Ordinal) || ns.StartsWith("Azure.Monitor", StringComparison.Ordinal);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/DevelopmentConfigurationTests.cs b/tests/Uinsure.Policies.Api.Tests/DevelopmentConfigurationTests.cs
+new file mode 100644
+index 0000000..2fe78b4
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/DevelopmentConfigurationTests.cs
+@@ -0,0 +1,30 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// The path dotnet run takes: Development, with the database configured only by the app's own files.
++public sealed class DevelopmentConfigurationTests : IClassFixture<DevelopmentConfigurationApiFactory>
++{
++    private readonly DevelopmentConfigurationApiFactory _factory;
++
++    public DevelopmentConfigurationTests(DevelopmentConfigurationApiFactory factory)
++    {
++        _factory = factory;
++    }
++
++    [Fact]
++    public async Task Health_live_and_ready_return_200_Healthy_on_the_Development_configuration_alone()
++    {
++        using var client = _factory.CreateClient();
++
++        using var live = await client.GetAsync("/health/live", TestContext.Current.CancellationToken);
++        using var ready = await client.GetAsync("/health/ready", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
++        Assert.Equal("Healthy", await live.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
++        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
++        Assert.Equal("Healthy", await ready.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/HealthEndpointTests.cs b/tests/Uinsure.Policies.Api.Tests/HealthEndpointTests.cs
+new file mode 100644
+index 0000000..e39291a
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/HealthEndpointTests.cs
+@@ -0,0 +1,38 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++public sealed class HealthEndpointTests : IClassFixture<PoliciesApiFactory>
++{
++    private readonly PoliciesApiFactory _factory;
++
++    public HealthEndpointTests(PoliciesApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public async Task Health_live_returns_200_Healthy()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/health/live", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
++    }
++
++    [Fact]
++    public async Task Health_ready_returns_200_Healthy_when_the_database_answers()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/health/ready", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/HealthWithUnreachableDatabaseTests.cs b/tests/Uinsure.Policies.Api.Tests/HealthWithUnreachableDatabaseTests.cs
+new file mode 100644
+index 0000000..36ee868
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/HealthWithUnreachableDatabaseTests.cs
+@@ -0,0 +1,38 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// Ready runs the database check and live runs none, so only ready notices the database is gone.
++public sealed class HealthWithUnreachableDatabaseTests : IClassFixture<UnreachableDatabaseApiFactory>
++{
++    private readonly UnreachableDatabaseApiFactory _factory;
++
++    public HealthWithUnreachableDatabaseTests(UnreachableDatabaseApiFactory factory)
++    {
++        _factory = factory;
++    }
++
++    [Fact]
++    public async Task Health_ready_returns_503_Unhealthy_when_the_database_cannot_be_reached()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/health/ready", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
++        Assert.Equal("Unhealthy", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
++    }
++
++    [Fact]
++    public async Task Health_live_returns_200_Healthy_when_the_database_cannot_be_reached()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/health/live", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/OpenApiDevelopmentTests.cs b/tests/Uinsure.Policies.Api.Tests/OpenApiDevelopmentTests.cs
+new file mode 100644
+index 0000000..9cb1f49
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/OpenApiDevelopmentTests.cs
+@@ -0,0 +1,39 @@
++using System.Net;
++using System.Text.Json;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++public sealed class OpenApiDevelopmentTests : IClassFixture<PoliciesApiFactory>
++{
++    private readonly PoliciesApiFactory _factory;
++
++    public OpenApiDevelopmentTests(PoliciesApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public async Task OpenApi_document_is_served_as_OpenAPI_3_1_in_Development()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/openapi/v1.json", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
++        Assert.StartsWith("3.1", document.RootElement.GetProperty("openapi").GetString(), StringComparison.Ordinal);
++    }
++
++    [Fact]
++    public async Task Scalar_api_reference_is_served_in_Development()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/scalar", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/OpenApiProductionTests.cs b/tests/Uinsure.Policies.Api.Tests/OpenApiProductionTests.cs
+new file mode 100644
+index 0000000..d888621
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/OpenApiProductionTests.cs
+@@ -0,0 +1,36 @@
++using System.Net;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++public sealed class OpenApiProductionTests : IClassFixture<ProductionApiFactory>
++{
++    private readonly ProductionApiFactory _factory;
++
++    public OpenApiProductionTests(ProductionApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public async Task OpenApi_document_is_not_served_outside_Development()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/openapi/v1.json", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
++    }
++
++    [Fact]
++    public async Task Scalar_api_reference_is_not_served_outside_Development()
++    {
++        using var client = _factory.CreateClient();
++
++        using var response = await client.GetAsync("/scalar", TestContext.Current.CancellationToken);
++
++        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/ApplicationInsightsApiFactory.cs b/tests/Uinsure.Policies.Api.Tests/Support/ApplicationInsightsApiFactory.cs
+new file mode 100644
+index 0000000..3ff72ff
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/ApplicationInsightsApiFactory.cs
+@@ -0,0 +1,19 @@
++using Microsoft.AspNetCore.Hosting;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// Production with APPLICATIONINSIGHTS_CONNECTION_STRING set. The value is a dummy, not a secret: an
++// all-zero key, and ingestion and live endpoints on a closed local port, so nothing leaves the machine.
++public sealed class ApplicationInsightsApiFactory : ProductionApiFactory
++{
++    public const string DummyConnectionString =
++        "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=http://127.0.0.1:1/;LiveEndpoint=http://127.0.0.1:1/";
++
++    protected override void ConfigureWebHost(IWebHostBuilder builder)
++    {
++        base.ConfigureWebHost(builder);
++
++        // Replaces the empty value the base factory sets; read by Program before builder.Build().
++        builder.UseSetting("APPLICATIONINSIGHTS_CONNECTION_STRING", DummyConnectionString);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/CapturingLoggerProvider.cs b/tests/Uinsure.Policies.Api.Tests/Support/CapturingLoggerProvider.cs
+new file mode 100644
+index 0000000..d967d46
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/CapturingLoggerProvider.cs
+@@ -0,0 +1,30 @@
++using System.Collections.Concurrent;
++using Microsoft.Extensions.Logging;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++public sealed record CapturedLog(string Category, LogLevel Level, string Message, Exception? Exception);
++
++public sealed class CapturingLoggerProvider : ILoggerProvider
++{
++    private readonly ConcurrentQueue<CapturedLog> _entries = new();
++
++    public IReadOnlyCollection<CapturedLog> Entries => _entries.ToArray();
++
++    public ILogger CreateLogger(string categoryName) => new CapturingLogger(categoryName, _entries);
++
++    public void Dispose()
++    {
++    }
++
++    private sealed class CapturingLogger(string category, ConcurrentQueue<CapturedLog> entries) : ILogger
++    {
++        public IDisposable? BeginScope<TState>(TState state)
++            where TState : notnull => null;
++
++        public bool IsEnabled(LogLevel logLevel) => true;
++
++        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
++            entries.Enqueue(new CapturedLog(category, logLevel, formatter(state, exception), exception));
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/DevelopmentConfigurationApiFactory.cs b/tests/Uinsure.Policies.Api.Tests/Support/DevelopmentConfigurationApiFactory.cs
+new file mode 100644
+index 0000000..6b685d5
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/DevelopmentConfigurationApiFactory.cs
+@@ -0,0 +1,82 @@
++using Microsoft.AspNetCore.Hosting;
++using Microsoft.AspNetCore.Mvc.Testing;
++using Microsoft.AspNetCore.TestHost;
++using Microsoft.Data.Sqlite;
++using Microsoft.Extensions.Configuration;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.DependencyInjection.Extensions;
++using Microsoft.Extensions.Hosting;
++using Microsoft.Extensions.Time.Testing;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// The API in Development on the project's own configuration: nothing is injected for the database,
++// so the provider and connection come from appsettings*.json exactly as they do under dotnet run.
++// Only the clock is swapped. The SQLite file the configuration names is deleted on dispose.
++public sealed class DevelopmentConfigurationApiFactory : WebApplicationFactory<Program>
++{
++    private string? _databaseFile;
++
++    public FakeTimeProvider Clock { get; } = new(TestClock.Now);
++
++    protected override void ConfigureWebHost(IWebHostBuilder builder)
++    {
++        builder.UseEnvironment(Environments.Development);
++        builder.UseSetting("APPLICATIONINSIGHTS_CONNECTION_STRING", string.Empty);
++
++        builder.ConfigureTestServices(services =>
++        {
++            services.RemoveAll<TimeProvider>();
++            services.AddSingleton<TimeProvider>(Clock);
++        });
++    }
++
++    protected override IHost CreateHost(IHostBuilder builder)
++    {
++        var host = base.CreateHost(builder);
++
++        var connectionString = host.Services.GetRequiredService<IConfiguration>().GetConnectionString("Policies");
++        _databaseFile = DatabaseFileToRemove(connectionString);
++
++        return host;
++    }
++
++    protected override void Dispose(bool disposing)
++    {
++        base.Dispose(disposing);
++
++        if (disposing && _databaseFile is not null)
++        {
++            // Pooled connections keep the file open on Windows.
++            SqliteConnection.ClearAllPools();
++            foreach (var file in new[] { _databaseFile, _databaseFile + "-shm", _databaseFile + "-wal" })
++            {
++                File.Delete(file);
++            }
++        }
++    }
++
++    // Only a file-backed SQLite database under this test run's own directories is removed, so a
++    // misconfigured path can never delete a database the test didn't create.
++    private static string? DatabaseFileToRemove(string? connectionString)
++    {
++        if (string.IsNullOrWhiteSpace(connectionString))
++        {
++            return null;
++        }
++
++        var dataSource = new SqliteConnectionStringBuilder(connectionString).DataSource;
++        if (string.IsNullOrWhiteSpace(dataSource) || dataSource.Equals(":memory:", StringComparison.OrdinalIgnoreCase))
++        {
++            return null;
++        }
++
++        var fullPath = Path.GetFullPath(dataSource, Environment.CurrentDirectory);
++        var ownDirectories = new[] { Environment.CurrentDirectory, AppContext.BaseDirectory }
++            .Select(directory => Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)) + Path.DirectorySeparatorChar);
++
++        return ownDirectories.Any(directory => fullPath.StartsWith(directory, StringComparison.OrdinalIgnoreCase))
++            ? fullPath
++            : null;
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/PoliciesApiFactory.cs b/tests/Uinsure.Policies.Api.Tests/Support/PoliciesApiFactory.cs
+new file mode 100644
+index 0000000..b97fa62
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/PoliciesApiFactory.cs
+@@ -0,0 +1,68 @@
++using Microsoft.AspNetCore.Hosting;
++using Microsoft.AspNetCore.Mvc.Testing;
++using Microsoft.AspNetCore.TestHost;
++using Microsoft.Data.Sqlite;
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Infrastructure;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.DependencyInjection.Extensions;
++using Microsoft.Extensions.Hosting;
++using Microsoft.Extensions.Time.Testing;
++using Uinsure.Policies.Persistence;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// The API in-process on one open SQLite in-memory connection, with a FakeTimeProvider at TestClock.Now.
++// One factory per test class (IClassFixture).
++public class PoliciesApiFactory : WebApplicationFactory<Program>
++{
++    private readonly SqliteConnection _connection = new("DataSource=:memory:");
++
++    public FakeTimeProvider Clock { get; } = new(TestClock.Now);
++
++    // The service registrations the app made, captured after Program ran.
++    public IReadOnlyList<Type> RegisteredServiceTypes { get; private set; } = [];
++
++    protected virtual string EnvironmentName => Environments.Development;
++
++    // AdjustTime, not SetUtcNow: a test may have moved the clock forward, and SetUtcNow can't go back.
++    public void ResetClock() => Clock.AdjustTime(TestClock.Now);
++
++    protected override void ConfigureWebHost(IWebHostBuilder builder)
++    {
++        builder.UseEnvironment(EnvironmentName);
++        builder.UseSetting("Database:Provider", "Sqlite");
++        builder.UseSetting("ConnectionStrings:Policies", "DataSource=:memory:");
++        builder.UseSetting("APPLICATIONINSIGHTS_CONNECTION_STRING", string.Empty);
++
++        builder.ConfigureTestServices(services =>
++        {
++            RegisteredServiceTypes = [.. services.Select(descriptor => descriptor.ServiceType)];
++
++            services.RemoveAll<DbContextOptions<PoliciesDbContext>>();
++            services.RemoveAll<IDbContextOptionsConfiguration<PoliciesDbContext>>();
++            services.AddDbContext<PoliciesDbContext>(options => options.UseSqlite(_connection));
++
++            services.RemoveAll<TimeProvider>();
++            services.AddSingleton<TimeProvider>(Clock);
++        });
++    }
++
++    protected override IHost CreateHost(IHostBuilder builder)
++    {
++        // Open before the host starts: an in-memory database lives only while its connection is open.
++        // Program's start-up EnsureCreated then builds the schema on this connection.
++        _connection.Open();
++        return base.CreateHost(builder);
++    }
++
++    protected override void Dispose(bool disposing)
++    {
++        base.Dispose(disposing);
++
++        if (disposing)
++        {
++            _connection.Dispose();
++        }
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/ProductionApiFactory.cs b/tests/Uinsure.Policies.Api.Tests/Support/ProductionApiFactory.cs
+new file mode 100644
+index 0000000..6fd0bfa
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/ProductionApiFactory.cs
+@@ -0,0 +1,9 @@
++using Microsoft.Extensions.Hosting;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// The same API in the Production environment: no OpenAPI, no Scalar, no developer details.
++public class ProductionApiFactory : PoliciesApiFactory
++{
++    protected override string EnvironmentName => Environments.Production;
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/TestClock.cs b/tests/Uinsure.Policies.Api.Tests/Support/TestClock.cs
+new file mode 100644
+index 0000000..34733be
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/TestClock.cs
+@@ -0,0 +1,9 @@
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// The fixed instant every integration test starts from. Boundaries are arithmetic from Today.
++public static class TestClock
++{
++    public static DateTimeOffset Now { get; } = new(2026, 10, 17, 12, 0, 0, TimeSpan.Zero);
++
++    public static DateOnly Today { get; } = new(2026, 10, 17);
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/ThrowingEndpointStartupFilter.cs b/tests/Uinsure.Policies.Api.Tests/Support/ThrowingEndpointStartupFilter.cs
+new file mode 100644
+index 0000000..94cdcd3
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/ThrowingEndpointStartupFilter.cs
+@@ -0,0 +1,19 @@
++using Microsoft.AspNetCore.Builder;
++using Microsoft.AspNetCore.Hosting;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// Appends a path that throws after the app's own pipeline, so the throw happens inside the app's
++// exception handling exactly as an exception from a controller would.
++internal sealed class ThrowingEndpointStartupFilter : IStartupFilter
++{
++    public const string Path = "/test/unhandled-exception";
++
++    public const string Sentinel = "F0B-SENTINEL-the-exception-message-must-stay-in-the-logs";
++
++    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
++    {
++        next(app);
++        app.Map(Path, branch => branch.Run(_ => throw new InvalidOperationException(Sentinel)));
++    };
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/UnhandledExceptionApiFactory.cs b/tests/Uinsure.Policies.Api.Tests/Support/UnhandledExceptionApiFactory.cs
+new file mode 100644
+index 0000000..691155e
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/UnhandledExceptionApiFactory.cs
+@@ -0,0 +1,23 @@
++using Microsoft.AspNetCore.Hosting;
++using Microsoft.AspNetCore.TestHost;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Logging;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// Production, plus a test-only path that throws, and a logger provider that captures what is logged.
++public sealed class UnhandledExceptionApiFactory : ProductionApiFactory
++{
++    public CapturingLoggerProvider Logs { get; } = new();
++
++    protected override void ConfigureWebHost(IWebHostBuilder builder)
++    {
++        base.ConfigureWebHost(builder);
++
++        builder.ConfigureTestServices(services =>
++        {
++            services.AddTransient<IStartupFilter, ThrowingEndpointStartupFilter>();
++            services.AddSingleton<ILoggerProvider>(Logs);
++        });
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Support/UnreachableDatabaseApiFactory.cs b/tests/Uinsure.Policies.Api.Tests/Support/UnreachableDatabaseApiFactory.cs
+new file mode 100644
+index 0000000..4f3aaf3
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Support/UnreachableDatabaseApiFactory.cs
+@@ -0,0 +1,33 @@
++using Microsoft.AspNetCore.Hosting;
++using Microsoft.AspNetCore.Mvc.Testing;
++using Microsoft.AspNetCore.TestHost;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.DependencyInjection.Extensions;
++using Microsoft.Extensions.Hosting;
++using Microsoft.Extensions.Time.Testing;
++
++namespace Uinsure.Policies.Api.Tests.Support;
++
++// The app's own SQL Server provider pointed at a closed local port, so the ready check has a
++// database it can't reach. No SQLite override: this is the configured provider switch.
++public sealed class UnreachableDatabaseApiFactory : WebApplicationFactory<Program>
++{
++    private const string UnreachableSqlServer =
++        "Server=tcp:127.0.0.1,1;Database=Policies;Connect Timeout=2;ConnectRetryCount=0;Encrypt=False";
++
++    public FakeTimeProvider Clock { get; } = new(TestClock.Now);
++
++    protected override void ConfigureWebHost(IWebHostBuilder builder)
++    {
++        builder.UseEnvironment(Environments.Production);
++        builder.UseSetting("Database:Provider", "SqlServer");
++        builder.UseSetting("ConnectionStrings:Policies", UnreachableSqlServer);
++        builder.UseSetting("APPLICATIONINSIGHTS_CONNECTION_STRING", string.Empty);
++
++        builder.ConfigureTestServices(services =>
++        {
++            services.RemoveAll<TimeProvider>();
++            services.AddSingleton<TimeProvider>(Clock);
++        });
++    }
++}
+diff --git a/tests/Uinsure.Policies.Api.Tests/Uinsure.Policies.Api.Tests.csproj b/tests/Uinsure.Policies.Api.Tests/Uinsure.Policies.Api.Tests.csproj
+new file mode 100644
+index 0000000..021f36f
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/Uinsure.Policies.Api.Tests.csproj
+@@ -0,0 +1,20 @@
++<Project Sdk="Microsoft.NET.Sdk">
++
++  <PropertyGroup>
++    <OutputType>Exe</OutputType>
++    <IsPackable>false</IsPackable>
++    <IsTestProject>true</IsTestProject>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <PackageReference Include="xunit.v3" />
++    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
++    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
++    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\..\src\Uinsure.Policies.Api\Uinsure.Policies.Api.csproj" />
++  </ItemGroup>
++
++</Project>
+diff --git a/tests/Uinsure.Policies.Api.Tests/UnhandledExceptionTests.cs b/tests/Uinsure.Policies.Api.Tests/UnhandledExceptionTests.cs
+new file mode 100644
+index 0000000..44c2062
+--- /dev/null
++++ b/tests/Uinsure.Policies.Api.Tests/UnhandledExceptionTests.cs
+@@ -0,0 +1,67 @@
++using System.Net;
++using System.Text.Json;
++using Microsoft.Extensions.Logging;
++using Uinsure.Policies.Api.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Api.Tests;
++
++// The 500 row of the contract, outside Development: a generic RFC 9457 body with a traceId, the
++// exception's details in the logs only.
++public sealed class UnhandledExceptionTests : IClassFixture<UnhandledExceptionApiFactory>
++{
++    private readonly UnhandledExceptionApiFactory _factory;
++
++    public UnhandledExceptionTests(UnhandledExceptionApiFactory factory)
++    {
++        _factory = factory;
++        _factory.ResetClock();
++    }
++
++    [Fact]
++    public async Task Unhandled_exception_returns_500_problem_details_with_a_generic_detail_and_a_traceId()
++    {
++        using var response = await GetThrowingPath();
++
++        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
++        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
++
++        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
++        var body = problem.RootElement;
++        Assert.Equal("https://tools.ietf.org/html/rfc9110#section-15.6.1", body.GetProperty("type").GetString());
++        Assert.Equal("An error occurred while processing your request.", body.GetProperty("title").GetString());
++        Assert.Equal(500, body.GetProperty("status").GetInt32());
++        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("detail").GetString()));
++        Assert.Equal(ThrowingEndpointStartupFilter.Path, body.GetProperty("instance").GetString());
++        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("traceId").GetString()));
++        Assert.False(body.TryGetProperty("ruleId", out _));
++    }
++
++    [Fact]
++    public async Task Unhandled_exception_response_reveals_no_exception_message_type_or_stack_trace_outside_Development()
++    {
++        using var response = await GetThrowingPath();
++
++        var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
++
++        Assert.DoesNotContain(ThrowingEndpointStartupFilter.Sentinel, text, StringComparison.Ordinal);
++        Assert.DoesNotContain(nameof(InvalidOperationException), text, StringComparison.Ordinal);
++        Assert.DoesNotContain(nameof(ThrowingEndpointStartupFilter), text, StringComparison.Ordinal);
++        Assert.DoesNotContain("   at ", text, StringComparison.Ordinal);
++    }
++
++    [Fact]
++    public async Task Unhandled_exception_is_logged_with_the_exception()
++    {
++        using var response = await GetThrowingPath();
++
++        Assert.Contains(_factory.Logs.Entries, entry =>
++            entry.Level >= LogLevel.Error && entry.Exception?.Message == ThrowingEndpointStartupFilter.Sentinel);
++    }
++
++    private async Task<HttpResponseMessage> GetThrowingPath()
++    {
++        using var client = _factory.CreateClient();
++        return await client.GetAsync(ThrowingEndpointStartupFilter.Path, TestContext.Current.CancellationToken);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/BannedApiTests.cs b/tests/Uinsure.Policies.Architecture.Tests/BannedApiTests.cs
+new file mode 100644
+index 0000000..681f007
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/BannedApiTests.cs
+@@ -0,0 +1,123 @@
++using System.Text.Json;
++using System.Text.RegularExpressions;
++using System.Xml.Linq;
++using Uinsure.Policies.Architecture.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// Banned APIs: BannedSymbols.txt lists the clock and rounding calls, every src project restores
++// BannedApiAnalyzers, and A11: the RS0030 suppression appears only in Money.cs.
++public sealed partial class BannedApiTests
++{
++    [Theory]
++    [InlineData("P:System.DateTime.Now")]
++    [InlineData("P:System.DateTime.UtcNow")]
++    [InlineData("P:System.DateTime.Today")]
++    [InlineData("P:System.DateTimeOffset.Now")]
++    [InlineData("P:System.DateTimeOffset.UtcNow")]
++    [InlineData("M:System.TimeProvider.GetLocalNow")]
++    [InlineData("P:System.TimeZoneInfo.Local")]
++    [InlineData("M:System.Math.Round(System.Decimal)")]
++    [InlineData("M:System.Math.Round(System.Decimal,System.Int32)")]
++    [InlineData("M:System.Math.Round(System.Decimal,System.MidpointRounding)")]
++    [InlineData("M:System.Math.Round(System.Decimal,System.Int32,System.MidpointRounding)")]
++    [InlineData("M:System.Decimal.Round(System.Decimal)")]
++    [InlineData("M:System.Decimal.Round(System.Decimal,System.Int32)")]
++    [InlineData("M:System.Decimal.Round(System.Decimal,System.MidpointRounding)")]
++    [InlineData("M:System.Decimal.Round(System.Decimal,System.Int32,System.MidpointRounding)")]
++    public void BannedSymbols_file_bans_the_symbol(string documentationId)
++    {
++        var path = RepoPaths.Combine("BannedSymbols.txt");
++        Assert.True(File.Exists(path), "BannedSymbols.txt is missing from the repository root.");
++
++        var banned = File.ReadAllLines(path)
++            .Select(line => line.Split(';')[0].Trim())
++            .Where(line => line.Length > 0 && !line.StartsWith("//", StringComparison.Ordinal) && !line.StartsWith('#'));
++
++        Assert.Contains(documentationId, banned);
++    }
++
++    [Theory]
++    [InlineData("Uinsure.Policies.Domain")]
++    [InlineData("Uinsure.Policies.Services")]
++    [InlineData("Uinsure.Policies.Persistence")]
++    [InlineData("Uinsure.Policies.Api")]
++    public void Banned_API_analyzer_is_restored_for_the_src_project(string project)
++    {
++        var assets = new[]
++        {
++            RepoPaths.Combine("src", project, "obj", "project.assets.json"),
++            RepoPaths.Combine("artifacts", "obj", project, "project.assets.json"),
++        }.FirstOrDefault(File.Exists);
++        Assert.NotNull(assets);
++
++        using var json = JsonDocument.Parse(File.ReadAllText(assets));
++        var libraries = json.RootElement.GetProperty("libraries").EnumerateObject().Select(library => library.Name);
++
++        Assert.Contains(libraries, name => name.StartsWith("Microsoft.CodeAnalysis.BannedApiAnalyzers/", StringComparison.OrdinalIgnoreCase));
++    }
++
++    // A missing BannedSymbols.txt must fail the build, never silently switch RS0030 off.
++    [Fact]
++    public void BannedSymbols_file_is_included_for_src_projects_without_an_Exists_condition()
++    {
++        var props = XDocument.Load(RepoPaths.Combine("Directory.Build.props"));
++
++        var item = props.Descendants("AdditionalFiles")
++            .SingleOrDefault(element => ((string?)element.Attribute("Include") ?? string.Empty)
++                .Contains("BannedSymbols.txt", StringComparison.Ordinal));
++        Assert.NotNull(item);
++
++        var conditions = item.AncestorsAndSelf()
++            .Select(element => (string?)element.Attribute("Condition") ?? string.Empty);
++
++        Assert.DoesNotContain(conditions, condition => condition.Contains("Exists(", StringComparison.OrdinalIgnoreCase));
++    }
++
++    [Fact]
++    public void RS0030_is_suppressed_only_in_Money_cs()
++    {
++        var offending = SuppressionCandidateFiles()
++            .Where(file => Path.GetFileName(file) != "Money.cs")
++            .Where(file => SuppressesRs0030(File.ReadAllText(file)))
++            .Select(RepoPaths.Relative);
++
++        Assert.Empty(offending);
++    }
++
++    private static IEnumerable<string> SuppressionCandidateFiles()
++    {
++        string[] extensions = [".cs", ".csproj", ".props", ".targets", ".editorconfig", ".globalconfig"];
++        var src = RepoPaths.Combine("src");
++        var underSrc = Directory.Exists(src)
++            ? Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories)
++                .Where(file => extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)
++                    || Path.GetFileName(file) == ".editorconfig")
++                .Where(file => !RepoPaths.IsBuildOutput(RepoPaths.Relative(file)))
++            : [];
++        var atRoot = new[] { "Directory.Build.props", "Directory.Build.targets", ".editorconfig", ".globalconfig" }
++            .Select(name => RepoPaths.Combine(name))
++            .Where(File.Exists);
++
++        return underSrc.Concat(atRoot);
++    }
++
++    private static bool SuppressesRs0030(string text) =>
++        PragmaDisable().IsMatch(text)
++        || SuppressMessage().IsMatch(text)
++        || NoWarn().IsMatch(text)
++        || SeverityLowered().IsMatch(text);
++
++    [GeneratedRegex(@"#pragma\s+warning\s+disable\b[^\r\n]*\bRS0030\b")]
++    private static partial Regex PragmaDisable();
++
++    [GeneratedRegex(@"SuppressMessage\s*\([^)]*\bRS0030\b")]
++    private static partial Regex SuppressMessage();
++
++    [GeneratedRegex(@"<NoWarn>[^<]*\bRS0030\b")]
++    private static partial Regex NoWarn();
++
++    [GeneratedRegex(@"dotnet_diagnostic\.RS0030\.severity\s*=\s*(none|silent|suggestion)")]
++    private static partial Regex SeverityLowered();
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/ControllerTests.cs b/tests/Uinsure.Policies.Architecture.Tests/ControllerTests.cs
+new file mode 100644
+index 0000000..29bff04
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/ControllerTests.cs
+@@ -0,0 +1,97 @@
++using System.Reflection;
++using Uinsure.Policies.Architecture.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// A7: controllers are sealed, inherit ControllerBase, are named *Controller, and keep Domain types
++// out of their public signatures. ControllerBase is matched by name, so this project needs no
++// compile-time reference to ASP.NET Core.
++public sealed class ControllerTests
++{
++    private const string ControllerBaseName = "Microsoft.AspNetCore.Mvc.ControllerBase";
++
++    private static IEnumerable<Type> ApiTypes =>
++        SourceAssemblies.Api.GetTypes().Where(type => !SourceAssemblies.IsCompilerGenerated(type));
++
++    private static IEnumerable<Type> Controllers => ApiTypes.Where(InheritsControllerBase);
++
++    [Fact]
++    public void Controllers_are_sealed()
++    {
++        Assert.Empty(Controllers.Where(type => !type.IsSealed).Select(type => type.FullName));
++    }
++
++    [Fact]
++    public void Controllers_are_named_with_the_Controller_suffix()
++    {
++        Assert.Empty(Controllers
++            .Where(type => !type.Name.EndsWith("Controller", StringComparison.Ordinal))
++            .Select(type => type.FullName));
++    }
++
++    [Fact]
++    public void Types_named_Controller_inherit_ControllerBase()
++    {
++        Assert.Empty(ApiTypes
++            .Where(type => type.Name.EndsWith("Controller", StringComparison.Ordinal) && !InheritsControllerBase(type))
++            .Select(type => type.FullName));
++    }
++
++    [Fact]
++    public void Controller_public_signatures_use_no_Domain_type()
++    {
++        const BindingFlags publicDeclared = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
++
++        var leaks = Controllers.SelectMany(controller =>
++            controller.GetMethods(publicDeclared).Cast<MethodBase>()
++                .Concat(controller.GetConstructors(publicDeclared))
++                .SelectMany(member => SignatureTypes(member)
++                    .Where(type => type.Assembly == SourceAssemblies.Domain)
++                    .Select(type => $"{controller.Name}.{member.Name} uses {type.FullName}")));
++
++        Assert.Empty(leaks);
++    }
++
++    private static bool InheritsControllerBase(Type type)
++    {
++        for (var baseType = type.BaseType; baseType is not null; baseType = baseType.BaseType)
++        {
++            if (baseType.FullName == ControllerBaseName)
++            {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
++    private static IEnumerable<Type> SignatureTypes(MethodBase member)
++    {
++        var returnTypes = member is MethodInfo method ? new[] { method.ReturnType } : [];
++        return returnTypes
++            .Concat(member.GetParameters().Select(parameter => parameter.ParameterType))
++            .SelectMany(Flatten);
++    }
++
++    private static IEnumerable<Type> Flatten(Type type)
++    {
++        yield return type;
++
++        if (type.HasElementType && type.GetElementType() is { } element)
++        {
++            foreach (var inner in Flatten(element))
++            {
++                yield return inner;
++            }
++        }
++
++        if (type.IsGenericType)
++        {
++            foreach (var inner in type.GetGenericArguments().SelectMany(Flatten))
++            {
++                yield return inner;
++            }
++        }
++    }
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/DomainEntityTests.cs b/tests/Uinsure.Policies.Architecture.Tests/DomainEntityTests.cs
+new file mode 100644
+index 0000000..c37aac3
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/DomainEntityTests.cs
+@@ -0,0 +1,28 @@
++using System.Reflection;
++using Uinsure.Policies.Architecture.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// A8: Domain entities change only through their own methods. An init accessor (records,
++// positional parameters) can't mutate after construction, so it isn't a setter here.
++public sealed class DomainEntityTests
++{
++    [Fact]
++    public void Domain_types_have_no_public_setter_other_than_init()
++    {
++        const BindingFlags publicDeclared = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
++
++        var setters = SourceAssemblies.Domain.GetTypes()
++            .Where(type => type.Namespace?.StartsWith("Uinsure.Policies.Domain", StringComparison.Ordinal) == true)
++            .SelectMany(type => type.GetProperties(publicDeclared))
++            .Where(property => property.SetMethod is { IsPublic: true } setter && !IsInitOnly(setter))
++            .Select(property => $"{property.DeclaringType?.FullName}.{property.Name}");
++
++        Assert.Empty(setters);
++    }
++
++    private static bool IsInitOnly(MethodInfo setter) =>
++        setter.ReturnParameter.GetRequiredCustomModifiers()
++            .Any(modifier => modifier.FullName == "System.Runtime.CompilerServices.IsExternalInit");
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/LayeringTests.cs b/tests/Uinsure.Policies.Architecture.Tests/LayeringTests.cs
+new file mode 100644
+index 0000000..c3cf91a
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/LayeringTests.cs
+@@ -0,0 +1,104 @@
++using System.Reflection;
++using NetArchTest.Rules;
++using Uinsure.Policies.Architecture.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// A1–A6: the References table of the architecture contract.
++public sealed class LayeringTests
++{
++    [Fact]
++    public void Domain_types_depend_on_no_Microsoft_namespace_and_not_on_TimeProvider()
++    {
++        var result = Types.InAssembly(SourceAssemblies.Domain)
++            .Should().NotHaveDependencyOnAny("Microsoft", "System.TimeProvider")
++            .GetResult();
++
++        Assert.Empty(ArchResults.FailingTypeNamesIn(result, "Uinsure.Policies.Domain"));
++    }
++
++    [Fact]
++    public void Domain_references_only_BCL_assemblies()
++    {
++        var nonBcl = SourceAssemblies.ReferencedAssemblyNames(SourceAssemblies.Domain)
++            .Where(name => !name.StartsWith("System", StringComparison.Ordinal) && name != "netstandard");
++
++        Assert.Empty(nonBcl);
++    }
++
++    [Fact]
++    public void Services_does_not_depend_on_EF_Core_AspNetCore_Persistence_or_Api()
++    {
++        AssertNoDependency(
++            SourceAssemblies.Services,
++            "Uinsure.Policies.Services",
++            ["Microsoft.EntityFrameworkCore", "Microsoft.AspNetCore", "Uinsure.Policies.Persistence", "Uinsure.Policies.Api"]);
++    }
++
++    [Fact]
++    public void Persistence_does_not_depend_on_AspNetCore_or_Api()
++    {
++        AssertNoDependency(
++            SourceAssemblies.Persistence,
++            "Uinsure.Policies.Persistence",
++            ["Microsoft.AspNetCore", "Uinsure.Policies.Api"]);
++    }
++
++    [Fact]
++    public void No_src_assembly_references_a_test_assembly()
++    {
++        var offending = SourceAssemblies.All
++            .SelectMany(assembly => SourceAssemblies.ReferencedAssemblyNames(assembly)
++                .Where(IsTestAssembly)
++                .Select(reference => $"{assembly.GetName().Name} references {reference}"));
++
++        Assert.Empty(offending);
++    }
++
++    [Fact]
++    public void Api_types_other_than_Program_do_not_use_Persistence_or_EF_Core()
++    {
++        var result = Types.InAssembly(SourceAssemblies.Api)
++            .Should().NotHaveDependencyOnAny("Uinsure.Policies.Persistence", "Microsoft.EntityFrameworkCore")
++            .GetResult();
++
++        Assert.DoesNotContain(ArchResults.FailingTypeNames(result), name => !IsProgramOrNestedInIt(name));
++    }
++
++    [Fact]
++    public void Api_contracts_do_not_use_AspNetCore()
++    {
++        var result = Types.InAssembly(SourceAssemblies.Api)
++            .Should().NotHaveDependencyOnAny("Microsoft.AspNetCore")
++            .GetResult();
++
++        Assert.Empty(ArchResults.FailingTypeNamesIn(result, "Uinsure.Policies.Api.Contracts"));
++    }
++
++    private static void AssertNoDependency(Assembly assembly, string ownNamespace, string[] forbidden)
++    {
++        var typeLevel = Types.InAssembly(assembly)
++            .Should().NotHaveDependencyOnAny(forbidden)
++            .GetResult();
++        var assemblyLevel = SourceAssemblies.ReferencedAssemblyNames(assembly)
++            .Where(name => forbidden.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal)));
++
++        string[] failures = [.. ArchResults.FailingTypeNamesIn(typeLevel, ownNamespace), .. assemblyLevel];
++        Assert.Empty(failures);
++    }
++
++    private static bool IsTestAssembly(string name) =>
++        name.StartsWith("xunit", StringComparison.OrdinalIgnoreCase)
++        || name.StartsWith("Microsoft.Extensions.TimeProvider.Testing", StringComparison.Ordinal)
++        || name.StartsWith("Microsoft.AspNetCore.Mvc.Testing", StringComparison.Ordinal)
++        || name.EndsWith(".Tests", StringComparison.Ordinal);
++
++    // Program is the composition root, the one Api type allowed to touch Persistence; its
++    // compiler-generated nested types (lambdas, closures) come with it.
++    private static bool IsProgramOrNestedInIt(string fullName)
++    {
++        var outer = fullName.Split('+', '/')[0];
++        return outer == "Program" || outer.EndsWith(".Program", StringComparison.Ordinal);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/MigrationTests.cs b/tests/Uinsure.Policies.Architecture.Tests/MigrationTests.cs
+new file mode 100644
+index 0000000..2d57e03
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/MigrationTests.cs
+@@ -0,0 +1,42 @@
++using Uinsure.Policies.Architecture.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// The initial SQL Server migration lives in Persistence and targets PoliciesDbContext. EF types are
++// matched by name, so this project needs no compile-time reference to EF Core.
++public sealed class MigrationTests
++{
++    private const string MigrationBaseName = "Microsoft.EntityFrameworkCore.Migrations.Migration";
++    private const string DbContextAttributeName = "Microsoft.EntityFrameworkCore.Infrastructure.DbContextAttribute";
++    private const string PoliciesDbContextName = "Uinsure.Policies.Persistence.PoliciesDbContext";
++
++    [Fact]
++    public void Persistence_has_a_migration_for_PoliciesDbContext()
++    {
++        var migrations = SourceAssemblies.Persistence.GetTypes()
++            .Where(IsMigration)
++            .Where(TargetsPoliciesDbContext);
++
++        Assert.NotEmpty(migrations);
++    }
++
++    private static bool IsMigration(Type type)
++    {
++        for (var baseType = type.BaseType; baseType is not null; baseType = baseType.BaseType)
++        {
++            if (baseType.FullName == MigrationBaseName)
++            {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
++    private static bool TargetsPoliciesDbContext(Type type) =>
++        type.GetCustomAttributesData().Any(attribute =>
++            attribute.AttributeType.FullName == DbContextAttributeName
++            && attribute.ConstructorArguments is [{ Value: Type context }]
++            && context.FullName == PoliciesDbContextName);
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/RepositoryTests.cs b/tests/Uinsure.Policies.Architecture.Tests/RepositoryTests.cs
+new file mode 100644
+index 0000000..0d4cc15
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/RepositoryTests.cs
+@@ -0,0 +1,40 @@
++using Uinsure.Policies.Architecture.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++// A9: no Unit of Work and no generic repository. A10: the repository is internal sealed.
++public sealed class RepositoryTests
++{
++    private static IEnumerable<Type> SourceTypes =>
++        SourceAssemblies.All.SelectMany(assembly => assembly.GetTypes())
++            .Where(type => !SourceAssemblies.IsCompilerGenerated(type));
++
++    [Fact]
++    public void No_src_type_is_a_unit_of_work()
++    {
++        Assert.Empty(SourceTypes
++            .Where(type => type.Name.Contains("UnitOfWork", StringComparison.OrdinalIgnoreCase))
++            .Select(type => type.FullName));
++    }
++
++    [Fact]
++    public void No_src_repository_type_is_generic()
++    {
++        Assert.Empty(SourceTypes
++            .Where(type => type.IsGenericTypeDefinition && type.Name.Contains("Repository", StringComparison.Ordinal))
++            .Select(type => type.FullName));
++    }
++
++    [Fact]
++    public void Repository_classes_in_Persistence_are_internal_and_sealed()
++    {
++        var exposed = SourceAssemblies.Persistence.GetTypes()
++            .Where(type => type.IsClass && !SourceAssemblies.IsCompilerGenerated(type))
++            .Where(type => type.Name.EndsWith("Repository", StringComparison.Ordinal))
++            .Where(type => type.IsPublic || type.IsNestedPublic || !type.IsSealed)
++            .Select(type => type.FullName);
++
++        Assert.Empty(exposed);
++    }
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs b/tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs
+new file mode 100644
+index 0000000..e7e11ba
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs
+@@ -0,0 +1,105 @@
++using Uinsure.Policies.Architecture.Tests.Support;
++using Xunit;
++
++namespace Uinsure.Policies.Architecture.Tests;
++
++public sealed class RuleCoverageTests
++{
++    private const string UnitProject = "Uinsure.Policies.Domain.Tests";
++    private const string IntegrationProject = "Uinsure.Policies.Api.Tests";
++
++    // The repository's own coverage: these run in every dotnet test.
++
++    [Fact]
++    public void Every_rule_id_that_is_not_pending_has_a_unit_and_an_integration_trait()
++    {
++        Assert.Empty(RuleCoverage.ForRepository(RepoPaths.Root).MissingCoverage);
++    }
++
++    [Fact]
++    public void Every_rule_trait_names_a_rule_id_from_the_requirements()
++    {
++        Assert.Empty(RuleCoverage.ForRepository(RepoPaths.Root).UnknownTraits);
++    }
++
++    [Fact]
++    public void No_pending_rule_id_already_has_a_rule_trait()
++    {
++        Assert.Empty(RuleCoverage.ForRepository(RepoPaths.Root).StalePending);
++    }
++
++    [Fact]
++    public void Every_pending_id_is_a_rule_id_from_the_requirements()
++    {
++        Assert.Empty(RuleCoverage.ForRepository(RepoPaths.Root).UnknownPending);
++    }
++
++    [Fact]
++    public void Requirements_rule_tables_parse_with_RENEW_1_2_expanded_into_two_ids()
++    {
++        var ids = RuleCoverage.ParseRuleIds(File.ReadAllText(RepoPaths.Combine("docs", "requirements.md")));
++
++        Assert.Contains("SELL-1", ids);
++        Assert.Contains("CANCEL-1a", ids);
++        Assert.Contains("RENEW-1", ids);
++        Assert.Contains("RENEW-2", ids);
++        Assert.Contains("COULD-3", ids);
++        Assert.DoesNotContain("RENEW-1/2", ids);
++    }
++
++    // The check itself: each failure mode is detected, so a green run means something.
++
++    [Fact]
++    public void A_built_rule_with_no_unit_trait_is_reported()
++    {
++        var report = RuleCoverage.Analyse(Ids("SELL-1"), Traits(IntegrationProject, "SELL-1"), Ids());
++
++        Assert.Single(report.MissingCoverage, gap => gap.StartsWith("SELL-1: no unit-test trait", StringComparison.Ordinal));
++    }
++
++    [Fact]
++    public void A_built_rule_with_no_integration_trait_is_reported()
++    {
++        var report = RuleCoverage.Analyse(Ids("SELL-1"), Traits(UnitProject, "SELL-1"), Ids());
++
++        Assert.Single(report.MissingCoverage, gap => gap.StartsWith("SELL-1: no integration-test trait", StringComparison.Ordinal));
++    }
++
++    [Fact]
++    public void A_trait_naming_an_id_not_in_the_requirements_is_reported()
++    {
++        var report = RuleCoverage.Analyse(Ids("SELL-1"), Traits(IntegrationProject, "SELL-9"), Ids("SELL-1"));
++
++        Assert.Equal(new[] { $"{IntegrationProject}: SELL-9" }, report.UnknownTraits);
++    }
++
++    [Fact]
++    public void A_pending_id_that_already_has_a_trait_is_reported_as_stale()
++    {
++        var report = RuleCoverage.Analyse(Ids("SELL-1"), Traits(IntegrationProject, "SELL-1"), Ids("SELL-1"));
++
++        Assert.Equal(new[] { "SELL-1" }, report.StalePending);
++    }
++
++    [Fact]
++    public void A_pending_id_not_in_the_requirements_is_reported()
++    {
++        var report = RuleCoverage.Analyse(Ids("SELL-1"), Traits(IntegrationProject), Ids("SELL-1", "SELL-99"));
++
++        Assert.Equal(new[] { "SELL-99" }, report.UnknownPending);
++    }
++
++    [Fact]
++    public void Trait_parsing_reads_only_Rule_trait_literals()
++    {
++        // Built by concatenation so this file holds no trait-shaped literal for the scan to find.
++        var source = "[" + "Trait(\"Rule\", \"SELL-2\")]\n[" + "Trait( \"Rule\" , \"SELL-5\" )]\n[" + "Trait(\"Category\", \"SELL-7\")]";
++
++        Assert.Equal(new[] { "SELL-2", "SELL-5" }, RuleCoverage.ParseTraits(source));
++    }
++
++    private static IReadOnlySet<string> Ids(params string[] ids) => ids.ToHashSet(StringComparer.Ordinal);
++
++    private static IReadOnlyDictionary<string, IReadOnlySet<string>> Traits(string project, params string[] ids) =>
++        new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal) { [project] = Ids(ids) };
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/Support/ArchResults.cs b/tests/Uinsure.Policies.Architecture.Tests/Support/ArchResults.cs
+new file mode 100644
+index 0000000..2d896e3
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/Support/ArchResults.cs
+@@ -0,0 +1,15 @@
++using NetArchTest.Rules;
++
++namespace Uinsure.Policies.Architecture.Tests.Support;
++
++internal static class ArchResults
++{
++    public static IReadOnlyList<string> FailingTypeNames(TestResult result) =>
++        result.IsSuccessful ? [] : [.. (result.FailingTypes ?? []).Select(type => $"{type.FullName}")];
++
++    // Failing types in a namespace or any namespace below it. Filtering here rather than with a
++    // NetArchTest namespace predicate leaves out compiler-emitted types (e.g. Microsoft.CodeAnalysis.
++    // EmbeddedAttribute) and doesn't depend on whether a predicate matches exactly or by prefix.
++    public static IReadOnlyList<string> FailingTypeNamesIn(TestResult result, string ns) =>
++        [.. FailingTypeNames(result).Where(name => name.StartsWith(ns + ".", StringComparison.Ordinal))];
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/Support/RepoPaths.cs b/tests/Uinsure.Policies.Architecture.Tests/Support/RepoPaths.cs
+new file mode 100644
+index 0000000..fecaa13
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/Support/RepoPaths.cs
+@@ -0,0 +1,28 @@
++namespace Uinsure.Policies.Architecture.Tests.Support;
++
++internal static class RepoPaths
++{
++    private const string SolutionFile = "Uinsure.Policies.slnx";
++
++    public static string Root { get; } = FindRoot();
++
++    public static string Combine(params string[] parts) => Path.Combine([Root, .. parts]);
++
++    public static string Relative(string fullPath) => Path.GetRelativePath(Root, fullPath).Replace('\\', '/');
++
++    public static bool IsBuildOutput(string relativePath) =>
++        relativePath.Split('/', '\\').Any(segment => segment is "bin" or "obj");
++
++    private static string FindRoot()
++    {
++        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
++        {
++            if (File.Exists(Path.Combine(directory.FullName, SolutionFile)))
++            {
++                return directory.FullName;
++            }
++        }
++
++        throw new InvalidOperationException($"{SolutionFile} was not found above {AppContext.BaseDirectory}.");
++    }
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/Support/RuleCoverage.cs b/tests/Uinsure.Policies.Architecture.Tests/Support/RuleCoverage.cs
+new file mode 100644
+index 0000000..89507ce
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/Support/RuleCoverage.cs
+@@ -0,0 +1,130 @@
++using System.Text.RegularExpressions;
++
++namespace Uinsure.Policies.Architecture.Tests.Support;
++
++internal sealed record RuleCoverageReport(
++    IReadOnlyList<string> MissingCoverage,
++    IReadOnlyList<string> UnknownTraits,
++    IReadOnlyList<string> StalePending,
++    IReadOnlyList<string> UnknownPending);
++
++// Works from source text. U: the rule ids in the first column of the §2 rule tables of
++// docs/requirements.md (X-1/2 expands to X-1 and X-2). T: the Rule trait literals in tests/**/*.cs,
++// keyed by test project. P: tests/rule-coverage.pending.txt, the ids of nodes not yet built.
++internal static partial class RuleCoverage
++{
++    public static RuleCoverageReport ForRepository(string root)
++    {
++        var ruleIds = ParseRuleIds(File.ReadAllText(Path.Combine(root, "docs", "requirements.md")));
++        var pending = ParsePending(File.ReadAllText(Path.Combine(root, "tests", "rule-coverage.pending.txt")));
++        var testsDirectory = Path.Combine(root, "tests");
++
++        var traitsByProject = Directory.EnumerateFiles(testsDirectory, "*.cs", SearchOption.AllDirectories)
++            .Select(file => (File: file, Relative: Path.GetRelativePath(testsDirectory, file).Replace('\\', '/')))
++            .Where(source => !RepoPaths.IsBuildOutput(source.Relative))
++            .GroupBy(source => source.Relative.Split('/')[0], StringComparer.Ordinal)
++            .ToDictionary(
++                project => project.Key,
++                project => (IReadOnlySet<string>)project
++                    .SelectMany(source => ParseTraits(File.ReadAllText(source.File)))
++                    .ToHashSet(StringComparer.Ordinal),
++                StringComparer.Ordinal);
++
++        return Analyse(ruleIds, traitsByProject, pending);
++    }
++
++    public static IReadOnlySet<string> ParseRuleIds(string requirementsMarkdown)
++    {
++        var ids = new SortedSet<string>(StringComparer.Ordinal);
++        var inFunctionalRequirements = false;
++
++        foreach (var rawLine in requirementsMarkdown.Split('\n'))
++        {
++            var line = rawLine.TrimEnd('\r');
++            if (line.StartsWith("## ", StringComparison.Ordinal))
++            {
++                inFunctionalRequirements = line.StartsWith("## 2.", StringComparison.Ordinal);
++            }
++
++            var row = RuleRow().Match(line);
++            if (inFunctionalRequirements && row.Success)
++            {
++                ids.UnionWith(Expand(row.Groups[1].Value));
++            }
++        }
++
++        return ids;
++    }
++
++    public static IEnumerable<string> ParseTraits(string source) =>
++        RuleTrait().Matches(source).Select(match => match.Groups[1].Value);
++
++    public static IReadOnlySet<string> ParsePending(string text) =>
++        text.Split('\n').Select(line => line.Trim()).Where(line => line.Length > 0).ToHashSet(StringComparer.Ordinal);
++
++    public static RuleCoverageReport Analyse(
++        IReadOnlySet<string> ruleIds,
++        IReadOnlyDictionary<string, IReadOnlySet<string>> traitsByProject,
++        IReadOnlySet<string> pending)
++    {
++        var unit = TraitsIn(traitsByProject, IsUnitProject);
++        var integration = TraitsIn(traitsByProject, IsIntegrationProject);
++        var anywhere = TraitsIn(traitsByProject, _ => true);
++
++        var missing = ruleIds.Where(id => !pending.Contains(id))
++            .SelectMany(id => Gaps(id, unit, integration))
++            .ToList();
++        var unknownTraits = traitsByProject
++            .SelectMany(project => project.Value.Where(id => !ruleIds.Contains(id)).Select(id => $"{project.Key}: {id}"))
++            .Order(StringComparer.Ordinal)
++            .ToList();
++        var stale = pending.Where(anywhere.Contains).Order(StringComparer.Ordinal).ToList();
++        var unknownPending = pending.Where(id => !ruleIds.Contains(id)).Order(StringComparer.Ordinal).ToList();
++
++        return new RuleCoverageReport(missing, unknownTraits, stale, unknownPending);
++    }
++
++    private static bool IsUnitProject(string project) =>
++        project.EndsWith(".Domain.Tests", StringComparison.Ordinal) || project.EndsWith(".Services.Tests", StringComparison.Ordinal);
++
++    private static bool IsIntegrationProject(string project) =>
++        project.EndsWith(".Api.Tests", StringComparison.Ordinal);
++
++    private static HashSet<string> TraitsIn(
++        IReadOnlyDictionary<string, IReadOnlySet<string>> traitsByProject,
++        Func<string, bool> projectFilter) =>
++        traitsByProject.Where(project => projectFilter(project.Key))
++            .SelectMany(project => project.Value)
++            .ToHashSet(StringComparer.Ordinal);
++
++    private static IEnumerable<string> Gaps(string id, HashSet<string> unit, HashSet<string> integration)
++    {
++        if (!unit.Contains(id))
++        {
++            yield return $"{id}: no unit-test trait (Domain.Tests or Services.Tests)";
++        }
++
++        if (!integration.Contains(id))
++        {
++            yield return $"{id}: no integration-test trait (Api.Tests)";
++        }
++    }
++
++    private static IEnumerable<string> Expand(string cell)
++    {
++        var slash = cell.IndexOf('/');
++        if (slash < 0)
++        {
++            return [cell];
++        }
++
++        var prefix = cell[..(cell.LastIndexOf('-', slash) + 1)];
++        return [cell[..slash], prefix + cell[(slash + 1)..]];
++    }
++
++    [GeneratedRegex(@"^\|\s*([A-Z]+-\d+[a-z]?(?:/\d+)?)\s*\|")]
++    private static partial Regex RuleRow();
++
++    [GeneratedRegex(@"\[Trait\(\s*""Rule""\s*,\s*""([^""]*)""\s*\)\]")]
++    private static partial Regex RuleTrait();
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/Support/SourceAssemblies.cs b/tests/Uinsure.Policies.Architecture.Tests/Support/SourceAssemblies.cs
+new file mode 100644
+index 0000000..4d1ccb6
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/Support/SourceAssemblies.cs
+@@ -0,0 +1,24 @@
++using System.Reflection;
++
++namespace Uinsure.Policies.Architecture.Tests.Support;
++
++// Loaded by name so the tests don't depend on any particular type existing in a layer.
++internal static class SourceAssemblies
++{
++    public static Assembly Domain { get; } = Assembly.Load("Uinsure.Policies.Domain");
++
++    public static Assembly Services { get; } = Assembly.Load("Uinsure.Policies.Services");
++
++    public static Assembly Persistence { get; } = Assembly.Load("Uinsure.Policies.Persistence");
++
++    public static Assembly Api { get; } = Assembly.Load("Uinsure.Policies.Api");
++
++    public static IReadOnlyList<Assembly> All { get; } = [Domain, Services, Persistence, Api];
++
++    public static IEnumerable<string> ReferencedAssemblyNames(Assembly assembly) =>
++        assembly.GetReferencedAssemblies().Select(reference => reference.Name ?? string.Empty);
++
++    public static bool IsCompilerGenerated(Type type) =>
++        type.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), inherit: false)
++        || type.Name.Contains('<');
++}
+diff --git a/tests/Uinsure.Policies.Architecture.Tests/Uinsure.Policies.Architecture.Tests.csproj b/tests/Uinsure.Policies.Architecture.Tests/Uinsure.Policies.Architecture.Tests.csproj
+new file mode 100644
+index 0000000..f208b7e
+--- /dev/null
++++ b/tests/Uinsure.Policies.Architecture.Tests/Uinsure.Policies.Architecture.Tests.csproj
+@@ -0,0 +1,21 @@
++<Project Sdk="Microsoft.NET.Sdk">
++
++  <PropertyGroup>
++    <OutputType>Exe</OutputType>
++    <IsPackable>false</IsPackable>
++    <IsTestProject>true</IsTestProject>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <PackageReference Include="xunit.v3" />
++    <PackageReference Include="NetArchTest.eNhancedEdition" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\..\src\Uinsure.Policies.Domain\Uinsure.Policies.Domain.csproj" />
++    <ProjectReference Include="..\..\src\Uinsure.Policies.Services\Uinsure.Policies.Services.csproj" />
++    <ProjectReference Include="..\..\src\Uinsure.Policies.Persistence\Uinsure.Policies.Persistence.csproj" />
++    <ProjectReference Include="..\..\src\Uinsure.Policies.Api\Uinsure.Policies.Api.csproj" />
++  </ItemGroup>
++
++</Project>
+diff --git a/tests/Uinsure.Policies.Domain.Tests/Uinsure.Policies.Domain.Tests.csproj b/tests/Uinsure.Policies.Domain.Tests/Uinsure.Policies.Domain.Tests.csproj
+new file mode 100644
+index 0000000..97f2aac
+--- /dev/null
++++ b/tests/Uinsure.Policies.Domain.Tests/Uinsure.Policies.Domain.Tests.csproj
+@@ -0,0 +1,17 @@
++<Project Sdk="Microsoft.NET.Sdk">
++
++  <PropertyGroup>
++    <OutputType>Exe</OutputType>
++    <IsPackable>false</IsPackable>
++    <IsTestProject>true</IsTestProject>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <PackageReference Include="xunit.v3" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\..\src\Uinsure.Policies.Domain\Uinsure.Policies.Domain.csproj" />
++  </ItemGroup>
++
++</Project>
+diff --git a/tests/Uinsure.Policies.Services.Tests/Uinsure.Policies.Services.Tests.csproj b/tests/Uinsure.Policies.Services.Tests/Uinsure.Policies.Services.Tests.csproj
+new file mode 100644
+index 0000000..9c16c60
+--- /dev/null
++++ b/tests/Uinsure.Policies.Services.Tests/Uinsure.Policies.Services.Tests.csproj
+@@ -0,0 +1,18 @@
++<Project Sdk="Microsoft.NET.Sdk">
++
++  <PropertyGroup>
++    <OutputType>Exe</OutputType>
++    <IsPackable>false</IsPackable>
++    <IsTestProject>true</IsTestProject>
++  </PropertyGroup>
++
++  <ItemGroup>
++    <PackageReference Include="xunit.v3" />
++    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
++  </ItemGroup>
++
++  <ItemGroup>
++    <ProjectReference Include="..\..\src\Uinsure.Policies.Services\Uinsure.Policies.Services.csproj" />
++  </ItemGroup>
++
++</Project>
+diff --git a/tests/Uinsure.Policies.Services.Tests/UkCalendarTests.cs b/tests/Uinsure.Policies.Services.Tests/UkCalendarTests.cs
+new file mode 100644
+index 0000000..830422f
+--- /dev/null
++++ b/tests/Uinsure.Policies.Services.Tests/UkCalendarTests.cs
+@@ -0,0 +1,72 @@
++using Microsoft.Extensions.Time.Testing;
++using Xunit;
++
++namespace Uinsure.Policies.Services.Tests;
++
++// "Today" is the Europe/London date of the UTC instant. In 2027, BST runs from 01:00 UTC on Sunday
++// 28 March to 01:00 UTC on Sunday 31 October. Each side of every boundary is its own test.
++public sealed class UkCalendarTests
++{
++    [Fact]
++    public void UkCalendar_today_at_23_30_UTC_in_BST_is_the_next_UK_date()
++    {
++        Assert.Equal(new DateOnly(2027, 7, 1), UkTodayAt(2027, 6, 30, 23, 30));
++    }
++
++    [Fact]
++    public void UkCalendar_today_at_23_30_UTC_in_GMT_is_the_same_UK_date()
++    {
++        Assert.Equal(new DateOnly(2027, 1, 15), UkTodayAt(2027, 1, 15, 23, 30));
++    }
++
++    [Fact]
++    public void UkCalendar_today_at_22_59_59_UTC_in_BST_is_still_the_UTC_date()
++    {
++        Assert.Equal(new DateOnly(2027, 6, 30), UkTodayAt(2027, 6, 30, 22, 59, 59));
++    }
++
++    [Fact]
++    public void UkCalendar_today_at_23_00_UTC_in_BST_is_the_next_UK_date()
++    {
++        Assert.Equal(new DateOnly(2027, 7, 1), UkTodayAt(2027, 6, 30, 23, 0));
++    }
++
++    [Fact]
++    public void UkCalendar_today_at_23_59_59_UTC_in_GMT_is_the_same_UK_date()
++    {
++        Assert.Equal(new DateOnly(2027, 1, 15), UkTodayAt(2027, 1, 15, 23, 59, 59));
++    }
++
++    [Fact]
++    public void UkCalendar_today_at_midnight_UTC_in_GMT_is_the_new_UK_date()
++    {
++        Assert.Equal(new DateOnly(2027, 1, 16), UkTodayAt(2027, 1, 16, 0, 0));
++    }
++
++    [Fact]
++    public void UkCalendar_today_at_23_00_UTC_the_day_before_BST_starts_is_the_same_UK_date()
++    {
++        Assert.Equal(new DateOnly(2027, 3, 27), UkTodayAt(2027, 3, 27, 23, 0));
++    }
++
++    [Fact]
++    public void UkCalendar_today_at_23_00_UTC_the_day_BST_starts_is_the_next_UK_date()
++    {
++        Assert.Equal(new DateOnly(2027, 3, 29), UkTodayAt(2027, 3, 28, 23, 0));
++    }
++
++    [Fact]
++    public void UkCalendar_today_at_23_00_UTC_the_day_before_GMT_returns_is_the_next_UK_date()
++    {
++        Assert.Equal(new DateOnly(2027, 10, 31), UkTodayAt(2027, 10, 30, 23, 0));
++    }
++
++    [Fact]
++    public void UkCalendar_today_at_23_00_UTC_the_day_GMT_returns_is_the_same_UK_date()
++    {
++        Assert.Equal(new DateOnly(2027, 10, 31), UkTodayAt(2027, 10, 31, 23, 0));
++    }
++
++    private static DateOnly UkTodayAt(int year, int month, int day, int hour, int minute, int second = 0) =>
++        UkCalendar.Today(new FakeTimeProvider(new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero)));
++}
+diff --git a/tests/postman/Uinsure.Policies.postman_collection.json b/tests/postman/Uinsure.Policies.postman_collection.json
+new file mode 100644
+index 0000000..95da70d
+--- /dev/null
++++ b/tests/postman/Uinsure.Policies.postman_collection.json
+@@ -0,0 +1,71 @@
++{
++  "info": {
++    "name": "Uinsure.Policies",
++    "description": "Uinsure Policies API. One folder per plan node, each with its happy path and rule violations. Requests create their own data and compute dates from the real today; rows that need a fake clock are integration-test only.",
++    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
++  },
++  "item": [
++    {
++      "name": "F0b Walking skeleton",
++      "item": [
++        {
++          "name": "happy path",
++          "item": [
++            {
++              "name": "HEALTH · live → 200",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"HEALTH · live answers 200 Healthy\", function () {",
++                      "    pm.response.to.have.status(200);",
++                      "    pm.expect(pm.response.text()).to.eql(\"Healthy\");",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/health/live",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["health", "live"]
++                }
++              }
++            },
++            {
++              "name": "HEALTH · ready (database answers) → 200",
++              "event": [
++                {
++                  "listen": "test",
++                  "script": {
++                    "type": "text/javascript",
++                    "exec": [
++                      "pm.test(\"HEALTH · ready answers 200 Healthy when the database answers\", function () {",
++                      "    pm.response.to.have.status(200);",
++                      "    pm.expect(pm.response.text()).to.eql(\"Healthy\");",
++                      "});"
++                    ]
++                  }
++                }
++              ],
++              "request": {
++                "method": "GET",
++                "header": [],
++                "url": {
++                  "raw": "{{baseUrl}}/health/ready",
++                  "host": ["{{baseUrl}}"],
++                  "path": ["health", "ready"]
++                }
++              }
++            }
++          ]
++        }
++      ]
++    }
++  ]
++}
+diff --git a/tests/postman/local.postman_environment.json b/tests/postman/local.postman_environment.json
+new file mode 100644
+index 0000000..2ab26f3
+--- /dev/null
++++ b/tests/postman/local.postman_environment.json
+@@ -0,0 +1,12 @@
++{
++  "name": "local",
++  "values": [
++    {
++      "key": "baseUrl",
++      "value": "http://localhost:5080",
++      "type": "default",
++      "enabled": true
++    }
++  ],
++  "_postman_variable_scope": "environment"
++}
+diff --git a/tests/rule-coverage.pending.txt b/tests/rule-coverage.pending.txt
+new file mode 100644
+index 0000000..cd024bc
+--- /dev/null
++++ b/tests/rule-coverage.pending.txt
+@@ -0,0 +1,30 @@
++SELL-1
++SELL-2
++SELL-3
++SELL-4
++SELL-5
++SELL-6
++SELL-7
++GET-1
++CANCEL-1a
++CANCEL-1b
++CANCEL-1c
++CANCEL-2
++CANCEL-3
++CANCEL-4
++CANCEL-5
++CANCEL-6
++CANCEL-7
++RENEW-1
++RENEW-2
++RENEW-3a
++RENEW-3b
++RENEW-4
++RENEW-5
++RENEW-6
++COULD-1
++COULD-2
++COULD-2a
++COULD-2b
++COULD-2c
++COULD-3
