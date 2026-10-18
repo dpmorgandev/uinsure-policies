@@ -1,31 +1,34 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Uinsure.Policies.Api.Contracts;
+using Uinsure.Policies.Api.Errors;
+using Uinsure.Policies.Domain.Policies;
+using Uinsure.Policies.Services;
 
 namespace Uinsure.Policies.Api.Controllers;
 
 [ApiController]
 [Route("policies")]
-public sealed class PoliciesController : ControllerBase
+public sealed class PoliciesController(PolicyService service) : ControllerBase
 {
-    // STUB: canned responses until the green steps wire the service.
     [HttpPost]
     [EnableRateLimiting("writes")]
-    public ActionResult<PolicyResponse> Sell(SellPolicyRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PolicyResponse>> Sell(SellPolicyRequest request, CancellationToken cancellationToken)
     {
-        var reference = request.Reference!.Trim().ToUpperInvariant();
-        return Created($"/policies/{reference}", Canned(reference));
+        var result = await service.Sell(request.ToCommand(), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return this.ToProblem(result.Violations);
+        }
+
+        var response = result.Value.ToResponse();
+        return Created($"/policies/{response.Reference}", response);
     }
 
     [HttpGet("{reference}")]
-    public ActionResult<PolicyResponse> Get(string reference, CancellationToken cancellationToken) =>
-        Canned(reference.Trim().ToUpperInvariant());
-
-    private static PolicyResponse Canned(string reference) => new(
-        reference,
-        PolicyType.Household,
-        new DateOnly(2026, 11, 1),
-        365.00m,
-        true,
-        new PropertyDto { AddressLine1 = "1 High St", Postcode = "M1 1AA" });
+    public async Task<ActionResult<PolicyResponse>> Get(string reference, CancellationToken cancellationToken)
+    {
+        var result = await service.Get(PolicyReference.Normalise(reference), cancellationToken);
+        return result.IsSuccess ? result.Value.ToResponse() : this.ToProblem(result.Violations);
+    }
 }

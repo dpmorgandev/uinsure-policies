@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace Uinsure.Policies.Api.Contracts;
 
@@ -16,10 +17,11 @@ public enum PaymentMethod
 }
 
 // Required members are nullable so a missing field fails [Required] instead of binding as a default.
-public sealed class SellPolicyRequest
+public sealed class SellPolicyRequest : IValidatableObject
 {
+    private static readonly Regex ReferencePattern = new("^[A-Z0-9-]{3,20}$", RegexOptions.None, TimeSpan.FromSeconds(1));
+
     [Required]
-    [RegularExpression("^[A-Za-z0-9-]{3,20}$")]
     public string? Reference { get; init; }
 
     [Required]
@@ -42,6 +44,17 @@ public sealed class SellPolicyRequest
 
     [Required]
     public PropertyDto? Property { get; init; }
+
+    // SELL-1: the pattern applies to the trimmed, upper-cased reference, so " abc-1 " is valid.
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Reference is not null && !ReferencePattern.IsMatch(Reference.Trim().ToUpperInvariant()))
+        {
+            yield return new ValidationResult(
+                "The reference must be 3 to 20 characters: letters, digits or hyphens.",
+                [nameof(Reference)]);
+        }
+    }
 }
 
 public sealed class PolicyholderDto

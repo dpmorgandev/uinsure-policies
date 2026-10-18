@@ -9,6 +9,7 @@ using Uinsure.Policies.Api;
 using Uinsure.Policies.Api.Errors;
 using Scalar.AspNetCore;
 using Uinsure.Policies.Persistence;
+using Uinsure.Policies.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,14 +44,17 @@ builder.Services.AddOptions<RateLimiterOptions>().Configure<IOptions<RateLimitin
 });
 
 // Strict input: unknown members, integer enums and string numbers are 400s.
-builder.Services.AddControllers().AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
-    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
-    options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict;
-});
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false));
+        options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+    })
+    .ConfigureApiBehaviorOptions(options => options.InvalidModelStateResponseFactory = ValidationProblems.FromModelState);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddScoped<PolicyService>();
 builder.Services.AddOpenApi();
 
 // RFC 9457 bodies: every problem response carries the request path and a traceId.
