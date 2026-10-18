@@ -60,9 +60,11 @@ public sealed class SellPolicyRequest : IValidatableObject
 public sealed class PolicyholderDto
 {
     [Required]
+    [MaxLength(100)]
     public string? FirstName { get; init; }
 
     [Required]
+    [MaxLength(100)]
     public string? LastName { get; init; }
 
     [Required]
@@ -72,10 +74,13 @@ public sealed class PolicyholderDto
 public sealed class PropertyDto
 {
     [Required]
+    [MaxLength(200)]
     public string? AddressLine1 { get; init; }
 
+    [MaxLength(200)]
     public string? AddressLine2 { get; init; }
 
+    [MaxLength(200)]
     public string? AddressLine3 { get; init; }
 
     [Required]
