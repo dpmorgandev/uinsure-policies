@@ -216,8 +216,8 @@ nodes:
       - {id: t6, role: builder, step: green, layer: services, rules: [GET-1], title: "PolicyService.Get: normalised reference, UK today, null for not found", status: done}
       - {id: t7, role: builder, step: green, layer: persistence, rules: [GET-1], title: "GetByReference loads terms, policyholders, property and payments (refunds and claims arrive in F3)", status: done}
       - {id: t8, role: builder, step: green, layer: api, rules: [GET-1], title: "Real GET: response contract per api-contract, 404 problem body; money formatted to exactly 2 dp in every response (POST and GET); global unknown-query-parameter filter (400, api-contract E2); whole acceptance suite green", status: done}
-      - {id: t9, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
-      - {id: t10, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
+      - {id: t9, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: done}
+      - {id: t10, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: done}
       - {id: t11, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
       - {id: t12, role: tester, step: qa, layer: null, rules: [GET-1], title: "QA script docs/qa/build-F2.md, steps tagged per rule", status: pending}
       - {id: t13, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
