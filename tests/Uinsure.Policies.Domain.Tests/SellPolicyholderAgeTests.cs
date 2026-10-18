@@ -92,4 +92,35 @@ public sealed class SellPolicyholderAgeTests
         var violation = ViolationAssert.SingleBusinessRule(result, "SELL-5");
         Assert.Equal(1, ViolationAssert.Extension(violation, "index"));
     }
+
+    // The latest date of birth a request can carry: born after the start, so under 16 on it. The comparison
+    // must be defined for it (its 16th birthday is past 9999-12-31), so the sale fails as SELL-5, not throws.
+    [Fact]
+    [Trait("Rule", "SELL-5")]
+    public void Policyholder_born_on_31_December_9999_is_rejected_as_under_16_without_throwing()
+    {
+        var result = new PolicyBuilder()
+            .WithPolicyholders(new PolicyholderBuilder().WithDateOfBirth(new DateOnly(9999, 12, 31)))
+            .Sell();
+
+        var violation = ViolationAssert.SingleBusinessRule(result, "SELL-5");
+        Assert.Equal(1, ViolationAssert.Extension(violation, "index"));
+    }
+
+    // The earliest start date a request can carry. SELL-2 is collected, not returned early, so this start
+    // still reaches the SELL-5 check: no year arithmetic on it may throw either. Both rules are reported.
+    [Fact]
+    [Trait("Rule", "SELL-2")]
+    [Trait("Rule", "SELL-5")]
+    public void Start_date_of_1_January_0001_reports_SELL_2_and_SELL_5_without_throwing()
+    {
+        var result = new PolicyBuilder()
+            .WithStartDate(new DateOnly(1, 1, 1))
+            .WithPolicyholders(new PolicyholderBuilder().WithDateOfBirth(new DateOnly(1990, 1, 1)))
+            .Sell();
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(["SELL-2", "SELL-5"], result.Violations.Select(violation => violation.RuleId));
+        Assert.Equal(1, ViolationAssert.Extension(result.Violations[1], "index"));
+    }
 }

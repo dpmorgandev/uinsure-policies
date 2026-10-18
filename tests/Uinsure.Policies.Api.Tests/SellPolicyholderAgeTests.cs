@@ -96,4 +96,23 @@ public sealed class SellPolicyholderAgeTests : IClassFixture<PoliciesApiFactory>
         Assert.Equal(2, problem.GetProperty("index").GetInt32());
         await client.AssertNotStored("SELL5-SECOND-UNDER");
     }
+
+    // Born in 9984, the 16th birthday would be in year 10000, past the last date there is. Born after the
+    // start, the holder is under 16 on it: a 422 SELL-5, not a 500.
+    [Fact]
+    [Trait("Rule", "SELL-5")]
+    public async Task Policyholder_born_in_9984_is_rejected_with_422_as_under_16()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SELL5-BORN-9984")
+            .WithStartDate(Start)
+            .WithPolicyholders(new PolicyholderBuilder().WithDateOfBirth(new DateOnly(9984, 1, 1)))
+            .Build();
+
+        using var response = await client.PostPolicy(body);
+
+        var problem = await ProblemAssert.SingleRuleViolation(response, "SELL-5", Title);
+        Assert.Equal(1, problem.GetProperty("index").GetInt32());
+        await client.AssertNotStored("SELL5-BORN-9984");
+    }
 }
