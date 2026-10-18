@@ -144,11 +144,49 @@ nodes:
       - {id: t17, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: done}
       - {id: t18, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: done}
       - {id: t19, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: done}
+  - id: F1b
+    title: Layered models and interfaces
+    kind: feature
+    owner: loop
+    depends_on: [F1]
+    rules: []
+    cuttable: false
+    budget: null
+    status: pending
+    attempt: 0
+    branch: null
+    worktree: null
+    pr: null
+    qa: docs/qa/build-F1b.md
+    trace: docs/trace/build/F1b/
+    acceptance:
+      - "Architecture tests A12-A15 pass: Persistence records internal and the only EF-mapped types; Policy.Restore called only from Persistence; no EF-only constructor or Version in the Domain; the controller depends on IPolicyService, and PolicyService implements it and takes IReferenceGenerator"
+      - "No behaviour change: the whole F1 suite (277) stays green, and every Sell read-back proves the domain-record round trip"
+      - "A stale save still answers 409 /problems/concurrency, now through PolicyRecord.Version; a duplicate still answers SELL-1 409"
+      - "The repository's loaded-record map is scoped per request, never static"
+      - "A request the client aborts (OperationCanceledException with RequestAborted) is logged below Error and gets no 500 problem body"
+    tasks:
+      - {id: t1, role: tester, step: red, layer: acceptance, rules: [], title: "Architecture tests A12-A15 failing on the F1 code; a concurrency round-trip test through the records; a client-aborted request test (not logged at Error, no 500); throwing stubs for the new types", status: pending}
+      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "No new endpoint: skipped (David, 2026-10-18)", status: skipped}
+      - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Skipped: David reviews at Pause 2 (2026-10-18)", status: skipped}
+      - {id: t4, role: builder, step: green, layer: domain, rules: [], title: "Domain: Policy.Restore, remove the EF-only constructors and Version; Domain.Tests green", status: pending}
+      - {id: t5, role: builder, step: green, layer: services, rules: [], title: "Services: IPolicyService, IReferenceGenerator injected into PolicyService; Services.Tests green", status: pending}
+      - {id: t6, role: builder, step: green, layer: persistence, rules: [], title: "Persistence: Records, configurations on the records, PolicyRecordMapper as a Mapperly [Mapper] (Restore, Version and the tracked-record update hand-written), per-request record map, Version on PolicyRecord; migration regenerated", status: pending}
+      - {id: t7, role: builder, step: green, layer: api, rules: [], title: "Api: PolicyMappings as a Mapperly [Mapper]; the controller and DI depend on IPolicyService and IReferenceGenerator; UnexpectedExceptionHandler treats a client-aborted request as cancelled, not a 500; whole suite green", status: pending}
+      - {id: t8, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
+      - {id: t9, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
+      - {id: t10, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+      - {id: t11, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F1b.md: the F1 Postman folder unchanged and green, plus the layering checks", status: pending}
+      - {id: t12, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
+      - {id: t13, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
+      - {id: t14, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
+      - {id: t15, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: pending}
+      - {id: t16, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
   - id: F2
     title: Retrieve
     kind: feature
     owner: loop
-    depends_on: [F1]
+    depends_on: [F1b]
     rules: [GET-1]
     cuttable: false
     budget: null

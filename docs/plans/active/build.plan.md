@@ -26,6 +26,7 @@ This plan runs once and closes when the system exists. Later changes go through 
   Every red and green task names the rule ids it covers.
 - Two pauses per loop node: Pause 1 when the acceptance suite is red and the stub is green; Pause 2 for HITL sign-off from walkthrough.md, the QA script and Postman. David merges.
 - File order is the schedule. F5 depends only on F0b but sits after F4.
+- **Amendment (David, 2026-10-18, after F1): node F1b, "Layered models and interfaces", before F2.** Reviewing F1, David asked for a model per layer (Api DTOs ↔ Domain ↔ Persistence records) and interfaces at the layer seams (`IPolicyService`, `IReferenceGenerator`, plus `IPolicyRepository`). Doing it now keeps F2–F4 from building on the old shape. It's a refactor: red is the new architecture tests A12–A15, the F1 suite is the safety net, and there's no new endpoint, so stub and Pause 1 are skipped. F2 now depends on F1b. Contract: architecture.spec.md, D1 amendment.
 - Budgets: F5 is time-boxed at 3h, and every other node is unset.
 - Cut order: F7, then F5. If F7 hasn't started by 12:00 on Monday 2026-10-19, it's cut; if F5 hasn't started by 14:00, it's cut. F0a to F4 and F6 are never cut. A cut is David's decision and needs a lesson.
 
