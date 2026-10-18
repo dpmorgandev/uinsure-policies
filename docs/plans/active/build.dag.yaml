@@ -196,7 +196,7 @@ nodes:
     rules: [GET-1]
     cuttable: false
     budget: null
-    status: investigating
+    status: in_progress
     attempt: 3
     branch: feature/build/F2
     worktree: .claude/worktrees/build-F2
