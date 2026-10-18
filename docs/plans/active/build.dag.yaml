@@ -187,7 +187,7 @@ nodes:
       - {id: t16, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
       - {id: t17, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: done}
       - {id: t18, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: done}
-      - {id: t19, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
+      - {id: t19, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: done}
   - id: F2
     title: Retrieve
     kind: feature
@@ -196,10 +196,10 @@ nodes:
     rules: [GET-1]
     cuttable: false
     budget: null
-    status: pending
-    attempt: 0
-    branch: null
-    worktree: null
+    status: in_progress
+    attempt: 1
+    branch: feature/build/F2
+    worktree: .claude/worktrees/build-F2
     pr: null
     qa: docs/qa/build-F2.md
     trace: docs/trace/build/F2/
