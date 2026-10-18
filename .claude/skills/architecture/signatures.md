@@ -44,7 +44,7 @@ public sealed class Term
 public sealed class Policy
 {
     public PolicyReference Reference { get; }  public PolicyType Type { get; }
-    public bool AutoRenew { get; }  public bool HasClaims { get; }  public Guid Version { get; } // concurrency token
+    public bool AutoRenew { get; }  public bool HasClaims { get; }    // no Version: it lives on PolicyRecord (F1b)
     public IReadOnlyList<Policyholder> Policyholders { get; }  public Property Property { get; }
     public IReadOnlyList<Term> Terms { get; }  public IReadOnlyList<Claim> Claims { get; }
     public Cancellation? Cancellation { get; }
@@ -53,6 +53,9 @@ public sealed class Policy
     public PolicyStatus StatusOn(DateOnly today);
     // Cancelled if Cancellation != null; Pending if today < Terms[0].Start; Expired if today > LatestTerm.End; else Active
 
+    public static Policy Restore(PolicyReference reference, PolicyType type, bool autoRenew, bool hasClaims,
+        IReadOnlyList<Policyholder> holders, Property property, IReadOnlyList<Term> terms,
+        IReadOnlyList<Claim> claims, Cancellation? cancellation);     // persistence only (A13): stored state, no rules run
     public static Result<Policy> Sell(PolicyReference reference, PolicyType type, DateOnly start, decimal amount,
         bool autoRenew, IReadOnlyList<Policyholder> holders, Property property, PaymentMethod method,
         string paymentReference, DateOnly today);                      // SELL-2..7 (SELL-7: amount > 0)
@@ -73,7 +76,9 @@ public enum ConflictReason { Concurrency, DuplicateReference }
 public sealed class PersistenceConflictException(ConflictReason reason) : Exception;
 public static class UkCalendar { public static DateOnly Today(TimeProvider clock); } // GetUtcNow() → Europe/London
 public sealed record PolicyDetails(Policy Policy, Term CurrentTerm, PolicyStatus Status);
-public sealed class PolicyService(IPolicyRepository repository, TimeProvider clock)
+public interface IReferenceGenerator { string Payment(); string Refund(); }  // implemented by ReferenceGenerator
+public interface IPolicyService { /* the methods below; PoliciesController depends on this */ }
+public sealed class PolicyService(IPolicyRepository repository, IReferenceGenerator references, TimeProvider clock) : IPolicyService
 {   // each method computes today once via UkCalendar.Today(clock)
     Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct);
     Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct);

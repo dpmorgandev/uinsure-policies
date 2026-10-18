@@ -18,11 +18,11 @@ src/Uinsure.Policies.Domain/        BCL only: no PackageReference, no ProjectRef
              PolicyReference PolicyType PaymentMethod PolicyStatus
   Rules/     RefundCalculator RefundCalculation RuleIds
   Common/    Result RuleViolation ViolationKind Money
-src/Uinsure.Policies.Services/      PolicyService (orchestrates only: load → today → domain → save)
+src/Uinsure.Policies.Services/      IPolicyService ← PolicyService (orchestrates only: load → today → domain → save)
   Commands/SellPolicy, Commands/PolicyDetails (read model)  IPolicyRepository  PersistenceConflictException
-  UkCalendar  ReferenceGenerator (payment and refund references)
-src/Uinsure.Policies.Persistence/   PoliciesDbContext  PoliciesDbContextFactory (design-time, SQL Server)  Configurations/
-  Migrations/ (SQL Server only)  PolicyRepository (internal sealed)  DatabaseOptions  PersistenceServiceCollectionExtensions
+  UkCalendar  IReferenceGenerator ← ReferenceGenerator (payment and refund references, injected)
+src/Uinsure.Policies.Persistence/   PoliciesDbContext  PoliciesDbContextFactory  Records/ (internal *Record)  PolicyRecordMapper
+  Configurations/ (map the records, never Domain)  Migrations/ (SQL Server)  PolicyRepository (internal sealed)  DatabaseOptions
 src/Uinsure.Policies.Api/           Program.cs (composition root: the only Api type that touches Persistence)
   Controllers/PoliciesController (sell, get, cancel, quote, claims, renew)
   Contracts/ (DTOs with DataAnnotations, PolicyMappings)
@@ -44,8 +44,8 @@ tests/ Domain.Tests (pure, DateOnly today) · Services.Tests (only if needed) ·
 | *.Tests | the project under test (Architecture.Tests: all four) | — |
 
 - Nothing in `src/` or `tests/` references `.claude/`.
-- No generic repository and no Unit of Work. No interface with one implementation, except `IPolicyRepository`.
-- `PolicyService` is concrete and injected as itself.
+- No generic repository and no Unit of Work. Interfaces at the layer seams only: `IPolicyService`, `IPolicyRepository`, `IReferenceGenerator`.
+- A model per layer: Api DTOs ↔ Domain ↔ Persistence records. `Policy.Restore` is for Persistence only; `Version` is on `PolicyRecord`.
 
 ## Where rules live (signatures in `signatures.md`)
 
@@ -72,8 +72,8 @@ each returned alone → then every 422 rule is collected, and none returns early
 - Cancel: `on ?? today`. Each refund goes to the method of the payment it reverses (CANCEL-2).
 - **No £0 Refund.** A `Refund` is created only when `RefundCalculation.Amount > 0`. Every term's
   calculation is still returned.
-- Any claim sets `HasClaims = true`. Every successful `Cancel`, `Renew` and `RecordClaim` sets
-  `Version = Guid.NewGuid()`.
+- Any claim sets `HasClaims = true`. The repository sets `PolicyRecord.Version = Guid.NewGuid()` on every
+  save of a changed policy (Cancel, Renew, RecordClaim); the domain has no `Version`.
 
 ## HTTP edge
 
@@ -85,7 +85,7 @@ each returned alone → then every 422 rule is collected, and none returns early
 | `ViolationKind.BusinessRule` | 422 | + `ruleId` (first in `RuleIds.Order`) + `violations: [{ruleId, detail}]` |
 | `PersistenceConflictException(DuplicateReference)` | 409 | as SELL-1 |
 | `PersistenceConflictException(Concurrency)` | 409 | `type: /problems/concurrency`, no `ruleId`, detail asks to retry |
-| Transport: `BadHttpRequestException` · non-HTTPS outside Development (not `/health/*`) · rate limiter | its 413/408/400 · 400 · 429 + `Retry-After` | no `ruleId`; fixed title/detail, never the exception message (Warning) · `/problems/https-required` · `/problems/rate-limited` |
+| Transport: `BadHttpRequestException` · non-HTTPS outside Development (not `/health/*`) · rate limiter · client aborted (`OperationCanceledException` + `RequestAborted`) | its 413/408/400 · 400 · 429 + `Retry-After` · none | no `ruleId`; fixed title/detail, never the exception message (Warning) · `/problems/https-required` · `/problems/rate-limited` · logged at Information, no body |
 | any other exception | 500 | generic `detail` + `traceId`; exception to logs only; no stack trace outside Development |
 
 - RFC 9457 body: `type` = `/problems/{rule-id lower-case, "/" → "-"}`, `title`, `status`, `detail`, `instance`,
@@ -108,8 +108,8 @@ each returned alone → then every 422 rule is collected, and none returns early
   the context, `IPolicyRepository` and the `ready` health check.
 - The aggregate is loaded whole, with no lazy loading. There's a unique index on `Reference`. Money uses
   `HasPrecision(18,2)`, and enums are stored as strings.
-- `Version` is `.IsConcurrencyToken()`. `PolicyRepository.SaveChanges` translates
-  `DbUpdateConcurrencyException` and the unique-index `DbUpdateException` into `PersistenceConflictException`.
+- EF maps the internal `*Record` types; `PolicyRecord.Version` is `.IsConcurrencyToken()`. `SaveChanges`
+  maps domain → tracked record (a per-request map, never static), then translates EF conflicts to `PersistenceConflictException`.
 - Migrations are SQL Server only, made via `PoliciesDbContextFactory`. The app never calls `Database.Migrate()`:
   with Sqlite it calls `EnsureCreated()` at start-up, and the tests do too.
 - Never `OrderBy`, `Sum` or compare money in SQL, because SQLite stores decimal as TEXT.
