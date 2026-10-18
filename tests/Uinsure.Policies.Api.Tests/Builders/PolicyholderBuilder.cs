@@ -4,12 +4,13 @@ using Uinsure.Policies.Api.Tests.Support;
 namespace Uinsure.Policies.Api.Tests.Builders;
 
 // A policyholder as the Sell request carries it. Build() with no overrides is valid: an adult on any
-// start date the sale window allows.
+// start date the sale window allows. None of it is the api.md example holder (Ada Lovelace, 1985-12-10);
+// BuilderDefaultsTests guards that.
 public sealed class PolicyholderBuilder
 {
-    private string _firstName = "Ada";
-    private string _lastName = "Lovelace";
-    private DateOnly _dateOfBirth = new(1985, 12, 10);
+    private string _firstName = "Katherine";
+    private string _lastName = "Johnson";
+    private DateOnly _dateOfBirth = new(1981, 8, 26);
 
     public PolicyholderBuilder WithName(string firstName, string lastName)
     {

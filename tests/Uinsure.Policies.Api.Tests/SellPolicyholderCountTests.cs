@@ -17,8 +17,8 @@ public sealed class SellPolicyholderCountTests : IClassFixture<PoliciesApiFactor
         _factory.ResetClock();
     }
 
-    // A holder unlike the builder default and the api.md example (Ada Lovelace, 1985-12-10), so the
-    // read-back can only come from the sale.
+    // A holder unlike the builder default (Katherine Johnson, 1981-08-26) and the api.md example (Ada
+    // Lovelace, 1985-12-10), so the read-back can only come from the sale.
     [Fact]
     [Trait("Rule", "SELL-4")]
     public async Task One_policyholder_is_accepted_and_reads_back()
@@ -37,7 +37,8 @@ public sealed class SellPolicyholderCountTests : IClassFixture<PoliciesApiFactor
         Assert.Equal(new DateOnly(1990, 4, 12), holder.GetDate("dateOfBirth"));
     }
 
-    // Each holder is read back whole (first name, last name, date of birth), in the order sold.
+    // Each holder is read back whole (first name, last name, date of birth), in the order sold. Holder 1
+    // sets only its name, so its date of birth is the builder default, 1981-08-26.
     [Fact]
     [Trait("Rule", "SELL-4")]
     public async Task Three_policyholders_are_accepted_and_read_back_in_order()
@@ -56,7 +57,7 @@ public sealed class SellPolicyholderCountTests : IClassFixture<PoliciesApiFactor
         var holders = policy.GetProperty("policyholders").EnumerateArray()
             .Select(holder => (holder.GetProperty("firstName").GetString(), holder.GetProperty("lastName").GetString(), holder.GetDate("dateOfBirth")));
         Assert.Equal(
-            [("Ada", "Lovelace", new DateOnly(1985, 12, 10)), ("Charles", "Babbage", new DateOnly(1991, 12, 26)), ("Mary", "Somerville", new DateOnly(1980, 12, 26))],
+            [("Ada", "Lovelace", new DateOnly(1981, 8, 26)), ("Charles", "Babbage", new DateOnly(1991, 12, 26)), ("Mary", "Somerville", new DateOnly(1980, 12, 26))],
             holders);
         var lastNames = policy.GetProperty("policyholders").EnumerateArray()
             .Select(holder => holder.GetProperty("lastName").GetString());
