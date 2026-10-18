@@ -111,10 +111,10 @@ nodes:
     rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7]
     cuttable: false
     budget: null
-    status: pending
-    attempt: 0
-    branch: null
-    worktree: null
+    status: in_progress
+    attempt: 1
+    branch: feature/build/F1
+    worktree: .claude/worktrees/build-F1
     pr: null
     qa: docs/qa/build-F1.md
     trace: docs/trace/build/F1/
