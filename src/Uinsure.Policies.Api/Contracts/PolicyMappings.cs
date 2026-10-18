@@ -21,7 +21,7 @@ internal static class PolicyMappings
     public static PolicyResponse ToResponse(this PolicyDetails details)
     {
         var policy = details.Policy;
-        var term = details.CurrentTerm;
+        var term = details.Term;
         return new PolicyResponse(
             policy.Reference.Value,
             Enum.Parse<PolicyType>(policy.Type.ToString()),

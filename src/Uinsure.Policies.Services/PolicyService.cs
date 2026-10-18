@@ -42,7 +42,7 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
         repository.Add(policy);
         await repository.SaveChanges(ct);
 
-        return Result<PolicyDetails>.Success(Details(policy, today));
+        return Result<PolicyDetails>.Success(Details(policy));
     }
 
     public async Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct)
@@ -57,19 +57,12 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
                 reference));
         }
 
-        return Result<PolicyDetails>.Success(Details(policy, UkCalendar.Today(clock)));
+        return Result<PolicyDetails>.Success(Details(policy));
     }
 
-    // The term covering today, else the latest. A policy with no cancellation is Pending until its first
-    // start, Expired after its latest end, and Active between.
-    private static PolicyDetails Details(Policy policy, DateOnly today)
-    {
-        var term = policy.Terms.FirstOrDefault(t => t.Start <= today && today <= t.End) ?? policy.Terms[^1];
-        var status = today < policy.Terms[0].Start ? PolicyStatus.Pending
-            : today > policy.Terms[^1].End ? PolicyStatus.Expired
-            : PolicyStatus.Active;
-        return new PolicyDetails(policy, term, status);
-    }
+    // F1 sells one term and nothing changes it, so the policy's only term is its current term.
+    // Status and the current term over several terms arrive with GET-1 in F2.
+    private static PolicyDetails Details(Policy policy) => new(policy, policy.Terms[0]);
 
     private static RuleViolation Violation(string ruleId, ViolationKind kind, string message, PolicyReference reference) =>
         new(ruleId, kind, message, new Dictionary<string, object?> { ["reference"] = reference.Value });
