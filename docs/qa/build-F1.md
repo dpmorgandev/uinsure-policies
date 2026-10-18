@@ -200,5 +200,5 @@ Each defect becomes a finding on this node's failure route, not a /plan-bug.
 | Postman CLI result | requests 75 / failed 0; assertions 73 / failed 0 (folder `F1 Sell`, port 5080) |
 | Steps passed | 64 of 64 |
 | Defects raised (finding ids) | none |
-| Verdict | ☐ Accept F1  ☐ Reject (findings above) |
-| Signature | |
+| Verdict | ☒ Accept F1  ☐ Reject (findings above) |
+| Signature | David Morgan, 2026-10-18 |
