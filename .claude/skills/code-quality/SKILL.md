@@ -13,10 +13,10 @@ The code must be explainable line by line by David. Simple and correct beats cle
 
 - **Single responsibility:** a type has one reason to change. `PolicyService` orchestrates (load → today
   → domain → save) and holds no rules. Rules live in the domain. Controllers map HTTP to the service and back.
-- **Dependency injection only at real seams:** the repository (`IPolicyRepository`) and the clock
-  (`TimeProvider`). Every other class is concrete and injected as itself, or not injected at all.
-- **No interface with one implementation**, except `IPolicyRepository`. No generic repository, no Unit of
-  Work, no mediator, no mapper library.
+- **Dependency injection at the layer seams:** `IPolicyService` (Api → Services), `IPolicyRepository`
+  (Services → Persistence), `IReferenceGenerator` and the clock (`TimeProvider`). Anything else is concrete.
+- **Interfaces at layer seams only** (David, 2026-10-18), never inside the Domain. No generic repository,
+  no Unit of Work, no mediator, no mapper library. A model per layer, mapped by hand.
 - **Open/closed** isn't a licence for extension points nobody asked for. Add one when the second case
   exists, not before.
 

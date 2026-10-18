@@ -147,6 +147,12 @@ Plus, for all options, **BannedApiAnalyzers** for call-level rules (`DateTime.No
 - [x] **D2: A, rich aggregate (David, 2026-10-17).** Rules live on `Policy`, alongside a pure `RefundCalculator`. Services only orchestrate: load via the repository, compute today, call the domain, then save.
 - [x] **D3: A (David, 2026-10-17).** The domain takes `DateOnly today`. Services compute it once via `UkCalendar.Today(TimeProvider)`. `FakeTimeProvider` is used in the service and integration tests. Reword requirements.md §3 to match. **Business timezone: Europe/London.**
 - [x] **SELL-3 on a 29 Feb start (David, 2026-10-17):** End = 28 Feb of the next year, because the anniversary is treated as 1 Mar. One special case in `Term.End`, with a named test. Every other date uses `Start.AddYears(1).AddDays(-1)`, so 1 Mar 2027 → 29 Feb 2028.
+- [x] **Amendment (David, 2026-10-18, after F1): a model per layer, and interfaces at the layer seams.** Reviewing F1, David asked for the layering he normally builds: Api models map to the domain, and the domain maps to Persistence models, which are what is stored. F1 showed EF leaking into the domain (private parameterless constructors and mutable `List` collections added only for EF, and `Version` on the aggregate). So:
+  - **Persistence records.** `Persistence/Records/` holds `PolicyRecord`, `PolicyholderRecord`, `PropertyRecord`, `TermRecord` and `PaymentRecord`: internal, mutable, with database keys. The EF configurations map the records, never a domain type. `PolicyRecordMapper` (internal) maps domain → record on `Add` and record → domain on load, and on `SaveChanges` applies the domain's state onto the tracked record.
+  - **`Version` lives on `PolicyRecord` only** (David). The repository keeps the record it loaded for each policy, so EF's original-value check still turns a stale save into the 409 `/problems/concurrency`. That map lives on the scoped `PolicyRepository`, one per request, and never in a static, so loaded records are released with the request's `DbContext`.
+  - **`Policy.Restore(...)`** (David) is a public static factory that rebuilds stored state and runs no sale rule. Only Persistence calls it (architecture test A13).
+  - **Interfaces at the layer seams.** `IPolicyService` (Services; the controller depends on it), `IReferenceGenerator` (Services; injected into `PolicyService`, which no longer calls a static), and `IPolicyRepository` unchanged. `TimeProvider` stays the time seam, so `UkCalendar` remains a static helper over it. There are no interfaces inside the Domain, and still no generic repository or Unit of Work.
+  - Built as plan node **F1b** before F2 (red: architecture tests A12–A15; green: the refactor, with F1's 277 tests as the safety net and no behaviour change).
 - [x] **SELL-5 for a policyholder born on 29 Feb: no ruling needed.** A 16th birthday always falls in a leap year, because a leap year plus 16 is another leap year (the only exception is 2100), so `AddYears(16)` is exact.
 - [x] **SELL-1 reference format (David, 2026-10-17):** trim and upper-case it, then it must match `^[A-Z0-9-]{3,20}$`, or the API returns 400. `abc-1` and `ABC-1` are the same policy, so the second one gets a 409. This settles the reference-normalisation checkbox below as accepted.
 - [x] **D4 → A (David).** D4 Single SQL Server migration set + SQLite `EnsureCreated` (A) / dual migrations (B) / SQL Server locally (C)
@@ -182,11 +188,13 @@ src/
   Uinsure.Policies.Services/
     PolicyService.cs                    # orchestrates only: load → today → domain → save
     Commands/  SellPolicy.cs  PolicyDetails.cs (read model returned to Api)
-    IPolicyRepository.cs  PersistenceConflictException.cs
-    UkCalendar.cs  ReferenceGenerator.cs (payment and refund references)
+    IPolicyService.cs  IPolicyRepository.cs  IReferenceGenerator.cs  PersistenceConflictException.cs
+    UkCalendar.cs  ReferenceGenerator.cs (payment and refund references; implements IReferenceGenerator)
   Uinsure.Policies.Persistence/
     PoliciesDbContext.cs  PoliciesDbContextFactory.cs (design-time, SQL Server)
-    Configurations/*.cs  Migrations/ (SQL Server only)
+    Records/  PolicyRecord.cs  PolicyholderRecord.cs  PropertyRecord.cs  TermRecord.cs  PaymentRecord.cs (internal)
+    PolicyRecordMapper.cs (internal: domain ↔ record)
+    Configurations/*.cs (map the records)  Migrations/ (SQL Server only)
     PolicyRepository.cs (internal sealed)  DatabaseOptions.cs  PersistenceServiceCollectionExtensions.cs
   Uinsure.Policies.Api/
     Program.cs                          # composition root: the only Api type that touches Persistence
@@ -215,7 +223,7 @@ tests/
 | Api | Services, Persistence, Domain, approved Api packages | any test project |
 | *.Tests | the project under test (Architecture.Tests: all four) | — |
 
-No `src/` or `tests/` project references anything under `.claude/`. No generic repository, no Unit of Work abstraction, no interface with one implementation except `IPolicyRepository`. `PolicyService` is concrete and injected as itself.
+No `src/` or `tests/` project references anything under `.claude/`. No generic repository and no Unit of Work abstraction. Interfaces sit at the layer seams only: `IPolicyService`, `IPolicyRepository` and `IReferenceGenerator`, each with one implementation, and none inside the Domain (amended 2026-10-18, F1b).
 
 ### C3 Key types (signatures)
 ```csharp
@@ -260,7 +268,7 @@ public sealed class Term
 public sealed class Policy
 {
     public PolicyReference Reference { get; }  public PolicyType Type { get; }
-    public bool AutoRenew { get; }  public bool HasClaims { get; }  public Guid Version { get; } // concurrency token
+    public bool AutoRenew { get; }  public bool HasClaims { get; }    // no Version: it lives on PolicyRecord (F1b)
     public IReadOnlyList<Policyholder> Policyholders { get; }  public Property Property { get; }
     public IReadOnlyList<Term> Terms { get; }  public IReadOnlyList<Claim> Claims { get; }
     public Cancellation? Cancellation { get; }
@@ -269,6 +277,9 @@ public sealed class Policy
     public PolicyStatus StatusOn(DateOnly today);
     // Cancelled if Cancellation != null; Pending if today < Terms[0].Start; Expired if today > LatestTerm.End; else Active
 
+    public static Policy Restore(PolicyReference reference, PolicyType type, bool autoRenew, bool hasClaims,
+        IReadOnlyList<Policyholder> holders, Property property, IReadOnlyList<Term> terms,
+        IReadOnlyList<Claim> claims, Cancellation? cancellation);     // persistence only (A13): stored state, no rules run
     public static Result<Policy> Sell(PolicyReference reference, PolicyType type, DateOnly start, decimal amount,
         bool autoRenew, IReadOnlyList<Policyholder> holders, Property property, PaymentMethod method,
         string paymentReference, DateOnly today);                      // SELL-2..7 (SELL-7: amount > 0)
@@ -289,7 +300,9 @@ public enum ConflictReason { Concurrency, DuplicateReference }
 public sealed class PersistenceConflictException(ConflictReason reason) : Exception;
 public static class UkCalendar { public static DateOnly Today(TimeProvider clock); } // GetUtcNow() → Europe/London
 public sealed record PolicyDetails(Policy Policy, Term CurrentTerm, PolicyStatus Status);
-public sealed class PolicyService(IPolicyRepository repository, TimeProvider clock)
+public interface IReferenceGenerator { string Payment(); string Refund(); }  // implemented by ReferenceGenerator
+public interface IPolicyService { /* the six methods below; the controller depends on this */ }
+public sealed class PolicyService(IPolicyRepository repository, IReferenceGenerator references, TimeProvider clock) : IPolicyService
 {   // each method computes today once via UkCalendar.Today(clock)
     Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct);
     Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct);
@@ -378,6 +391,10 @@ public sealed class PolicyService(IPolicyRepository repository, TimeProvider clo
 | A9 | No type named `*UnitOfWork*`, and no generic type named `*Repository*`, in any `src` assembly | naming |
 | A10 | `PolicyRepository` is `internal sealed` | naming |
 | A11 | The `RS0030` suppression appears only in `Money.cs` (a source-text check over `src/`) | source |
+| A12 | Every type in `Uinsure.Policies.Persistence.Records` is `internal`, and no EF configuration (`IEntityTypeConfiguration<T>`) targets a type from `Uinsure.Policies.Domain` | namespace |
+| A13 | `Policy.Restore` is called only from `Uinsure.Policies.Persistence` (source-text check over `src/`) | source |
+| A14 | Domain types have no non-public parameterless constructor and no `Version` member (nothing exists only for EF) | reflection |
+| A15 | `PoliciesController` depends on `IPolicyService`, not `PolicyService`; `PolicyService` implements `IPolicyService` and takes `IReferenceGenerator`; no `src` type calls `ReferenceGenerator` statically | reflection + source |
 
 **BannedApiAnalyzers** (`BannedSymbols.txt`, applied to every `src` project via `Directory.Build.props`, `RS0030` as error):
 
