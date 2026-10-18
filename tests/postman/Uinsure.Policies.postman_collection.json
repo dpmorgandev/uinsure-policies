@@ -66,6 +66,506 @@
           ]
         }
       ]
+    },
+    {
+      "name": "F1 Sell",
+      "description": "POST /policies, each read back with GET /policies/{reference}. Real-time rows only: the SELL-3 29 Feb case and the BST/GMT boundaries need a fake clock and are integration-test only.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// F1 Sell: dates from the real UK today (Postman can't fake time) and a fresh reference per request.",
+              "const pad = n => String(n).padStart(2, '0');",
+              "const ukToday = (() => {",
+              "    try {",
+              "        const text = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });",
+              "        if (/^\\d{4}-\\d{2}-\\d{2}$/.test(text)) { return text; }",
+              "    } catch (e) { /* no time-zone data: fall back to the machine's local date */ }",
+              "    const now = new Date();",
+              "    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());",
+              "})();",
+              "const parts = iso => iso.split('-').map(Number);",
+              "const utcIso = (y, m, d) => new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);",
+              "const addDays = (iso, n) => { const [y, m, d] = parts(iso); return utcIso(y, m, d + n); };",
+              "const addYears = (iso, n) => { const [y, m, d] = parts(iso); return utcIso(y + n, m, d); };",
+              "// SELL-3: start + 1 year - 1 day; a 29 Feb start ends on 28 Feb of the next year.",
+              "const endFor = iso => { const [y, m, d] = parts(iso); return m === 2 && d === 29 ? utcIso(y + 1, 2, 28) : addDays(addYears(iso, 1), -1); };",
+              "const start = addDays(ukToday, 15);",
+              "pm.variables.set('today', ukToday);",
+              "pm.variables.set('yesterday', addDays(ukToday, -1));",
+              "pm.variables.set('todayPlus60', addDays(ukToday, 60));",
+              "pm.variables.set('todayPlus61', addDays(ukToday, 61));",
+              "pm.variables.set('start', start);",
+              "pm.variables.set('startEnd', endFor(start));",
+              "pm.variables.set('dob16OnStart', addYears(start, -16));",
+              "pm.variables.set('dob16DayAfterStart', addDays(addYears(start, -16), 1));",
+              "pm.variables.set('dob16DayAfterPlus61', addDays(addYears(addDays(ukToday, 61), -16), 1));",
+              "const reference = 'F1-' + Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 1296).toString(36).toUpperCase().padStart(2, '0');",
+              "pm.variables.set('reference', reference);",
+              "pm.variables.set('referenceLower', reference.toLowerCase());",
+              "pm.variables.set('reference20', (reference + 'XXXXXXXXXXXXXXXXXXXX').slice(0, 20));",
+              "pm.variables.set('reference21', (reference + 'XXXXXXXXXXXXXXXXXXXXX').slice(0, 21));"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "happy path",
+          "item": [
+            {
+              "name": "SELL-1 · new reference → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "pm.test(\"SELL-1 · new reference answers 201 with Location /policies/{reference}\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
+                      "    pm.test(\"SELL-1 · reads back via GET\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        const policy = res.json();",
+                      "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "SELL-1 · lower-case reference with spaces is normalised → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "pm.test(\"SELL-1 · lower-case reference with spaces answers 201 with Location /policies/{reference}\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference\"));",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
+                      "    pm.test(\"SELL-1 · reads back via GET\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        const policy = res.json();",
+                      "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"  {{referenceLower}}  \",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "SELL-1 · reference of 20 characters → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const locationPath = () => (pm.response.headers.get(\"Location\") || \"\").replace(/^https?:\\/\\/[^/]+/, \"\");",
+                      "pm.test(\"SELL-1 · reference of 20 characters answers 201 with Location /policies/{reference}\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.expect(locationPath()).to.eql(\"/policies/\" + pm.variables.get(\"reference20\"));",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + locationPath(), function (err, res) {",
+                      "    pm.test(\"SELL-1 · reads back via GET\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        const policy = res.json();",
+                      "        pm.expect(policy.reference).to.eql(pm.variables.get(\"reference20\"));",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference20}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "rule violations",
+          "item": [
+            {
+              "name": "SELL-1 · duplicate reference → 409",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Sell the first policy, so this request is the duplicate.",
+                      "const first = {",
+                      "    reference: pm.variables.get(\"reference\"), type: \"Household\", startDate: pm.variables.get(\"start\"), amount: 365.00,",
+                      "    autoRenew: true, paymentMethod: \"DirectDebit\",",
+                      "    policyholders: [{ firstName: \"Ada\", lastName: \"Lovelace\", dateOfBirth: \"1985-12-10\" }],",
+                      "    property: { addressLine1: \"1 High St\", addressLine2: null, addressLine3: null, postcode: \"M1 1AA\" }",
+                      "};",
+                      "pm.sendRequest({",
+                      "    url: pm.variables.get(\"baseUrl\") + \"/policies\",",
+                      "    method: \"POST\",",
+                      "    header: { \"Content-Type\": \"application/json\" },",
+                      "    body: { mode: \"raw\", raw: JSON.stringify(first) }",
+                      "}, function (err, res) {",
+                      "    if (err || res.code !== 201) { throw new Error(\"SELL-1 precondition: the first sale did not return 201\"); }",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SELL-1 · duplicate reference answers 409 /problems/sell-1\", function () {",
+                      "    pm.response.to.have.status(409);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    pm.expect(problem.type).to.eql(\"/problems/sell-1\");",
+                      "    pm.expect(problem.title).to.eql(\"Policy reference already exists\");",
+                      "    pm.expect(problem.ruleId).to.eql(\"SELL-1\");",
+                      "    pm.expect(problem.instance).to.eql(\"/policies\");",
+                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(problem).to.not.have.property(\"violations\");",
+                      "    pm.expect(problem.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + pm.variables.get(\"reference\"), function (err, res) {",
+                      "    pm.test(\"SELL-1 · the original policy is unchanged\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(200);",
+                      "        pm.expect(res.json().amount).to.eql(365);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 500,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "SELL-1 · duplicate differing only in case → 409",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Sell the first policy, so this request is the duplicate.",
+                      "const first = {",
+                      "    reference: pm.variables.get(\"reference\"), type: \"Household\", startDate: pm.variables.get(\"start\"), amount: 365.00,",
+                      "    autoRenew: true, paymentMethod: \"DirectDebit\",",
+                      "    policyholders: [{ firstName: \"Ada\", lastName: \"Lovelace\", dateOfBirth: \"1985-12-10\" }],",
+                      "    property: { addressLine1: \"1 High St\", addressLine2: null, addressLine3: null, postcode: \"M1 1AA\" }",
+                      "};",
+                      "pm.sendRequest({",
+                      "    url: pm.variables.get(\"baseUrl\") + \"/policies\",",
+                      "    method: \"POST\",",
+                      "    header: { \"Content-Type\": \"application/json\" },",
+                      "    body: { mode: \"raw\", raw: JSON.stringify(first) }",
+                      "}, function (err, res) {",
+                      "    if (err || res.code !== 201) { throw new Error(\"SELL-1 precondition: the first sale did not return 201\"); }",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SELL-1 · duplicate differing only in case answers 409 /problems/sell-1\", function () {",
+                      "    pm.response.to.have.status(409);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    pm.expect(problem.type).to.eql(\"/problems/sell-1\");",
+                      "    pm.expect(problem.title).to.eql(\"Policy reference already exists\");",
+                      "    pm.expect(problem.ruleId).to.eql(\"SELL-1\");",
+                      "    pm.expect(problem.instance).to.eql(\"/policies\");",
+                      "    pm.expect(problem.traceId).to.be.a(\"string\").and.not.empty;",
+                      "    pm.expect(problem).to.not.have.property(\"violations\");",
+                      "    pm.expect(problem.reference).to.eql(pm.variables.get(\"reference\"));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{referenceLower}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "SELL-1 · reference of 2 characters → 400",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SELL-1 · reference of 2 characters answers 400 with an errors map and no ruleId\", function () {",
+                      "    pm.response.to.have.status(400);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    pm.expect(problem.title).to.eql(\"One or more validation errors occurred.\");",
+                      "    pm.expect(problem).to.not.have.property(\"ruleId\");",
+                      "    pm.expect(problem.errors).to.be.an(\"object\").that.is.not.empty;",
+                      "    pm.expect(problem.errors).to.have.property(\"reference\");",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(\"S1\"), function (err, res) {",
+                      "    pm.test(\"SELL-1 · nothing was stored (GET → 404)\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(404);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"S1\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "SELL-1 · reference of 21 characters → 400",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SELL-1 · reference of 21 characters answers 400 with an errors map and no ruleId\", function () {",
+                      "    pm.response.to.have.status(400);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    pm.expect(problem.title).to.eql(\"One or more validation errors occurred.\");",
+                      "    pm.expect(problem).to.not.have.property(\"ruleId\");",
+                      "    pm.expect(problem.errors).to.be.an(\"object\").that.is.not.empty;",
+                      "    pm.expect(problem.errors).to.have.property(\"reference\");",
+                      "});",
+                      "pm.sendRequest(pm.variables.get(\"baseUrl\") + \"/policies/\" + encodeURIComponent(pm.variables.get(\"reference21\")), function (err, res) {",
+                      "    pm.test(\"SELL-1 · nothing was stored (GET → 404)\", function () {",
+                      "        pm.expect(err).to.eql(null);",
+                      "        pm.expect(res.code).to.eql(404);",
+                      "    });",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"{{reference21}}\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            },
+            {
+              "name": "SELL-1 · reference with an underscore → 400",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"SELL-1 · reference with an underscore answers 400 with an errors map and no ruleId\", function () {",
+                      "    pm.response.to.have.status(400);",
+                      "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+                      "    const problem = pm.response.json();",
+                      "    pm.expect(problem.title).to.eql(\"One or more validation errors occurred.\");",
+                      "    pm.expect(problem).to.not.have.property(\"ruleId\");",
+                      "    pm.expect(problem.errors).to.be.an(\"object\").that.is.not.empty;",
+                      "    pm.expect(problem.errors).to.have.property(\"reference\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reference\": \"SELL1_UNDERSCORE\",\n  \"type\": \"Household\",\n  \"startDate\": \"{{start}}\",\n  \"amount\": 365,\n  \"autoRenew\": true,\n  \"paymentMethod\": \"DirectDebit\",\n  \"policyholders\": [\n    {\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"dateOfBirth\": \"1985-12-10\"\n    }\n  ],\n  \"property\": {\n    \"addressLine1\": \"1 High St\",\n    \"addressLine2\": null,\n    \"addressLine3\": null,\n    \"postcode\": \"M1 1AA\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/policies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["policies"]
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
