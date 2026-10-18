@@ -17,23 +17,27 @@ public sealed class SellPolicyholderCountTests : IClassFixture<PoliciesApiFactor
         _factory.ResetClock();
     }
 
+    // A holder unlike the builder default and the api.md example (Ada Lovelace, 1985-12-10), so the
+    // read-back can only come from the sale.
     [Fact]
     [Trait("Rule", "SELL-4")]
     public async Task One_policyholder_is_accepted_and_reads_back()
     {
         using var client = _factory.CreateClient();
         var body = new SellPolicyRequestBuilder("SELL4-ONE")
-            .WithPolicyholders(new PolicyholderBuilder().WithName("Ada", "Lovelace").WithDateOfBirth(new DateOnly(1985, 12, 10)))
+            .WithPolicyholders(new PolicyholderBuilder().WithName("Grace", "Hopper").WithDateOfBirth(new DateOnly(1990, 4, 12)))
             .Build();
 
         var policy = await client.SellAndReadBack(body, "SELL4-ONE");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL4-ONE", new DateOnly(2027, 10, 31));
         var holder = Assert.Single(policy.GetProperty("policyholders").EnumerateArray());
-        Assert.Equal("Ada", holder.GetProperty("firstName").GetString());
-        Assert.Equal("Lovelace", holder.GetProperty("lastName").GetString());
-        Assert.Equal(new DateOnly(1985, 12, 10), holder.GetDate("dateOfBirth"));
+        Assert.Equal("Grace", holder.GetProperty("firstName").GetString());
+        Assert.Equal("Hopper", holder.GetProperty("lastName").GetString());
+        Assert.Equal(new DateOnly(1990, 4, 12), holder.GetDate("dateOfBirth"));
     }
 
+    // Each holder is read back whole (first name, last name, date of birth), in the order sold.
     [Fact]
     [Trait("Rule", "SELL-4")]
     public async Task Three_policyholders_are_accepted_and_read_back_in_order()
@@ -42,12 +46,18 @@ public sealed class SellPolicyholderCountTests : IClassFixture<PoliciesApiFactor
         var body = new SellPolicyRequestBuilder("SELL4-THREE")
             .WithPolicyholders(
                 new PolicyholderBuilder().WithName("Ada", "Lovelace"),
-                new PolicyholderBuilder().WithName("Charles", "Babbage"),
-                new PolicyholderBuilder().WithName("Mary", "Somerville"))
+                new PolicyholderBuilder().WithName("Charles", "Babbage").WithDateOfBirth(new DateOnly(1991, 12, 26)),
+                new PolicyholderBuilder().WithName("Mary", "Somerville").WithDateOfBirth(new DateOnly(1980, 12, 26)))
             .Build();
 
         var policy = await client.SellAndReadBack(body, "SELL4-THREE");
 
+        SoldPolicyAssert.ReadsBackAsSold(policy, body, "SELL4-THREE", new DateOnly(2027, 10, 31));
+        var holders = policy.GetProperty("policyholders").EnumerateArray()
+            .Select(holder => (holder.GetProperty("firstName").GetString(), holder.GetProperty("lastName").GetString(), holder.GetDate("dateOfBirth")));
+        Assert.Equal(
+            [("Ada", "Lovelace", new DateOnly(1985, 12, 10)), ("Charles", "Babbage", new DateOnly(1991, 12, 26)), ("Mary", "Somerville", new DateOnly(1980, 12, 26))],
+            holders);
         var lastNames = policy.GetProperty("policyholders").EnumerateArray()
             .Select(holder => holder.GetProperty("lastName").GetString());
         Assert.Equal(["Lovelace", "Babbage", "Somerville"], lastNames);
