@@ -92,6 +92,7 @@ public sealed class RetrieveCurrentTermTests : IClassFixture<PoliciesApiFactory>
         var payment = Assert.Single(policy.Member("payments").EnumerateArray());
         AssertPayment(payment, "PAY-GET1-UNPAID-T1", "Card", 486.20m);
         PolicyResponseAssert.ShowsCurrentTerm(policy, 1, Term1Start, Term1End, 486.20m);
+        Assert.Equal("Active", policy.Member("status").GetString());
     }
 
     // Seeds both terms paid, moves the clock to readAt and reads the policy back whole: the stored values,
