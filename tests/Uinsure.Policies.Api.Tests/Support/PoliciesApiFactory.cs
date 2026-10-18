@@ -51,13 +51,9 @@ public class PoliciesApiFactory : WebApplicationFactory<Program>
     protected override IHost CreateHost(IHostBuilder builder)
     {
         // Open before the host starts: an in-memory database lives only while its connection is open.
+        // Program's start-up EnsureCreated then builds the schema on this connection.
         _connection.Open();
-        var host = base.CreateHost(builder);
-
-        using var scope = host.Services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<PoliciesDbContext>().Database.EnsureCreated();
-
-        return host;
+        return base.CreateHost(builder);
     }
 
     protected override void Dispose(bool disposing)

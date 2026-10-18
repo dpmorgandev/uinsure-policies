@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Uinsure.Policies.Architecture.Tests.Support;
 using Xunit;
 
@@ -55,6 +56,23 @@ public sealed partial class BannedApiTests
         var libraries = json.RootElement.GetProperty("libraries").EnumerateObject().Select(library => library.Name);
 
         Assert.Contains(libraries, name => name.StartsWith("Microsoft.CodeAnalysis.BannedApiAnalyzers/", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // A missing BannedSymbols.txt must fail the build, never silently switch RS0030 off.
+    [Fact]
+    public void BannedSymbols_file_is_included_for_src_projects_without_an_Exists_condition()
+    {
+        var props = XDocument.Load(RepoPaths.Combine("Directory.Build.props"));
+
+        var item = props.Descendants("AdditionalFiles")
+            .SingleOrDefault(element => ((string?)element.Attribute("Include") ?? string.Empty)
+                .Contains("BannedSymbols.txt", StringComparison.Ordinal));
+        Assert.NotNull(item);
+
+        var conditions = item.AncestorsAndSelf()
+            .Select(element => (string?)element.Attribute("Condition") ?? string.Empty);
+
+        Assert.DoesNotContain(conditions, condition => condition.Contains("Exists(", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
