@@ -20,15 +20,13 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
    - Resume any node in `in_progress | paused_acceptance | investigating | hitl | escalated`. Only one
      feature runs at a time.
    - Otherwise take the requested node only if it's the next one: the first `pending` node in file order
-     whose `depends_on` are all `done` and whose `owner` isn't `david`.
-   - F0a is not run by this loop.
+     whose `depends_on` are all `done` and whose `owner` isn't `david`. F0a isn't run by this loop.
 4. **Next task** = the first task whose `status` isn't `done` or `skipped`. Tasks run strictly in order.
 5. If a worktree `.claude/worktrees/<plan>-<node>` exists, `EnterWorktree({path})` and go to **Resume** (§9).
 
 ## 1. Recording (every step)
 
-- **Events:** `node .claude/scripts/render-trace.mjs event '<json>'` appends to
-  `docs/trace/<plan>/<node>/loop.jsonl`. Never write the file by hand.
+- **Events:** `node .claude/scripts/render-trace.mjs event '<json>'` appends to `docs/trace/<plan>/<node>/loop.jsonl`; never by hand.
   - Gate events carry `{event, cmd, exit, expect, ok, head}`.
   - Event names: `setup`, `state(<S>)`, `gate.<name>`, `pause1`, `verdict(<agent>,<PASS|FAIL>,<file>)`,
     `findings(<file>)`, `attempt++`, `steer(D<n>,<pause1|pause2|pr-comment>)`, `investigation.opened(inv-NNN)`,
@@ -57,6 +55,8 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
    `git rev-parse --abbrev-ref @{u}` fails (the branch tracks nothing, so never `main`).
 3. Commit the plan status `pending → in_progress`, `attempt: 1`, `branch` and `worktree`.
    Record `setup` and `state(in_progress)`.
+4. **Carry-overs:** each item in the newest snapshot's `## Carry-overs` becomes a task on this node
+   (`plan(<plan>/<node>): tasks amended`) or is cut by David. None stays only in a snapshot or a P2.
 
 **`builder / scaffold`** (optional, before red: only a node that adds a project)
 - Dispatch. Then `gate.scaffold`:
@@ -81,11 +81,11 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 
 **`builder / stub` (api)**
 - Dispatch. Then `gate.stub`:
-  - The build passes.
+  - The build passes, and the diff ⊆ `src/Uinsure.Policies.Api/**`.
   - Start `dotnet run --project src/Uinsure.Policies.Api --urls http://localhost:5080` in the background,
     and the node's routes answer with their happy-path status (curl). Stop the API.
-  - The acceptance rule filters still fail.
-  - The diff ⊆ `src/Uinsure.Policies.Api/**`.
+  - **Every test with a node `Rule` trait fails** (Api.Tests, `--output Detailed`). One that passes fails
+    the gate, unless it's a 400 shape test (name ends `_with_400`). Record each pass in the receipt.
 
 **`david / pause1`**: §6, Pause 1.
 

@@ -168,6 +168,10 @@ Nothing in `tests/` references `.claude/`. Test package versions are pinned once
 - **Clock.** `TestClock.Now = 2026-10-17T12:00:00Z`, `TestClock.Today = 2026-10-17` (same date in UTC and Europe/London). Every boundary reads as arithmetic from `TestClock.Today`. `DateTime.Now/UtcNow/Today` are banned (BannedApiAnalyzers) in tests too.
 - **Rule trait.** Every test that proves a rule carries `[Trait("Rule", "<ID>")]`: a string literal, exactly one ID per attribute, the ID exactly as in `docs/requirements.md` (compound row `RENEW-1/2` is traited as `RENEW-1` or `RENEW-2`). A test may carry several. Plumbing tests carry none. Filter: `dotnet test --solution Uinsure.Policies.slnx -- --filter-trait "Rule=SELL-2"`.
 - **Assertions (integration).** Status first; then for errors the RFC 9457 body: `type` = `/problems/<rule-id-lowercase>`, `ruleId`, and for 422 the `violations[]` list; for success the body, read back via `GET` (every Sell test is a POST → GET round trip).
+- **Amendment (David, 2026-10-18, F1 steer D2): tests a stub can't satisfy.** At F1's stub step five accept tests passed on the canned 201, and the investigator found the deeper cause: builder defaults, the stub's canned body and the contract's example payload held the same values. So:
+  - **Distinct test data.** Builder defaults never equal the api-contract example payloads, and every success test asserts at least one value the test itself set.
+  - **Full read-back.** Every success test reads the resource back through one shared assertion that compares the whole response to the request it sent. Derived values (an end date, a refund) are literals in the test, never recomputed. A partial read-back helper is a reviewer finding.
+  - **Strict stub gate.** A rule-traited test that passes on the stub fails `gate.stub`, unless it is a 400 shape test (name ends `_with_400`).
 
 ### C4. Rule-coverage check
 `RuleCoverageTests` in Architecture.Tests, so it runs in every `dotnet test` (pre-push, pipeline). Computed from source text, no build of other test projects needed:
@@ -188,7 +192,7 @@ Nothing in `tests/` references `.claude/`. Test package versions are pinned once
 |---|---|---|---|---|
 | 0 | Scaffold (only a node that adds projects) | builder | The `.slnx`, root build files and `src/*/*.csproj`; no `.cs`. Each `src/` project builds empty, so red compiles. | `scaffold` |
 | 1 | Red: acceptance | tester | The **full** acceptance suite in Api.Tests: every success and failure row for the node's rules, each traited; the Postman requests; the throwing `src/` stubs needed to compile (C7); node IDs removed from `rule-coverage.pending.txt`. Builds; acceptance tests fail. | `red` |
-| 2 | Stub controller | builder | Controller action(s) returning hard-coded happy-path responses (status, `Location`, body shape). Happy-path rows go green; rule-violation rows stay red. | `stub` |
+| 2 | Stub controller | builder | Controller action(s) returning hard-coded happy-path responses (status, `Location`, body shape). The routes are callable, but **every rule-traited test stays red**: a success test fails on its read-back values, which a canned body can't hold. Only a 400 shape test may pass (the request contracts are real). | `stub` |
 | — | **Pause 1** | David | Calls the stub in Postman; reads the acceptance tests. Loop waits. | — |
 | 3 | Domain | tester → builder | Red unit tests in Domain.Tests for each rule boundary (`red`), then real domain behaviour replaces the throws (`green`). | `red`, `green` |
 | 4 | Services | tester → builder | Red Services.Tests where Services has logic (`red`), then orchestration + `UkCalendar` (`green`). | `red`, `green` |

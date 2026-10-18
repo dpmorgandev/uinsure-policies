@@ -13,7 +13,7 @@ user-invocable: false
 |---|---|---|---|---|
 | 0 | Scaffold (only a node that adds projects) | builder | The `.slnx`, the root build files and the `src/*/*.csproj` files; no `.cs`. Each `src/` project builds empty, so red can compile. | `scaffold` |
 | 1 | Red: acceptance | tester | The **full** acceptance suite in Api.Tests: every success and failure row for the node's rules, each traited; the Postman requests; the throwing `src/` stubs needed to compile; the node's IDs removed from `tests/rule-coverage.pending.txt`. It builds, and the acceptance tests fail. | `red` |
-| 2 | Stub controller | builder | Actions returning hard-coded happy-path responses (status, `Location`, body shape). Happy-path rows go green; rule-violation rows stay red. | `stub` |
+| 2 | Stub controller | builder | Actions returning hard-coded happy-path responses (status, `Location`, body shape). The routes are callable, but **every rule-traited test stays red**: a success test fails on its read-back values. Only a 400 shape test (`…_with_400`) may pass. | `stub` |
 | — | Pause 1 | David | Calls the stub in Postman and reads the acceptance tests. | — |
 | 3 | Domain | tester → builder | Red unit tests in Domain.Tests for each rule boundary, then real domain behaviour replaces the throws. | `red`, `green` |
 | 4 | Services | tester → builder | Red Services.Tests where Services has logic, then orchestration and `UkCalendar`. | `red`, `green` |
@@ -62,7 +62,9 @@ attributes, logic) is denied.
 - **Builders** live in `tests/<project>/Builders/` (`SellPolicyRequestBuilder`, `PolicyholderBuilder`,
   `PolicyBuilder`, `CancellationRequestBuilder`, `RenewalRequestBuilder`, `ClaimRequestBuilder`).
   `Build()` with no overrides gives a **valid** object relative to `TestClock.Today`. A test overrides
-  only the field under test (`.WithStartDate(TestClock.Today.AddDays(61))`).
+  only the field under test (`.WithStartDate(TestClock.Today.AddDays(61))`). **Defaults never equal the
+  api-contract example payloads** (names, dates, amounts, address), so a stub canned from the example
+  can't pass a test that sells the defaults.
 - **No random data**, and no `Guid.NewGuid()` references. Each integration test passes its own literal
   reference, for example `"SELL2-AT-61"`.
 - **Clock:** `TestClock.Now = 2026-10-17T12:00:00Z`, and `TestClock.Today = 2026-10-17`. Every boundary is
@@ -75,6 +77,10 @@ attributes, logic) is denied.
   `/problems/<rule-id-lowercase>`, `ruleId`, `violations[]` for a 422, and the extension values). For
   success, assert 201 + `Location`, then read the body back via `GET`: every Sell test is a POST → GET
   round trip. The multi-violation 422 has its own test.
+- **Full read-back for every success test.** One shared assertion compares the whole read-back to the
+  request sent (every field the node's response carries), and the test sets at least one value itself.
+  Derived values (end date, refund) are literals from the test, never recomputed with the code's formula.
+  A helper that checks only status, `Location` or the echoed reference proves nothing: a stub passes it.
 
 ## Integration harness (Api.Tests)
 

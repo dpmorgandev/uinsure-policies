@@ -69,6 +69,10 @@ open-decisions: <count of bullets under Open decisions>
 ## Next action
 <expands next-action>
 
+## Carry-overs
+- <deferred item for the next node: a P2 finding, debt, a follow-up> — <where it was raised>
+  (/feature SETUP turns each into a task on that node, or David cuts it)
+
 ## Open decisions
 - <decision> — <spec or question it belongs to>
 

@@ -27,6 +27,10 @@ row by ID: the ID, the rule, and the **agreed interpretation**, which is what th
    start + 15.
 4. **Status codes** match the contract: 400 shape, 404 GET-1, 409 SELL-1/CANCEL-4/RENEW-6/COULD-2c, and 422
    for every other numbered rule. A 422 lists every broken rule in `violations[]`.
+5. **Stub-proof success rows.** A success test reads the resource back in full through the shared
+   assertion, sells at least one value of its own (builder defaults never equal the contract example), and
+   asserts derived values as literals. No rule-traited test passed on the stub except a 400 shape test
+   (`gate.stub` receipt). A success row a canned stub could pass doesn't cover its rule.
 
 ## The rule-coverage check (Architecture.Tests, `RuleCoverageTests`)
 

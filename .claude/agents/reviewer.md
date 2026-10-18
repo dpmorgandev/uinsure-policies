@@ -34,7 +34,11 @@ The security verdict isn't shown to you, and you don't ask for it. Read each rul
 2. **TDD order.** Each rule's red commit precedes its green commit (from the trailer log). The stub
    commit comes before green. No assertion was weakened, deleted or skipped after its red commit.
 3. **Anti-oracle.** Tests assert behaviour, not implementation. No test was edited to match the code.
-   There's no random or time-of-day data.
+   There's no random or time-of-day data. **Every success test is stub-proof:** it reads the resource back
+   through the shared full read-back assertion, sets at least one value itself, and asserts derived values
+   (end dates, refunds) as literals. A test whose assertions a canned or echoing stub could satisfy, a
+   partial read-back helper, or builder defaults equal to the contract example is a finding. Cross-check
+   `gate.stub` in the receipts: a rule-traited test that passed on the stub is a finding.
 4. **Code quality.** SOLID at this size, DI only at real seams, the rule of three, and the slop list
    from the code-quality skill.
 5. **Leftovers.** No `NotImplementedException` remains in `src/`, and no banned time or rounding API is used.
