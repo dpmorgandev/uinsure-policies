@@ -1,0 +1,117 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T17:08:38Z",
+  "plan": "build",
+  "node": "F1",
+  "attempt": 1,
+  "agent": "reviewer",
+  "agent_id": "a496f92d6f90a39fd",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F1",
+    "attempt": 1,
+    "base_sha": "4cf3d0e07d1819efaab118d52a39e5f4c27bc466",
+    "head_sha": "762c994606128d2f85a5f0eb9634eea384e0b82c",
+    "diff_fingerprint": "63b96c7d6cb77ec2bd87fe3e656ab3260f911264",
+    "verdict": "FAIL",
+    "gate_refs": [
+      "loop.jsonl:3 gate.red (t1 acceptance red, head 117c8c8)",
+      "loop.jsonl:4 gate.stub (head c741dae)",
+      "loop.jsonl:11 gate.finding-red (D1, head df4045f)",
+      "loop.jsonl:12 gate.finding-green (D1, head 7832d37)",
+      "loop.jsonl:13 gate.stub (re-run after D1, head 7832d37)",
+      "loop.jsonl:18 gate.finding-red (D2 I1-I8, head 3c439a1)",
+      "loop.jsonl:21 gate.finding-red (D2 I9-I12, head 60f14c7)",
+      "loop.jsonl:22 gate.stub (strict, head 60f14c7)",
+      "loop.jsonl:23 gate.red (t4 domain, head de98107)",
+      "loop.jsonl:24 gate.green (t5 domain, head 727fcc3)",
+      "loop.jsonl:25 gate.stub (t6 services stub, head 22f63b4)",
+      "loop.jsonl:26 gate.red (t7 services, head 5a33383)",
+      "loop.jsonl:27 gate.green (t8 services, head 12c95bd)",
+      "loop.jsonl:28 gate.green (t9 persistence, head 7e6442e)",
+      "loop.jsonl:29 gate.green (t10 api, head 7b3ebb3)",
+      "loop.jsonl:30 gate.run (head 7b3ebb3)",
+      "loop.jsonl:31 gate.refactor (mistyped head)",
+      "loop.jsonl:32 gate.refactor (correction, head f7c2665)",
+      "loop.jsonl:33 gate.build (head 95963ab)",
+      "loop.jsonl:34 gate.test (head 95963ab)",
+      "loop.jsonl:35 gate.scope (head 95963ab)",
+      "loop.jsonl:36 gate.stubs (head 95963ab)",
+      "loop.jsonl:37 gate.run (head 95963ab)",
+      "loop.jsonl:38 gate.vulnerable (head 95963ab)"
+    ],
+    "rules_covered": [
+      "SELL-2",
+      "SELL-3",
+      "SELL-4",
+      "SELL-5",
+      "SELL-6",
+      "SELL-7"
+    ],
+    "rules_missing": [
+      "SELL-1"
+    ],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "GET-1",
+        "severity": "P1",
+        "file": "src/Uinsure.Policies.Services/PolicyService.cs",
+        "line": 65,
+        "what": "PolicyService.Details works out the current term and the Pending/Expired/Active status itself. F1 never reads Status, and no test covers those branches.",
+        "why": "The code-quality skill says PolicyService orchestrates and holds no rules. signatures.md puts Policy.CurrentTerm(today) and Policy.StatusOn(today), plus LatestTerm, in the domain. The GET-1 and Status rows of requirements.md are rules. This logic arrived in the t10 api green commit without a red test (gate.green loop.jsonl:29 says 'Pending/Active/Expired status are F2 scope'). Grep shows PolicyDetails.Status is never read in src/Uinsure.Policies.Api, so in F1 these are untested and unused branches, and they also miss the Cancelled case. Either put this in the domain with red tests, or leave it to F2 and return the trivial single-term value for now.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "SELL-1",
+        "severity": "P1",
+        "file": "tests/Uinsure.Policies.Api.Tests/SellReferenceTests.cs",
+        "line": 68,
+        "what": "No test shows a duplicate reference returns the 409 alone when its body also breaks a 422 rule. The service's duplicate check has no Services.Tests red test.",
+        "why": "requirements.md §2 Response standard says a 409 short-circuits before the rules are evaluated. api.md Evaluation order says each 409 short-circuits on its own. architecture says SELL-1 is checked in the service via GetByReference. Every duplicate test posts an otherwise valid body, so swapping the check and Policy.Sell in PolicyService.Sell would still pass. tdd-outside-in step 4 asks for red Services.Tests wherever Services has logic. This check arrived in the t10 api green commit with no Services red test (gate.green loop.jsonl:29 says so). RecordingPolicyRepository already supports such a test.",
+        "route_to": "tester"
+      },
+      {
+        "id": "R3",
+        "rule_id": "SELL-1",
+        "severity": "P1",
+        "file": "src/Uinsure.Policies.Persistence/PolicyRepository.cs",
+        "line": 30,
+        "what": "No test covers the index-backed 409. The step from a unique-violation DbUpdateException (SQLite 2067, SQL Server 2601/2627) to PersistenceConflictException to SELL-1 409 is unverified.",
+        "why": "The SELL-1 agreed interpretation says 'A unique DB index enforces it too'. The architecture HTTP-edge table says PersistenceConflictException(DuplicateReference) gives a 409 'as SELL-1'. A search of tests/ finds no PersistenceConflict, DuplicateReference or concurrency test. If the error-code filter were wrong, a racing duplicate would get a 500, and the suite would not notice. The race can be forced in Api.Tests, for example with a test-only repository whose GetByReference skips the service check.",
+        "route_to": "tester"
+      },
+      {
+        "id": "R4",
+        "rule_id": "SELL-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs",
+        "line": 48,
+        "what": "The race-path SELL-1 409 has no 'reference' extension and a different detail from the service path. It is built in UnexpectedExceptionHandler, not through ResultExtensions.",
+        "why": "The api.md matrix row for SELL-1 lists the extension 'reference' and the detail form 'A policy with reference ... already exists.' The architecture says DuplicateReference answers 'as SELL-1' and that ResultExtensions builds the response in one place. Here the same rule has two bodies that differ, and the status is hard-coded outside ProblemCatalog.StatusFor. A handler named 'Unexpected' now also handles an expected conflict.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R5",
+        "rule_id": "SELL-4",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Persistence/Configurations/PolicyConfiguration.cs",
+        "line": 26,
+        "what": "Policyholders and Terms are auto-included with no ordering by key. The read-back holder order and termNumber (index + 1) depend on the order the provider returns rows.",
+        "why": "The SELL-4 tests assert that policyholders read back in the order sold, and SELL-5's 'index' is a 1-based position. PolicyMappings numbers terms by list position. EF Core does not document an order for collection navigations without an explicit ordering, and SQL Server, the migration target, may return rows in another order than SQLite. Green on SQLite today, but fragile.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "TDD order holds for every node rule, from trailers.txt. Acceptance red: b5209f9..e6bde8d. Stub: 7e513c5. D1 and D2 finding reds come before the D1 fix 5dbc66e, which carries Fixes-Finding I1-I7. Domain red: caba58f..de98107, then green 727fcc3. Services red: 6030970 and 5a33383, then green 12c95bd. Persistence green: 7e6442e. API green: 7b3ebb3. Refactor: f7c2665.",
+      "I can't diff each test file between its red commit and HEAD, because I run no commands and only have the cumulative diff. For no weakened assertions I rely on the gate receipts: loop.jsonl:18 says the removed asserts were all replaced by stricter ones, and loop.jsonl:21 says the end-date literal moved from 2027-10-31 to 2027-11-07 because the builder's default start changed under D2/I9. At HEAD there is no Skip, no Random or Guid.NewGuid, and no DateTime.Now, UtcNow or Today in tests/.",
+      "At HEAD, src/ has no NotImplementedException, no banned time API, no Math.Round or decimal.Round, and no catch (Exception). gate.stubs (loop.jsonl:36) agrees.",
+      "SELL-2..7 behaviour matches requirements.md and the api.md matrix: titles, types, extensions (earliest/latest, count, index, amount), violations[] in rule order, and BST/GMT boundaries in both Services.Tests and Api.Tests. The named 29 Feb test is present in Domain and Api tests. Every success row reads back through SoldPolicyAssert, and BuilderDefaultsTests guards the builder defaults against the api.md example.",
+      "The route reference is not checked against the pattern on GET. That matches api.md ('a reference ... that fails the SELL-1 pattern, is 404 GET-1'), so it is not a finding.",
+      "The F0b empty InitialCreate migration was replaced by a regenerated one (loop.jsonl:28). It was never applied, but it's worth stating in the PR."
+    ]
+  }
+}
