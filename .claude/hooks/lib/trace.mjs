@@ -1,6 +1,7 @@
 // Shared trace helpers (traceability.spec Contract: layout, record schemas). Node built-ins only.
 // Used by trace-activity.mjs, gate-subagent.mjs and .claude/scripts/render-trace.mjs.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir, userInfo } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
@@ -61,11 +62,26 @@ export function relPath(root, p) {
 }
 
 // First 200 chars, with the repo root rewritten to repo-relative form.
-export function redactCommand(root, command) {
+// Every spelling of a Windows path a shell may use: C:\x, C:/x and /c/x.
+const spellings = (p) => {
+  const slash = p.split('\\').join('/');
+  return [slash.split('/').join('\\'), slash, slash.replace(/^([A-Za-z]):/, (_, d) => `/${d.toLowerCase()}`)];
+};
+
+// The trail is committed and the repo goes public, so a recorded command keeps no local path: the repo
+// root becomes `.`, the main checkout (when root is a worktree) `<main>`, the home dir `~` and any other
+// mention of the user name `<user>` (the Claude scratchpad slug carries it).
+export function redactCommand(root, command, { home = homedir(), user = userInfo().username } = {}) {
   if (typeof command !== 'string') return null;
-  const forms = [root, root.split('\\').join('/'), root.replace(/^([A-Za-z]):/, (_, d) => `/${d.toLowerCase()}`).split('\\').join('/')];
   let out = command;
-  for (const form of forms) out = out.split(form + '/').join('').split(form + '\\').join('').split(form).join('.');
+  const replace = (path, to) => {
+    for (const form of spellings(path)) out = out.split(form + '/').join(to === '.' ? '' : `${to}/`).split(form + '\\').join(to === '.' ? '' : `${to}\\`).split(form).join(to);
+  };
+  replace(root, '.');
+  const main = root.split('\\').join('/').split('/.claude/worktrees/')[0];
+  if (main !== root.split('\\').join('/')) replace(main, '<main>');
+  if (home) replace(home, '~');
+  if (user && user.length > 2) out = out.replace(new RegExp(user.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '<user>');
   return out.slice(0, 200);
 }
 

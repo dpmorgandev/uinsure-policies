@@ -6,7 +6,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync } from 
 import { join } from 'node:path';
 import { parseYaml, requirementIds } from '../skills/plan-dag/validate-dag.mjs';
 import {
-  appendJsonl, currentAttempt, currentBranch, git, nowIso, planNodeFromBranch, readJsonl, repoRoot, traceDir,
+  appendJsonl, currentAttempt, currentBranch, git, nowIso, planNodeFromBranch, readJsonl, redactCommand, repoRoot, traceDir,
 } from '../hooks/lib/trace.mjs';
 
 const BASE = 'origin/main';
@@ -314,12 +314,35 @@ function prBody(t, check) {
 
 // ---------- main ----------
 
+// Re-applies redactCommand to every recorded command in a node's activity.jsonl, for records written
+// before the redaction covered the main checkout, home dir and user name. Only the command text changes;
+// a reconciled event records the run.
+export function cmdRedact(root, plan, nodeId) {
+  if (!plan || !nodeId) fail('usage: redact <plan> <node>');
+  const dir = traceDir(root, plan, nodeId);
+  const file = join(dir, 'activity.jsonl');
+  const records = readJsonl(file);
+  let changed = 0;
+  const out = records.map((r) => {
+    if (typeof r.command !== 'string') return r;
+    const command = redactCommand(root, r.command);
+    if (command !== r.command) changed++;
+    return { ...r, command };
+  });
+  writeFileSync(file, out.map((r) => JSON.stringify(r)).join('\n') + (out.length ? '\n' : ''));
+  appendJsonl(join(dir, 'loop.jsonl'), { v: 1, ts: nowIso(), plan, node: nodeId, attempt: currentAttempt(dir), source: 'reconciled',
+    event: 'reconciled(activity.jsonl)', detail: `redactCommand re-applied: ${changed} of ${records.length} command records changed` });
+  process.stdout.write(`redacted ${changed} of ${records.length} command records in docs/trace/${plan}/${nodeId}/activity.jsonl\n`);
+  process.exit(0);
+}
+
 function main() {
   const [cmd, a, b, flag] = process.argv.slice(2);
   const root = repoRoot(process.cwd());
   if (!root) fail('not inside a git repository');
   if (cmd === 'event') return cmdEvent(root, a);
-  if (!['render', 'pr-body', 'check'].includes(cmd) || !a || !b) fail('usage: event <json> | render|pr-body|check <plan> <node> [--archive]');
+  if (cmd === 'redact') return cmdRedact(root, a, b);
+  if (!['render', 'pr-body', 'check'].includes(cmd) || !a || !b) fail('usage: event <json> | render|pr-body|check|redact <plan> <node> [--archive]');
   const t = gather(root, a, b);
   const check = completeness(t, { archive: flag === '--archive' });
   if (cmd === 'check') {
