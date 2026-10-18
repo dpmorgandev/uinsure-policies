@@ -108,6 +108,29 @@ public sealed class SellReferenceTests : IClassFixture<PoliciesApiFactory>
         Assert.Equal("SELL1-SPACES", problem.GetProperty("reference").GetString());
     }
 
+    // A 409 short-circuits before the 422 rules: the duplicate also starts on today + 61 (SELL-2) for an
+    // amount of 0 (SELL-7), and still gets only SELL-1, with no violations[].
+    [Fact]
+    [Trait("Rule", "SELL-1")]
+    public async Task Duplicate_reference_with_a_body_that_breaks_SELL_2_and_SELL_7_is_rejected_with_409_alone()
+    {
+        using var client = _factory.CreateClient();
+        var original = SellPolicyRequestBuilder.Distinctive("SELL1-DUP-422").Build();
+        var sold = await client.SellAndReadBack(original, "SELL1-DUP-422");
+        SoldPolicyAssert.ReadsBackAsSold(sold, original, "SELL1-DUP-422", new DateOnly(2027, 11, 15));
+
+        using var duplicate = await client.PostPolicy(new SellPolicyRequestBuilder("SELL1-DUP-422")
+            .WithStartDate(TestClock.Today.AddDays(61))
+            .WithAmount(0.00m)
+            .Build());
+
+        var problem = await ProblemAssert.Conflict(duplicate, "SELL-1", "Policy reference already exists");
+        Assert.Equal("SELL1-DUP-422", problem.GetProperty("reference").GetString());
+        using var read = await client.GetPolicy("SELL1-DUP-422");
+        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+        SoldPolicyAssert.ReadsBackAsSold(await read.ReadJson(), original, "SELL1-DUP-422", new DateOnly(2027, 11, 15));
+    }
+
     [Fact]
     [Trait("Rule", "SELL-1")]
     public async Task Reference_of_3_characters_is_accepted()
