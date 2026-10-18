@@ -130,19 +130,20 @@ nodes:
       - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the Sell stub in Postman, read the acceptance tests; go or change", status: done}
       - {id: t4, role: tester, step: red, layer: domain, rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7], title: "Domain.Tests for Policy.Sell at every boundary: reference normalisation, start today to today+60, end = start + 1y − 1d incl. 29 Feb, 1-3 holders, 16 on the start date, full-amount payment, amount > 0", status: done}
       - {id: t5, role: builder, step: green, layer: domain, rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7], title: "Policy.Sell enforces SELL-1..7 with DateOnly today passed in, collecting every violation", status: done}
-      - {id: t6, role: tester, step: red, layer: services, rules: [SELL-2, SELL-6], title: "Services.Tests: PolicyService.Sell reads UK today once (BST/GMT) and generates the payment reference", status: pending}
-      - {id: t7, role: builder, step: green, layer: services, rules: [SELL-2, SELL-6], title: "PolicyService.Sell: UkCalendar.Today, ReferenceGenerator, repository Add and SaveChanges", status: pending}
-      - {id: t8, role: builder, step: green, layer: persistence, rules: [SELL-1], title: "Policy, Policyholder, Property and Payment configurations; unique index on the normalised reference; duplicate → PersistenceConflictException; migration", status: pending}
-      - {id: t9, role: builder, step: green, layer: api, rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7], title: "Real controller → PolicyService: 400 shape, 422 violations[], 409 duplicate, 201 Location, bare GET; whole acceptance suite green", status: pending}
-      - {id: t10, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
-      - {id: t11, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
-      - {id: t12, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
-      - {id: t13, role: tester, step: qa, layer: null, rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7], title: "QA script docs/qa/build-F1.md, steps tagged per rule", status: pending}
-      - {id: t14, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
-      - {id: t15, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
-      - {id: t16, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
-      - {id: t17, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: pending}
-      - {id: t18, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
+      - {id: t6, role: builder, step: stub, layer: services, rules: [], title: "Stub PolicyService: the primary-constructor dependencies held, Sell still throwing (unread primary-constructor parameters fail -warnaserror, so the tester cannot stub it); no behaviour", status: pending}
+      - {id: t7, role: tester, step: red, layer: services, rules: [SELL-2, SELL-6], title: "Services.Tests: PolicyService.Sell reads UK today once (BST/GMT) and generates the payment reference", status: pending}
+      - {id: t8, role: builder, step: green, layer: services, rules: [SELL-2, SELL-6], title: "PolicyService.Sell: UkCalendar.Today, ReferenceGenerator, repository Add and SaveChanges", status: pending}
+      - {id: t9, role: builder, step: green, layer: persistence, rules: [SELL-1], title: "Policy, Policyholder, Property and Payment configurations; unique index on the normalised reference; duplicate → PersistenceConflictException; migration", status: pending}
+      - {id: t10, role: builder, step: green, layer: api, rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7], title: "Real controller → PolicyService: 400 shape, 422 violations[], 409 duplicate, 201 Location, bare GET; whole acceptance suite green", status: pending}
+      - {id: t11, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
+      - {id: t12, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage, diff scope, no NotImplementedException in src", status: pending}
+      - {id: t13, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+      - {id: t14, role: tester, step: qa, layer: null, rules: [SELL-1, SELL-2, SELL-3, SELL-4, SELL-5, SELL-6, SELL-7], title: "QA script docs/qa/build-F1.md, steps tagged per rule", status: pending}
+      - {id: t15, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
+      - {id: t16, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
+      - {id: t17, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
+      - {id: t18, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: pending}
+      - {id: t19, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
   - id: F2
     title: Retrieve
     kind: feature
