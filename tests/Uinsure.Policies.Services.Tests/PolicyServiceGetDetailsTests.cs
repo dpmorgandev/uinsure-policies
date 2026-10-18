@@ -101,6 +101,25 @@ public sealed class PolicyServiceGetDetailsTests
         Assert.Equal(PolicyStatus.Active, details.Status);
     }
 
+    // GET-1's failure row at the layer that builds it (finding A2/I6): nothing stored under the reference is one
+    // NotFound violation, naming the reference in its detail and its reference extension, and nothing is saved.
+    [Fact]
+    [Trait("Rule", "GET-1")]
+    public async Task Get_of_a_reference_with_no_policy_fails_with_one_GET_1_NotFound_violation()
+    {
+        Result<PolicyDetails> result = await _service.Get(new PolicyReference("GET1-SVC-NONE"), TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsSuccess);
+        var violation = Assert.Single(result.Violations);
+        Assert.Equal("GET-1", violation.RuleId);
+        Assert.Equal(ViolationKind.NotFound, violation.Kind);
+        Assert.Equal("No policy with reference 'GET1-SVC-NONE'.", violation.Message);
+        Assert.NotNull(violation.Extensions);
+        Assert.Equal("GET1-SVC-NONE", Assert.Single(violation.Extensions).Value);
+        Assert.Equal("GET1-SVC-NONE", violation.Extensions["reference"]);
+        Assert.Equal(0, _repository.SaveChangesCalls);
+    }
+
     private async Task<Policy> Store(Policy policy)
     {
         _repository.Add(policy);
