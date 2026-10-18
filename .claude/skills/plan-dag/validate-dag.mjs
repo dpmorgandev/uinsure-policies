@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Validates a plan's DAG file (<plan-id>.dag.yaml) and its sibling <plan-id>.plan.md.
-// Usage: node validate-dag.mjs <path/to/plan-id.dag.yaml> [requirements.md]
+// Validates a plan's DAG file (<plan-id>.dag.yaml) and its sibling <plan-id>.plan.md, or an investigation's
+// inv-NNN.plan.md on its own (it has no DAG).
+// Usage: node validate-dag.mjs <path/to/plan-id.dag.yaml | path/to/inv-NNN.plan.md> [requirements.md]
 // Exit 0 = valid, 1 = invalid (one "error:" line per problem), 2 = usage/setup error.
 // The YAML reader below accepts a strict subset (block maps and lists, flow lists and maps,
 // plain/quoted scalars, comments) and reports anything else, because the harness takes no
@@ -308,11 +309,73 @@ function checkPlanMd(md, planId, err) {
   if (prior !== null && prior.trim() === "") err("plan.md: '## Prior work consulted' is empty (write hits or 'none')");
 }
 
+// An inv-NNN plan has no DAG file: its .plan.md holds the question, the findings and one `yaml recommendations`
+// block (planning.spec, The four plan-* skills). Kinds feature|bug|amend-node; David alone moves a status off proposed.
+const REC_KEYS = ["kind", "target", "rule", "reason", "status"];
+export function validateInvestigation(md, { fileBase, reqIds }) {
+  const errors = [];
+  const err = (m) => errors.push(m);
+  const text = md.replace(/\r\n/g, "\n");
+  const fm = text.match(/^---\n([\s\S]*?)\n---\n/);
+  if (!fm) return ["plan.md: frontmatter missing"];
+  const front = Object.fromEntries(fm[1].split("\n").map((l) => l.match(/^(\w+):\s*(.*?)\s*(#.*)?$/)).filter(Boolean).map((m) => [m[1], m[2]]));
+  const planId = front.plan_id;
+  if (!/^inv-\d{3}$/.test(planId ?? "")) err(`plan.md: plan_id '${planId}' is not inv-NNN`);
+  if (fileBase && fileBase !== `${planId}.plan.md`) err(`plan.md: plan_id '${planId}' does not match file name ${fileBase}`);
+  if (front.kind !== "investigation") err(`plan.md: kind '${front.kind}' must be investigation`);
+  if (front.dag !== "null") err("plan.md: frontmatter 'dag:' must be null (an investigation has no DAG)");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(front.created ?? "")) err("plan.md: created is not YYYY-MM-DD");
+  const parent = front.parent ?? "";
+  if (parent !== "null" && !/^(build|feat-\d{3}|bug-\d{3})\/(F\d+[a-z]?|N\d+)$/.test(parent)) err(`plan.md: parent '${parent}' is not null or <plan>/<node>`);
+  for (const k of ["status", "approved_by", "approved_on", "nodes"]) if (k in front) err(`plan.md: '${k}' has no place in an investigation`);
+  if (/^```yaml dag/m.test(text)) err("plan.md: an investigation never holds a DAG");
+
+  const body = (name) => {
+    const m = text.match(new RegExp(`^## ${name}[^\\n]*\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, "m"));
+    return m ? m[1].replace(/<!--[\s\S]*?-->/g, "") : null;
+  };
+  for (const s of ["Question", "Hypothesis", "Evidence", "Findings", "Recommendations", "Rejected alternatives", "Prior work consulted", "Attempt log", "Completion record"])
+    if (body(s) === null) err(`plan.md: section '## ${s}' missing`);
+  const question = body("Question");
+  if (question !== null && !/\?\s*$/.test(question.trim())) err("plan.md: '## Question' must be one falsifiable question ending in '?'");
+  const rej = body("Rejected alternatives");
+  if (rej !== null && !/^- \S/m.test(rej)) err("plan.md: '## Rejected alternatives' needs at least one '- ' bullet");
+  const prior = body("Prior work consulted");
+  if (prior !== null && prior.trim() === "") err("plan.md: '## Prior work consulted' is empty (write hits or 'none')");
+
+  const blocks = [...text.matchAll(/^```yaml recommendations\n([\s\S]*?)^```$/gm)];
+  if (blocks.length !== 1) { err(`plan.md: needs exactly one \`\`\`yaml recommendations block (found ${blocks.length})`); return errors; }
+  let recs;
+  try { recs = parseYaml(`recommendations:\n${blocks[0][1].replace(/^(?=\S)/gm, "  ")}`).recommendations; }
+  catch (e) { err(`plan.md: recommendations: ${e.message}`); return errors; }
+  if (!Array.isArray(recs) || recs.length === 0) { err("plan.md: recommendations needs at least one entry"); return errors; }
+  recs.forEach((r, i) => {
+    const at = `recommendation #${i + 1}`;
+    if (!r || typeof r !== "object" || Array.isArray(r)) { err(`${at}: not a map`); return; }
+    for (const k of ["kind", "target", "reason", "status"]) if (!(k in r)) err(`${at}: missing key '${k}'`);
+    for (const k of Object.keys(r)) if (!REC_KEYS.includes(k)) err(`${at}: unknown key '${k}'`);
+    if (!["feature", "bug", "amend-node"].includes(r.kind)) err(`${at}: kind '${r.kind}' is not feature|bug|amend-node`);
+    if (!["proposed", "accepted", "rejected"].includes(r.status)) err(`${at}: status '${r.status}' is not proposed|accepted|rejected`);
+    if (typeof r.reason !== "string" || !r.reason) err(`${at}: reason empty`);
+    if (r.kind === "amend-node" && (parent === "null" || r.target !== parent)) err(`${at}: amend-node must target the parent node '${parent}'`);
+    if (r.kind !== "amend-node" && r.target !== null) err(`${at}: a ${r.kind} recommendation has target null (its plan does not exist yet)`);
+    if (r.rule !== undefined && r.rule !== null && reqIds && !reqIds.has(r.rule)) err(`${at}: rule '${r.rule}' not found in requirements`);
+  });
+  return errors;
+}
+
 // ---------- CLI ----------
 const samePath = (a, b) => (process.platform === "win32" ? resolve(a).toLowerCase() === resolve(b).toLowerCase() : resolve(a) === resolve(b));
 if (process.argv[1] && samePath(fileURLToPath(import.meta.url), process.argv[1])) {
   const [dagPath, reqPath = "docs/requirements.md"] = process.argv.slice(2);
-  if (!dagPath || !dagPath.endsWith(".dag.yaml")) { console.error("usage: validate-dag.mjs <plan-id>.dag.yaml [requirements.md]"); process.exit(2); }
+  if (dagPath && /(^|[\\/])inv-\d{3}\.plan\.md$/.test(dagPath)) {
+    for (const p of [dagPath, reqPath]) if (!existsSync(p)) { console.error(`missing file: ${p}`); process.exit(2); }
+    const errors = validateInvestigation(readFileSync(dagPath, "utf8"), { fileBase: basename(dagPath), reqIds: requirementIds(readFileSync(reqPath, "utf8")) });
+    if (errors.length) { for (const e of errors) console.log(`error: ${e}`); process.exit(1); }
+    console.log(`investigation: ok · ${basename(dagPath)}`);
+    process.exit(0);
+  }
+  if (!dagPath || !dagPath.endsWith(".dag.yaml")) { console.error("usage: validate-dag.mjs <plan-id>.dag.yaml | inv-NNN.plan.md [requirements.md]"); process.exit(2); }
   for (const p of [dagPath, reqPath]) if (!existsSync(p)) { console.error(`missing file: ${p}`); process.exit(2); }
   const mdPath = join(dirname(dagPath), basename(dagPath).replace(/\.dag\.yaml$/, ".plan.md"));
   let dag;
