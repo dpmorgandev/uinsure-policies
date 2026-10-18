@@ -79,8 +79,7 @@ public sealed class Policy
 
         for (var i = 0; i < holders.Count; i++)
         {
-            // SELL-5: 16 or older on the start date, so the 16th birthday itself passes.
-            if (holders[i].DateOfBirth.AddYears(MinimumAge) > start)
+            if (!IsOldEnough(holders[i].DateOfBirth, start))
             {
                 violations.Add(Violation(
                     RuleIds.Sell5,
@@ -103,6 +102,19 @@ public sealed class Policy
         var payment = new Payment(paymentReference, method, amount);
         var term = new Term(start, amount, payment);
         return Result<Policy>.Success(new Policy(reference, type, autoRenew, holders, property, term));
+    }
+
+    // SELL-5: 16 or older on the start date, so the 16th birthday itself passes. The years are compared first
+    // so that no extreme dateOfBirth or startDate can make AddYears overflow; it only runs in the birthday year.
+    private static bool IsOldEnough(DateOnly dateOfBirth, DateOnly start)
+    {
+        var birthdayYear = start.Year - MinimumAge;
+        if (dateOfBirth.Year != birthdayYear)
+        {
+            return dateOfBirth.Year < birthdayYear;
+        }
+
+        return dateOfBirth.AddYears(MinimumAge) <= start;
     }
 
     private static RuleViolation Violation(string ruleId, string message, params (string Key, object? Value)[] extensions) =>
