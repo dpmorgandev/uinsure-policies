@@ -6,7 +6,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { relPath, redactCommand, currentAttempt, currentRound, appendJsonl } from '../lib/trace.mjs';
+import { relPath, redactCommand, currentAttempt, currentRound, appendJsonl, writeVerdict, writeFindings } from '../lib/trace.mjs';
 import { agentOf, buildRecord } from '../trace-activity.mjs';
 import { validateEvent, gather, completeness } from '../../scripts/render-trace.mjs';
 
@@ -158,13 +158,48 @@ test('currentAttempt: 1 plus one per attempt++ event; the round follows it', () 
     assert.equal(currentAttempt(dir), 1);
     events('setup', 'verdict(reviewer,FAIL,x)', 'attempt++');
     assert.equal(currentAttempt(dir), 2);
-    assert.equal(currentRound(dir), 'A2');
+    // the investigator's findings take the FAIL's round (A1); the re-review's verdicts are A2
+    assert.equal(currentRound(dir), 'A1');
     assert.equal(currentRound(dir, 'verdict'), 'A2');
     events('setup', 'attempt++', 'attempt++');
     assert.equal(currentAttempt(dir), 3);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('writeVerdict never overwrites; writeFindings records the findings ids', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'trace-write-'));
+  const base = { agent: 'reviewer', agentId: 'a', plan: 'build', node: 'F1', attempt: 1 };
+  try {
+    const first = writeVerdict(dir, { ...base, round: 'A1', verdict: { verdict: 'FAIL' } });
+    const second = writeVerdict(dir, { ...base, round: 'A1', verdict: { verdict: 'PASS' } });
+    assert.match(first, /A1-reviewer\.json$/);
+    assert.match(second, /A1\.2-reviewer\.json$/);
+    assert.equal(JSON.parse(readFileSync(first, 'utf8')).verdict.verdict, 'FAIL');
+    const file = writeFindings(dir, { round: 'A1', agentId: 'i', plan: 'build', node: 'F1', attempt: 2, source: 'reviewer',
+      findings: { source_ref: 'verdicts/A1-reviewer.json: R1, R2', findings: [{ id: 'I1' }, { id: 'I2' }] }, body: '{}' });
+    assert.match(readFileSync(file, 'utf8'), /^finding_ids: \[I1, I2\]$/m);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('completeness: Fixes-Finding <round>/<id> resolves; a lost verdict passes only when reconciled', () => {
+  const t = {
+    node: { owner: 'loop', kind: 'feature', rules: [] }, nodeId: 'F1', activity: [], markers: {}, qa: {},
+    commits: [{ sha: 'a'.repeat(40), subject: 'fix', agent: 'builder', plan: 'build', node: 'F1', tdd: 'green', rules: [], fixes: ['A1/I1', 'A1/I9'] }],
+    loop: [{ event: 'gate.red', ok: true }, { event: 'gate.green', ok: true }, { event: 'gate.integrate', ok: true }],
+    verdicts: [{ file: 'A1-security.json', agent: 'security', verdict: { verdict: 'PASS', findings: [] } }],
+    findings: ['A1'], findingIds: ['A1/I1'],
+  };
+  let reasons = completeness(t).reasons;
+  assert.ok(!reasons.some((x) => x.includes('A1/I1 ')), reasons.join('\n'));
+  assert.ok(reasons.some((x) => x.includes('Fixes-Finding A1/I9')), reasons.join('\n'));
+  assert.ok(reasons.some((x) => x.includes('round A1 lacks')), reasons.join('\n'));
+  t.loop.push({ event: 'reconciled(A1-reviewer.json)' });
+  reasons = completeness(t).reasons;
+  assert.ok(!reasons.some((x) => x.includes('round A1 lacks')), reasons.join('\n'));
 });
 
 test('completeness: F0a (owner david) is OK git-only', () => {

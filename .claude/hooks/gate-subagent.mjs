@@ -66,10 +66,22 @@ export function dirtySnapshot(root, start) {
 }
 
 // G3 (+ G2 second leg): every path git says changed since start must be in the role's scope.
+// A path that now matches origin/main exactly arrived with a rebase (or was restored to main's version);
+// the agent didn't author it. Without this the git agent's integrate trips G3/G4 after every harness merge.
+function sameAsMain(root, path) {
+  try {
+    execFileSync('git', ['diff', '--quiet', 'origin/main', '--', path], { cwd: root, stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function scopeViolations(root, role, start, preexisting = {}) {
   const changed = new Set(changedSince(root, start)
     .filter((p) => !matchesAny(p, TRACE))
-    .filter((p) => !(p in preexisting && preexisting[p] === hashOf(root, p))));
+    .filter((p) => !(p in preexisting && preexisting[p] === hashOf(root, p)))
+    .filter((p) => !sameAsMain(root, p)));
   const kind = nodeKind(root);
   const out = [];
   let testerSrc = false;

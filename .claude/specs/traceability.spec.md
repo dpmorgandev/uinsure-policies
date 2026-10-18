@@ -131,7 +131,7 @@ docs/trace/
   <plan>/<node>/
     activity.jsonl                generated (PostToolUse hook): one line per Edit/Write/Bash/PowerShell call, any agent; plus Read/Grep for reviewer, security and investigator only
     loop.jsonl                    generated (orchestrator events + gate receipts); current state = last event
-    verdicts/<round>-<agent>.json generated (SubagentStop hook): one validated verdict per reviewer/security run; <round> = A<n> or D<n>
+    verdicts/<round>-<agent>.json generated (SubagentStop hook): one validated verdict per reviewer/security run, never overwritten (a second run in a round is <round>.2-<agent>.json); <round> = A<attempt> for verdicts; findings take the FAIL's A<n> or a steer's D<n>; a lost verdict file is accepted by the check only with a reconciled(<file>) loop event that points at the evidence
     findings/A<n>.md              recorded (SubagentStop hook): the investigator's final message, verbatim, per FAIL (attempt n)
     findings/D<n>.md              recorded (SubagentStop hook): the same, per David steer n (Pause 1, Pause 2 or a PR comment; no attempt++)
     README.md                     generated node summary (the interviewer's entry point; source of the PR body)

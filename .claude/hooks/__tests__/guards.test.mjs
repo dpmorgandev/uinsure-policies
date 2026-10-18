@@ -141,6 +141,25 @@ test('G3: a builder write to tests/ found by git blocks at stop; a clean diff pa
   assert.ok(scopeViolations(root, 'builder', start).some((v) => v.includes('tests/A.cs')));
 }));
 
+test('G3/G4: harness files that arrive with a rebase onto main are not blamed on the git agent', () => withRepo('main', (root) => {
+  sh(root, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+  sh(root, 'checkout', '-q', '-b', 'feature/build/F1');
+  const start = sh(root, 'rev-parse', 'HEAD');
+  // main gains a harness change; the branch is rebased onto it
+  sh(root, 'checkout', '-q', 'main');
+  mkdirSync(join(root, '.claude', 'hooks'), { recursive: true });
+  writeFileSync(join(root, '.claude', 'hooks', 'x.mjs'), 'export {};\n');
+  sh(root, 'add', '.claude/hooks/x.mjs');
+  sh(root, 'commit', '-q', '-m', 'harness on main');
+  sh(root, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
+  sh(root, 'checkout', '-q', 'feature/build/F1');
+  sh(root, 'rebase', '-q', 'origin/main');
+  assert.deepEqual(scopeViolations(root, 'git', start), []);
+  // an agent edit to that same file is still caught
+  writeFileSync(join(root, '.claude', 'hooks', 'x.mjs'), 'export const y = 1;\n');
+  assert.ok(scopeViolations(root, 'git', start).some((v) => v.startsWith('G4: .claude/hooks/x.mjs')));
+}));
+
 test('G3: files already dirty at start are not blamed on the agent unless it changes them', () => withRepo('feature/build/F1', (root) => {
   const start = sh(root, 'rev-parse', 'HEAD');
   mkdirSync(join(root, '.claude', 'hooks'), { recursive: true });
