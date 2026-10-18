@@ -1,6 +1,6 @@
 namespace Uinsure.Policies.Domain.Policies;
 
-public sealed record PolicyReference(string Value)
+public readonly record struct PolicyReference(string Value)
 {
-    public static PolicyReference Normalise(string raw) => throw new NotImplementedException();
+    public static PolicyReference Normalise(string raw) => new(raw.Trim().ToUpperInvariant());
 }
