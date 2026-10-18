@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Uinsure.Policies.Api.Tests.Builders;
 using Uinsure.Policies.Api.Tests.Support;
 using Xunit;
@@ -38,4 +39,31 @@ public sealed class SellDuplicateRaceTests : IClassFixture<DuplicateRaceApiFacto
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
         SoldPolicyAssert.ReadsBackAsSold(await read.ReadJson(), original, "SELL1-RACE", new DateOnly(2027, 11, 15));
     }
+
+    // The race-path body is the service-path body: the contract's detail with the reference, the reference
+    // extension, and every other member equal, bar the per-request traceId.
+    [Fact]
+    [Trait("Rule", "SELL-1")]
+    public async Task Duplicate_reference_that_races_past_the_service_check_gets_the_same_SELL_1_body_as_the_service_check()
+    {
+        using var client = _factory.CreateClient();
+        await client.SellAndReadBack(SellPolicyRequestBuilder.Distinctive("SELL1-RACE-BODY").Build(), "SELL1-RACE-BODY");
+        _factory.HideOnceFromDuplicateCheck("SELL1-RACE-BODY");
+
+        using var raced = await client.PostPolicy(new SellPolicyRequestBuilder("SELL1-RACE-BODY").Build());
+        var racedProblem = await ProblemAssert.Conflict(raced, "SELL-1", Title);
+        Assert.Equal(1, _factory.HiddenLookups("SELL1-RACE-BODY"));
+
+        Assert.Equal("A policy with reference 'SELL1-RACE-BODY' already exists.", racedProblem.Member("detail").GetString());
+        Assert.Equal("SELL1-RACE-BODY", racedProblem.Member("reference").GetString());
+
+        using var checkedDuplicate = await client.PostPolicy(new SellPolicyRequestBuilder("SELL1-RACE-BODY").Build());
+        var checkedProblem = await ProblemAssert.Conflict(checkedDuplicate, "SELL-1", Title);
+        Assert.Equal(MembersExceptTraceId(checkedProblem), MembersExceptTraceId(racedProblem));
+    }
+
+    private static SortedDictionary<string, string> MembersExceptTraceId(JsonElement problem) =>
+        new(problem.EnumerateObject()
+            .Where(member => member.Name != "traceId")
+            .ToDictionary(member => member.Name, member => member.Value.GetRawText()), StringComparer.Ordinal);
 }
