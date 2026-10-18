@@ -7,12 +7,6 @@ namespace Uinsure.Policies.Services;
 
 public sealed class PolicyService(IPolicyRepository repository, IReferenceGenerator references, TimeProvider clock) : IPolicyService
 {
-    // Temporary: t8 removes this constructor once the tests build the service with a reference generator.
-    public PolicyService(IPolicyRepository repository, TimeProvider clock)
-        : this(repository, new ReferenceGenerator(), clock)
-    {
-    }
-
     public async Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct)
     {
         var today = UkCalendar.Today(clock);
@@ -53,11 +47,12 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
             return Result<PolicyDetails>.Failure(DuplicateReference(command.Reference));
         }
 
-        return Result<PolicyDetails>.Success(Details(policy));
+        return Result<PolicyDetails>.Success(Details(policy, today));
     }
 
     public async Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct)
     {
+        var today = UkCalendar.Today(clock);
         var policy = await repository.GetByReference(reference, ct);
         if (policy is null)
         {
@@ -68,12 +63,11 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
                 reference));
         }
 
-        return Result<PolicyDetails>.Success(Details(policy));
+        return Result<PolicyDetails>.Success(Details(policy, today));
     }
 
-    // F1 sells one term and nothing changes it, so the policy's only term is its current term.
-    // Status is a placeholder, and the current term over several terms arrives with GET-1 in F2.
-    private static PolicyDetails Details(Policy policy) => new(policy, policy.Terms[0], PolicyStatus.Active);
+    private static PolicyDetails Details(Policy policy, DateOnly today) =>
+        new(policy, policy.CurrentTerm(today), policy.StatusOn(today));
 
     private static RuleViolation DuplicateReference(PolicyReference reference) => Violation(
         RuleIds.Sell1,
