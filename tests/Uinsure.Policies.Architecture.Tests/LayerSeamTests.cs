@@ -56,6 +56,18 @@ public sealed class LayerSeamTests
         Assert.Contains(typeof(IReferenceGenerator), typeof(ReferenceGenerator).GetInterfaces());
     }
 
+    // Finding A1/I4: IReferenceGenerator is the only way to a reference, so ReferenceGenerator offers no
+    // public static entry point that code could call around the injected seam.
+    [Fact]
+    public void ReferenceGenerator_declares_no_public_static_method()
+    {
+        var statics = typeof(ReferenceGenerator)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Select(method => method.Name);
+
+        Assert.Empty(statics);
+    }
+
     private static bool InheritsControllerBase(Type type)
     {
         for (var baseType = type.BaseType; baseType is not null; baseType = baseType.BaseType)
