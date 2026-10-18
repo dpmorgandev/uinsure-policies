@@ -15,6 +15,9 @@ public sealed class BuilderDefaultsTests
     private const decimal ExampleAmount = 365.00m;
     private const string ExampleAddressLine1 = "1 High St";
     private const string ExamplePostcode = "M1 1AA";
+    private const string ExampleFirstName = "Ada";
+    private const string ExampleLastName = "Lovelace";
+    private static readonly DateOnly ExampleDateOfBirth = new(1985, 12, 10);
 
     // The default start is a valid sale (SELL-2 window) but no boundary the SELL-2 tests own (today,
     // today + 60), not the example's start (today + 15) and not Distinctive's start (today + 30).
@@ -46,6 +49,38 @@ public sealed class BuilderDefaultsTests
         Assert.NotEqual(ExampleAddressLine1, property["addressLine1"]!.GetValue<string>());
         Assert.NotEqual(ExamplePostcode, property["postcode"]!.GetValue<string>());
         Assert.NotNull(property["addressLine2"]);
+    }
+
+    [Fact]
+    public void Default_policyholder_name_is_not_the_example_name()
+    {
+        var holder = new PolicyholderBuilder().Build();
+
+        Assert.NotEqual(ExampleFirstName, holder["firstName"]!.GetValue<string>());
+        Assert.NotEqual(ExampleLastName, holder["lastName"]!.GetValue<string>());
+    }
+
+    // The default holder must stay 16 or older (SELL-5) on every start a default-holder test sells,
+    // today + 61 (the multi-violation row) and 2028-02-29 (the SELL-3 29 Feb row) the latest of them.
+    [Fact]
+    public void Default_policyholder_date_of_birth_is_not_the_example_and_is_16_or_older_on_every_sold_start()
+    {
+        var dateOfBirth = Date(new PolicyholderBuilder().Build(), "dateOfBirth");
+
+        Assert.NotEqual(ExampleDateOfBirth, dateOfBirth);
+        Assert.True(dateOfBirth <= TestClock.Today.AddDays(61).AddYears(-16), "The default holder is under 16 on today + 61.");
+        Assert.True(dateOfBirth <= new DateOnly(2028, 2, 29).AddYears(-16), "The default holder is under 16 on 2028-02-29.");
+    }
+
+    // The sale defaults carry the default holder, alone.
+    [Fact]
+    public void Default_sale_carries_one_policyholder_who_is_not_the_example_holder()
+    {
+        var holder = Assert.Single(new SellPolicyRequestBuilder("GUARD").Build()["policyholders"]!.AsArray())!.AsObject();
+
+        Assert.NotEqual(
+            (ExampleFirstName, ExampleLastName, ExampleDateOfBirth),
+            (holder["firstName"]!.GetValue<string>(), holder["lastName"]!.GetValue<string>(), Date(holder, "dateOfBirth")));
     }
 
     private static DateOnly Date(JsonObject body, string property) =>
