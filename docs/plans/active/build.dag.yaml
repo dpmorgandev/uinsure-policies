@@ -169,7 +169,7 @@ nodes:
       - "Policy.LatestTerm, CurrentTerm(today) and StatusOn(today) live in the Domain with Domain.Tests (GET-1 traits come in F2), and PolicyService uses them"
       - "A Services.Tests unit test covers the race-path conversion to the SELL-1 result (carry-over, reviewer A2 R1)"
     tasks:
-      - {id: t1, role: tester, step: red, layer: acceptance, rules: [], title: "Architecture tests A12-A15 failing on the F1 code; a concurrency round-trip test through the records; a client-aborted request test (not logged at Error, no 500); the money 400 rows (amount with more than 2 decimal places, amount above 1,000,000.00, and the at-limit 201s); throwing stubs for the new types", status: pending}
+      - {id: t1, role: tester, step: red, layer: acceptance, rules: [], title: "Architecture tests A12-A15 failing on the F1 code; a concurrency round-trip test through the records; a client-aborted request test (not logged at Error, no 500); the money 400 rows (amount with more than 2 decimal places, amount above 1,000,000.00, and the at-limit 201s); throwing stubs for the new types", status: done}
       - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "No new endpoint: skipped (David, 2026-10-18)", status: skipped}
       - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Skipped: David reviews at Pause 2 (2026-10-18)", status: skipped}
       - {id: t4, role: tester, step: red, layer: domain, rules: [], title: "Domain.Tests for Policy.LatestTerm, CurrentTerm(today) and StatusOn(today) (Pending, Active, Expired at each boundary), untraited: F2 adds the GET-1 traits (carry-over, David 2026-10-18)", status: pending}
