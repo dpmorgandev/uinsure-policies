@@ -225,7 +225,7 @@ The SubagentStop hook blocks the agent from stopping until its final message val
     "attempt": { "type": "integer", "minimum": 1, "maximum": 5 },
     "base_sha": { "pattern": "^[0-9a-f]{40}$" },
     "head_sha": { "pattern": "^[0-9a-f]{40}$" },
-    "diff_fingerprint": { "type": "string", "description": "git diff base...head | git patch-id --stable" },
+    "diff_fingerprint": { "type": "string", "description": "git diff base...head without docs/trace, docs/plans, docs/qa, docs/context | git patch-id --stable" },
     "verdict": { "enum": ["PASS","FAIL"] },
     "gate_refs": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "loop.jsonl gate events read" },
     "rules_covered": { "type": "array", "items": { "type": "string" }, "description": "rule ids (reviewer) or OWASP ids e.g. API3:2023 (security) checked and met" },
@@ -251,7 +251,7 @@ Hook-side semantic checks: `PASS` ⇒ no P0/P1 findings, `rules_missing` empty, 
 
 ### Commits
 - Subjects: `test(<rule>): red: …` · `feat(<rule>): green: …` · `feat(<node>): stub controller` · `fix(<rule>): …` · `refactor(<rule>): …` · `plan(<p>/<n>): <from> → <to>` · `chore(trace): <node> trail`.
-- Trailers `Agent`, `Plan`, `Node`, `Rule`, `TDD: scaffold|red|stub|green|refactor`, optional `Fixes-Finding`. A hook checks `Agent/Plan/Node` against `agent_type` and the branch. Explicit `git add <paths>` only; never commit-on-stop.
+- Trailers `Agent`, `Plan`, `Node`, `Rule`, `TDD: scaffold|red|stub|green|refactor`, optional `Fixes-Finding`. A hook checks `Agent/Plan/Node` against `agent_type` and the branch, and requires `Rule` and `TDD` on tester and builder commits (the QA script, a `docs(` commit, has no `TDD`). Explicit `git add <paths>` only; never commit-on-stop.
 
 ### Branching
 - **`main` is the integration branch.** There is no `develop` branch and no integration agent. Feature and bug branches are cut from `origin/main`, rebased onto `origin/main` at step 10, and merged by David with a merge commit, so TDD commits and their SHAs survive on `main` and `git log --first-parent main` shows one line per feature. David's own checkout is never touched (fetch only updates remote-tracking refs). The README states this.

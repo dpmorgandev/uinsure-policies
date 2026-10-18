@@ -14,7 +14,7 @@ import { allowlist, isKnownRole, nodeKind } from './lib/roles.mjs';
 import { checkDiff } from './lib/stub-rule.mjs';
 import { parseFinalMessage, validate, verdictSchema } from './lib/schema.mjs';
 import {
-  currentAttempt, currentBranch, currentRound, git, nowIso, planNodeFromBranch, repoRoot, traceDir, writeFindings, writeVerdict,
+  codeFingerprint, currentAttempt, currentBranch, currentRound, git, nowIso, planNodeFromBranch, repoRoot, traceDir, writeFindings, writeVerdict,
 } from './lib/trace.mjs';
 import { parseYaml } from '../skills/plan-dag/validate-dag.mjs';
 
@@ -94,11 +94,6 @@ function nodeRules(root, where) {
   return (parseYaml(readFileSync(file, 'utf8')).nodes ?? []).find((n) => n.id === where.node)?.rules ?? [];
 }
 
-function fingerprint(root, base) {
-  const diff = execFileSync('git', ['diff', `${base}...HEAD`], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  if (diff === '') return '';
-  return execFileSync('git', ['patch-id', '--stable'], { cwd: root, input: diff, encoding: 'utf8' }).trim().split(/\s+/)[0] ?? '';
-}
 
 // Verdict schema v1 plus the hook-side semantic checks.
 export function verdictProblems(v, { role, rules, head, fp, attempt }) {
@@ -115,7 +110,7 @@ export function verdictProblems(v, { role, rules, head, fp, attempt }) {
   }
   if (v.verdict === 'FAIL' && v.findings.length === 0) problems.push('FAIL needs at least one finding');
   if (head && v.head_sha !== head) problems.push(`head_sha must be ${head}`);
-  if (fp !== null && v.diff_fingerprint !== fp) problems.push(`diff_fingerprint must be ${fp} (git diff base...HEAD | git patch-id --stable)`);
+  if (fp !== null && v.diff_fingerprint !== fp) problems.push(`diff_fingerprint must be ${fp} (code diff base...HEAD without the bookkeeping paths | git patch-id --stable)`);
   if (attempt && v.attempt !== attempt) problems.push(`attempt must be ${attempt}`);
   return problems;
 }
@@ -180,7 +175,7 @@ function stop(input) {
     if (parsed && role === 'investigator') problems.push(...findingsProblems(parsed, { attempt }));
     if (parsed && role !== 'investigator') {
       const head = git(['rev-parse', 'HEAD'], root);
-      const fp = typeof parsed.base_sha === 'string' && /^[0-9a-f]{40}$/.test(parsed.base_sha) ? fingerprint(root, parsed.base_sha) : null;
+      const fp = typeof parsed.base_sha === 'string' && /^[0-9a-f]{40}$/.test(parsed.base_sha) ? codeFingerprint(root, parsed.base_sha) : null;
       problems.push(...verdictProblems(parsed, { role, rules: where ? nodeRules(root, where) : [], head, fp, attempt }));
     }
   }
@@ -197,7 +192,7 @@ function stop(input) {
   }
 
   if (parsed && dir) {
-    const round = currentRound(dir);
+    const round = currentRound(dir, role === 'investigator' ? 'findings' : 'verdict');
     if (role === 'investigator') writeFindings(dir, { round, agentId, plan: where.plan, node: where.node, attempt, source: parsed.source, findings: parsed, body: input.last_assistant_message });
     else writeVerdict(dir, { round, agent: role, agentId, plan: where.plan, node: where.node, attempt, verdict: parsed });
   }

@@ -24,7 +24,7 @@ errors fixed, because only your last message reaches the orchestrator.
     "attempt": { "type": "integer", "minimum": 1, "maximum": 5 },
     "base_sha": { "pattern": "^[0-9a-f]{40}$" },
     "head_sha": { "pattern": "^[0-9a-f]{40}$" },
-    "diff_fingerprint": { "type": "string", "description": "git diff base...head | git patch-id --stable" },
+    "diff_fingerprint": { "type": "string", "description": "git diff base...head without docs/trace, docs/plans, docs/qa, docs/context | git patch-id --stable" },
     "verdict": { "enum": ["PASS","FAIL"] },
     "gate_refs": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "loop.jsonl gate events read" },
     "rules_covered": { "type": "array", "items": { "type": "string" }, "description": "rule ids (reviewer) or OWASP ids e.g. API3:2023 (security) checked and met" },

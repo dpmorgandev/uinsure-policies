@@ -23,4 +23,20 @@ case "$agent" in
 esac
 [ "$msg_plan" = "$plan" ] || { echo "commit-msg: G9: Plan trailer must be '$plan' (got '$msg_plan')" >&2; exit 1; }
 [ "$msg_node" = "$node" ] || { echo "commit-msg: G9: Node trailer must be '$node' (got '$msg_node')" >&2; exit 1; }
+
+# Tester and builder loop commits also carry Rule (an id, or `none` on a node without rules) and TDD.
+# The QA script (a docs( commit) has no TDD step.
+case "$agent" in
+  tester|builder)
+    [ -n "$(trailer "$1" Rule)" ] || { echo "commit-msg: G9: a $agent commit needs a Rule trailer (an id, or 'none')" >&2; exit 1; }
+    subject="$(head -1 "$1" | tr -d '\r')"
+    case "$subject" in
+      docs\(*) ;;
+      *)
+        case "$(trailer "$1" TDD)" in
+          scaffold|red|stub|green|refactor) ;;
+          *) echo "commit-msg: G9: a $agent commit needs TDD: scaffold|red|stub|green|refactor" >&2; exit 1 ;;
+        esac ;;
+    esac ;;
+esac
 exit 0

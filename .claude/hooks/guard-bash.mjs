@@ -5,13 +5,22 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { guarded, deny, identity, readInput } from './lib/io.mjs';
-import { currentBranch, git, planNodeFromBranch, repoRoot, traceDir } from './lib/trace.mjs';
+import { BOOKKEEPING, codeFingerprint, currentBranch, git, isBookkeeping, planNodeFromBranch, repoRoot, traceDir } from './lib/trace.mjs';
 
 // Rewrite `/usr/bin/git`, `C:\…\git.exe`, `"…/gh"` to plain `git` / `gh`.
 export function normalise(command) {
   return String(command ?? '')
     .replace(/(["'])[^"']*[\\/](git|gh)(?:\.exe)?\1/g, '$2')
     .replace(/(?:[A-Za-z]:)?[^\s"';&|]*[\\/](git|gh)(?:\.exe)?(?=[\s"']|$)/g, '$1');
+}
+
+// Blank heredoc bodies and quoted strings (keeping the quotes), so a message's own `;`, newlines or words
+// like `-warnaserror` can't be read as flags. Used where flags matter; content checks keep the full text.
+export function withoutQuoted(text) {
+  return text
+    .replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2(?=\s|$)/g, '<<HEREDOC')
+    .replace(/"(?:[^"\\]|\\[\s\S])*"/g, '""')
+    .replace(/'[^']*'/g, "''");
 }
 
 function gitInvocations(text, sub) {
@@ -58,7 +67,7 @@ function harnessPrGate(root, subagent) {
   return outside.length ? `G14: a harness PR may touch only .claude/, .githooks/ and CLAUDE.md (found ${outside.slice(0, 3).join(', ')})` : null;
 }
 
-// G14: latest reviewer and security verdicts must both be PASS with head_sha = HEAD. Null = allow.
+// G14: the latest reviewer and security verdicts must both be PASS and still cover HEAD (coversHead). Null = allow.
 export function prGate(root, subagent = false) {
   const branch = currentBranch(root);
   if (/^harness\/[a-z0-9][a-z0-9-]*$/.test(branch)) return harnessPrGate(root, subagent);
@@ -81,9 +90,32 @@ export function prGate(root, subagent = false) {
     const v = latest[agent];
     if (!v) return `G14: no ${agent} verdict for this node`;
     if (v.verdict?.verdict !== 'PASS') return `G14: the latest ${agent} verdict is ${v.verdict?.verdict ?? 'invalid'}`;
-    if (v.verdict?.head_sha !== head) return `G14: the latest ${agent} verdict is for ${String(v.verdict?.head_sha).slice(0, 7)}, not HEAD ${head.slice(0, 7)}`;
+    if (!coversHead(root, v.verdict, head)) {
+      return `G14: the latest ${agent} verdict is for ${String(v.verdict?.head_sha).slice(0, 7)}, and HEAD ${head.slice(0, 7)} changed the code since (only ${BOOKKEEPING.join(', ')} may change after review)`;
+    }
   }
   return null;
+}
+
+// A PASS still covers HEAD when it is HEAD; when every commit since it touches only bookkeeping paths; or,
+// after a rebase, when the code diff against the merge base has the same patch-id as the reviewed one.
+function coversHead(root, verdict, head) {
+  const reviewed = verdict?.head_sha;
+  if (typeof reviewed !== 'string' || !/^[0-9a-f]{40}$/.test(reviewed)) return false;
+  if (reviewed === head) return true;
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', reviewed, head], { cwd: root, stdio: 'ignore' });
+    const changed = git(['diff', '--name-only', reviewed, head], root).split('\n').filter(Boolean);
+    if (changed.every(isBookkeeping)) return true;
+  } catch {
+    // not an ancestor (a rebase), or the reviewed commit is gone: fall through to the fingerprint
+  }
+  try {
+    const base = git(['merge-base', 'origin/main', head], root);
+    return typeof verdict.diff_fingerprint === 'string' && verdict.diff_fingerprint !== '' && verdict.diff_fingerprint === codeFingerprint(root, base, head);
+  } catch {
+    return false;
+  }
 }
 
 function commitMessageText(root, args) {
@@ -119,7 +151,7 @@ export function check({ command, subagent, role, root }) {
 
   // G11: hook bypasses and hook-path overrides, for everyone.
   if (/--no-verify\b/.test(text)) return 'G11: --no-verify is denied for everyone';
-  if (gitInvocations(text, 'commit').some(({ args }) => /(^|\s)-[a-zA-Z]*n[a-zA-Z]*(\s|$)/.test(args.replace(/(-m|-F)\s+("[^"]*"|'[^']*'|\S+)/g, '')))) return 'G11: git commit -n (no-verify) is denied';
+  if (gitInvocations(withoutQuoted(text), 'commit').some(({ args }) => /(^|\s)-[a-zA-Z]*n[a-zA-Z]*(\s|$)/.test(args.replace(/(-m|-F)\s+\S+/g, '')))) return 'G11: git commit -n (no-verify) is denied';
   if (/\bgit\s+(?:-\S+\s+)*-c\s+core\.hooksPath/i.test(text)) return 'G11: git -c core.hooksPath is denied';
   if (gitInvocations(text, 'config').some(({ args }) => /core\.hooksPath/i.test(args) && !isConfigRead(args))) return 'G11: changing core.hooksPath is denied';
 
@@ -141,6 +173,12 @@ export function check({ command, subagent, role, root }) {
       if (trailer('Agent') !== role) return `G9: the commit needs the trailer "Agent: ${role}" (found ${trailer('Agent') ?? 'none'})`;
       if (trailer('Plan') !== where.plan) return `G9: the commit needs the trailer "Plan: ${where.plan}"`;
       if (trailer('Node') !== where.node) return `G9: the commit needs the trailer "Node: ${where.node}"`;
+      if (['tester', 'builder'].includes(role)) {
+        if (!trailer('Rule')) return 'G9: the commit needs a Rule trailer (an id, or "none" on a node without rules)';
+        // The QA script (subject docs(...)) has no TDD step; every other tester or builder commit has one.
+        const qaScript = /(?:-m\s+["']|<<-?\s*['"]?\w+['"]?[^\n]*\n)docs\(/.test(text);
+        if (!qaScript && !['scaffold', 'red', 'stub', 'green', 'refactor'].includes(trailer('TDD'))) return 'G9: the commit needs TDD: scaffold|red|stub|green|refactor';
+      }
     }
   }
 

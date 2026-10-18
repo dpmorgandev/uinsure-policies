@@ -6,7 +6,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { relPath, redactCommand, currentRound, appendJsonl } from '../lib/trace.mjs';
+import { relPath, redactCommand, currentAttempt, currentRound, appendJsonl } from '../lib/trace.mjs';
 import { agentOf, buildRecord } from '../trace-activity.mjs';
 import { validateEvent, gather, completeness } from '../../scripts/render-trace.mjs';
 
@@ -143,6 +143,25 @@ test('currentRound: a steer makes the next round D<n>, otherwise A<attempt>', ()
     assert.equal(currentRound(dir), 'A1');
     writeFileSync(join(dir, 'loop.jsonl'), [{ event: 'setup', attempt: 1 }, { event: 'steer(D1,pause1)', attempt: 1 }].map((e) => JSON.stringify(e)).join('\n') + '\n');
     assert.equal(currentRound(dir), 'D1');
+    // a verdict after a steer still belongs to the attempt, so reviewer and security share one round
+    assert.equal(currentRound(dir, 'verdict'), 'A1');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('currentAttempt: 1 plus one per attempt++ event; the round follows it', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'trace-attempt-'));
+  const events = (...names) => writeFileSync(join(dir, 'loop.jsonl'), names.map((event) => JSON.stringify({ event, attempt: 0 })).join('\n') + '\n');
+  try {
+    events('setup');
+    assert.equal(currentAttempt(dir), 1);
+    events('setup', 'verdict(reviewer,FAIL,x)', 'attempt++');
+    assert.equal(currentAttempt(dir), 2);
+    assert.equal(currentRound(dir), 'A2');
+    assert.equal(currentRound(dir, 'verdict'), 'A2');
+    events('setup', 'attempt++', 'attempt++');
+    assert.equal(currentAttempt(dir), 3);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
