@@ -15,6 +15,8 @@ import { matchesAny } from '../lib/paths.mjs';
 import { skillProblems } from '../lib/skills-lint.mjs';
 import { renderPrompt, parseHeader } from '../../scripts/design/render-prompt.mjs';
 import { lintDesign } from '../../scripts/design/lint.mjs';
+import { coverageProblems } from '../../scripts/design/coverage.mjs';
+import { directionsProblems, contrast, TOKENS } from '../../scripts/design/validate-directions.mjs';
 
 const HOOKS = resolve(import.meta.dirname, '..');
 const ROOT = resolve(HOOKS, '..', '..');
@@ -172,6 +174,33 @@ test('G16 lint companion (EFF-12, EFF-2): a clean artifact passes; each mechanic
   assert.ok(lintDesign(GOOD_HTML, { id: 'overview', regions: [] }).some((p) => /fails closed/.test(p)));
 });
 
+// ---------- requirement coverage (ui-requirements stage 1) ----------
+
+const BRIEF = '# B\n## 2. Functional\n| ID | Priority | R | I |\n|---|---|---|---|\n| NAV-1 | MUST | a | b |\n'
+  + '| WB-1 | MUST | c | d |\n| WB-8 | — | cut | e |\n| PERF-1 | SHOULD | f | g |\n## 3. Delivery\n| X-1 | MUST | not §2 | h |\n';
+const catalog = (screens, notOnScreens) => ({ app: { screens, notOnScreens } });
+const on = (id, ...req) => ({ id, regions: [{ name: 'r', req }] });
+const PERF = { id: 'PERF-1', reason: 'load time, not a region', verifiedBy: 'web-testing perf budget' };
+
+test('coverage: every §2 ID on a region or declared notOnScreens passes; a missing feature area fails', () => {
+  assert.deepEqual(coverageProblems(BRIEF, catalog([on('overview', 'NAV-1'), on('sell', 'WB-1')], [PERF])), []);
+  const missing = coverageProblems(BRIEF, catalog([on('overview', 'NAV-1')], [PERF]));
+  assert.ok(missing.some((p) => /WB-1 \(MUST\) is on no screen region/.test(p)));
+  assert.ok(coverageProblems(BRIEF, catalog([on('overview', 'NAV-1'), on('sell', 'WB-1')])).some((p) => /PERF-1/.test(p)));
+});
+
+test('coverage: unknown, cut or doubly-placed IDs, a reasonless exemption, and empty inputs fail', () => {
+  const ok = [on('overview', 'NAV-1'), on('sell', 'WB-1')];
+  const has = (c, re) => assert.ok(coverageProblems(BRIEF, c).some((p) => re.test(p)), `${re} not reported`);
+  has(catalog([...ok, on('x', 'X-1')], [PERF]), /X-1 is tagged .* not a requirement/);
+  has(catalog([...ok, on('x', 'WB-8')], [PERF]), /WB-8 is cut/);
+  has(catalog([...ok, on('x', 'PERF-1')], [PERF]), /PERF-1 is in notOnScreens but also tagged/);
+  has(catalog(ok, [{ id: 'PERF-1', reason: 'x' }]), /needs both a reason and verifiedBy/);
+  has(catalog(ok, [PERF, { id: 'NOPE-1', reason: 'r', verifiedBy: 'v' }]), /NOPE-1, which is not a requirement/);
+  has(catalog([], [PERF]), /no screens \(fails closed\)/);
+  assert.ok(coverageProblems('# no section', catalog(ok)).some((p) => /fails closed/.test(p)));
+});
+
 // ---------- G17: skills lint ----------
 
 const SKILL = (body, fm = 'name: x\ndescription: y\nported-from: elsewhere v1') => `---\n${fm}\n---\n# X\n\n${body}`;
@@ -223,4 +252,89 @@ test('G13 (vi): the load check fails on a module with a syntax error (known-bad 
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ---------- Amendment A3: the creative director and /directions ----------
+
+const DIRECTIONS_READS = JSON.parse(readFileSync(join(ROOT, '.claude', 'skills', 'directions', 'inputs.json'), 'utf8')).reads;
+
+// A design repo with the brief and every file the directions stage tells the agent to read.
+function withDirectionsRepo(fn) {
+  return withDesignRepo((root) => {
+    writeFileSync(join(root, 'docs', 'ui-requirements.md'), '# Brief\n\n## 1. Context\n\nWhy a UI.\n\n## 2. Functional\n\nRows.\n');
+    for (const f of DIRECTIONS_READS) if (!f.endsWith('ui-requirements.md')) {
+      mkdirSync(join(root, f, '..'), { recursive: true });
+      writeFileSync(join(root, f), '# x\n');
+    }
+    return fn(root);
+  });
+}
+
+test('A3 G1: creative-director is a known role that may write only docs/ui/directions.json', () => {
+  assert.ok(isKnownRole('creative-director'));
+  const may = (p) => matchesAny(p, allowlist('creative-director'));
+  assert.ok(may('docs/ui/directions.json'));
+  for (const p of ['docs/ui/styles.md', 'docs/ui/mockups/a/overview.html', 'docs/ui/research/mood-type-icons.md', '.claude/skills/directions/template.md']) assert.ok(!may(p), p);
+  for (const role of [...BUILD_ROLES, 'ui-designer']) assert.ok(!matchesAny('docs/ui/directions.json', allowlist(role)), `${role} must not write directions`);
+});
+
+test('A3 G15: a rendered creative-director prompt passes; a changed byte or a missing read source is denied', () => withDirectionsRepo((root) => {
+  const prompt = renderPrompt({ root, stage: 'directions', direction: 'all', screen: 'all' });
+  assert.match(prompt, /^<!-- design-prompt v1 stage=directions direction=all screen=all attempt=1 /);
+  assert.match(prompt, /Why a UI\./, 'the brief section is carried verbatim');
+  assert.equal(dispatch(root, 'creative-director', prompt), null);
+  assert.match(dispatch(root, 'creative-director', prompt.replace('Exactly three territories', 'Some territories')), /^G15: the creative-director prompt differs/);
+  assert.match(dispatch(root, 'creative-director', 'Invent three styles.'), /^G15: a creative-director prompt/);
+  assert.throws(() => renderPrompt({ root, stage: 'directions', direction: 'case-file', screen: 'overview' }), /direction=all screen=all/);
+  rmSync(join(root, 'docs', 'ui', 'research', 'api-inventory.md'));
+  assert.throws(() => renderPrompt({ root, stage: 'directions', direction: 'all', screen: 'all' }), /missing source/);
+}));
+
+test('A3 G16: a creative-director receipt naming a valid directions.json passes; scope and agent mismatches block', () => withDesignRepo((root) => {
+  writeFileSync(join(root, 'docs', 'ui', 'directions.json'), '{"version":1,"territories":[]}');
+  const cd = (extra = {}) => JSON.stringify({ agent: 'creative-director', stage: 'directions', direction: 'all', screen: 'all', status: 'written', files: ['docs/ui/directions.json'], notes: 'three ideas', ...extra });
+  assert.deepEqual(designProblems(root, cd(), 'creative-director'), []);
+  assert.ok(designProblems(root, cd({ files: ['docs/ui/styles.md'] }), 'creative-director').some((p) => /outside the creative-director's write scope/.test(p)));
+  assert.ok(designProblems(root, cd({ agent: 'ui-designer' }), 'creative-director').some((p) => /receipt.agent must be "creative-director"/.test(p)));
+  writeFileSync(join(root, 'docs', 'ui', 'directions.json'), '{ not json');
+  assert.ok(designProblems(root, cd(), 'creative-director').some((p) => /not valid JSON/.test(p)));
+}));
+
+const IDS = new Set(['B1', 'B3', 'B9', 'C1', 'P2', 'M6', 'D1', 'K1', 'T1', 'T3']);
+const palette = () => Object.fromEntries(TOKENS.map((t) => [t, ['background', 'surface', 'border', 'accent'].includes(t)
+  ? { light: '#ffffff', dark: '#111111', source: 'proposed' }
+  : { light: '#1a1a1a', dark: '#f0f0f0', source: 'K1' }]));
+const territory = (i) => ({
+  name: `idea-${i}`, governingIdea: `idea ${i}`, singleMindedProposition: `belief ${i}`,
+  excludes: ['a', 'b', 'c'], layoutArchetype: `archetype ${i}`, toneRegister: `tone ${i}`,
+  signatureMove: { explorer: 'a rule chain from D1', workbench: 'a refund sum from A11' },
+  categoryDeparture: 'no sidebar',
+  derivedStyle: { palette: palette(), type: { sans: 'T3', mono: 'T1' }, dials: { design_variance: 3, motion_intensity: 1, visual_density: 5 } },
+  citations: ['B1', 'B3', 'B9', 'C1', 'M6'],
+});
+const doc = (...ts) => ({ version: 1, territories: ts });
+
+test('A3 validator: three complete, divergent, cited territories pass', () => {
+  assert.deepEqual(directionsProblems(doc(territory(1), territory(2), territory(3)), IDS), []);
+  assert.ok(contrast('#000000', '#ffffff') > 20.9 && contrast('#ffffff', '#ffffff') === 1);
+});
+
+test('A3 validator: wrong count, shared archetype or tone, bad citations, low contrast, bad type or empty input fail', () => {
+  const has = (d, re) => assert.ok(directionsProblems(d, IDS).some((p) => re.test(p)), `${re} not reported`);
+  has(doc(territory(1), territory(2)), /exactly 3/);
+  has(doc(territory(1), territory(2), { ...territory(3), layoutArchetype: 'archetype 1' }), /layoutArchetype .* shared/);
+  has(doc(territory(1), territory(2), { ...territory(3), toneRegister: 'Tone 2 ' }), /toneRegister .* shared/);
+  has(doc(territory(1), territory(2), { ...territory(3), citations: ['B1', 'B3', 'B9', 'C1', 'X9'] }), /don't resolve.*X9/);
+  has(doc(territory(1), territory(2), { ...territory(3), citations: ['B1', 'C1', 'P2', 'M6', 'D1'] }), /at least 2 workbench/);
+  has(doc(territory(1), territory(2), { ...territory(3), citations: ['B1', 'B3', 'B9', 'M6', 'D1'] }), /explorer prior-art/);
+  has(doc(territory(1), territory(2), { ...territory(3), excludes: ['a'] }), /excludes needs at least 3/);
+  has(doc(territory(1), territory(2), { ...territory(3), signatureMove: { explorer: 'x' } }), /signatureMove.workbench/);
+  const low = territory(3);
+  low.derivedStyle.palette.warn = { light: '#e69f00', dark: '#e69f00', source: 'K3' };
+  has(doc(territory(1), territory(2), low), /warn light is .* below 4.5:1/);
+  low.derivedStyle.palette.warn = { light: '#a06800', dark: '#e69f00', source: 'K3', graphicsOnly: true };
+  assert.ok(!directionsProblems(doc(territory(1), territory(2), low), IDS).some((p) => /warn/.test(p)), 'graphicsOnly passes at 3:1');
+  has(doc(territory(1), territory(2), { ...territory(3), derivedStyle: { ...territory(3).derivedStyle, type: { sans: 'Inter', mono: 'T1' } } }), /type.sans must be a researched T-id/);
+  has(doc(), /fails closed/);
+  has(null, /fails closed/);
 });

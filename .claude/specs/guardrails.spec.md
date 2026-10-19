@@ -432,3 +432,41 @@ put design stages on `feature/ui/<stage>` (Option B) without amending G14: a gap
 `/mockups` gains two fixes found in the same run: the worktree path is `../ui-DM` (a sibling; the old
 relative path nested it inside the `ui` worktree), and the trailers sit in one final paragraph with
 `Co-Authored-By` (G9 found no `Agent` trailer otherwise). Step 4 now commits the sign-off before the PR.
+
+## Amendment A3 (2026-10-19): guards for the creative director; the G3 stop-check fix. Approved by David ("yes build it")
+
+| ID | Change | File | Test (fixture) |
+|---|---|---|---|
+| G1 | `creative-director` is a known role whose allowlist is `docs/ui/directions.json` alone. Additive: no other role's list changes | `lib/roles.mjs` | the role writes only that file; no build role or ui-designer may |
+| G15 | Jurisdiction widens from `ui-designer` to the design agents (`ui-designer`, `creative-director`). The directions prompt renders from `.claude/skills/directions/{inputs.json,template.md}` with header `direction=all screen=all`; every file it tells the agent to read must exist, or the render fails (closed). Every other dispatch is still a no-op | `guard-dispatch.mjs`, `scripts/design/render-prompt.mjs` | rendered prompt → allow; one changed byte → deny; hand-written → deny; a missing read source → render fails |
+| G16 | Same widening: the receipt's `agent` must equal the stopping role, and each listed file must be in that role's allowlist (`.json` must parse) | `gate-design.mjs` | valid receipt → allow; a file outside scope, an agent mismatch, unparseable JSON → block |
+| G3 | **Stop-check fix.** At stop, a path changed since the agent started **only by commits carrying `Agent: main`**, and not changed again in the working tree, is the main session's work and isn't attributed to the agent | `gate-subagent.mjs` (`mainOnlyPaths`) | main-session commits during a run → no violation; an agent-trailered commit → still checked; an uncommitted change after the main commit → still attributed |
+
+**Found by running it.** In round 2 both research subagents (one web-research, one Explore) were blocked
+at stop three times. The main session had committed and edited files in the same worktree while they ran,
+and G3 compared the agent's start commit with the current tree, excusing only files that were already
+dirty at start. Neither agent wrote anything. **Residual risk, accepted:** an *uncommitted* main-session
+edit during a run is still attributed to the agent, because nothing marks whose it is. The stage skills
+say not to edit a worktree while an agent runs in it.
+
+**The directions validator** (`scripts/design/validate-directions.mjs`; a tool run by `/directions` in the
+parent, not a guard) fails unless:
+- there are exactly 3 territories, each with every field non-empty and at least 3 `excludes`;
+- names, layout archetypes and tone registers are pairwise distinct;
+- every citation resolves to an ID in `docs/ui/research/`, with at least 5 per territory, at least 2 from
+  B and at least 1 from P or C;
+- all ten palette tokens are given in both themes, each with a source;
+- the six text tokens reach 4.5:1 on the background in both themes, or 3:1 when marked `graphicsOnly`;
+- type is researched T-ids;
+- dials are integers from 1 to 10.
+
+An empty file fails closed. Known-bad fixtures cover each rule. The stage 2 contract's schema listed "the
+9 tokens of round 1"; round 1's tables actually had ten (with `border`), and the validator requires ten.
+
+**The requirement-coverage script** (`scripts/design/coverage.mjs`, stage 1) moves here from the `ui`
+branch with its tests, because `/directions` runs it at setup and G17 found the skill naming a script
+`main` didn't have.
+
+**Merge safety** (as A1): every change to a shared hook is additive or widens a list. The build roles'
+paths are unchanged (the no-op fixtures for the six roles still pass). The G3 change only removes false
+positives for commits trailered `Agent: main`. The self-test runs in pre-push.

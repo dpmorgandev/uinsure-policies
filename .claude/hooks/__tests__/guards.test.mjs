@@ -170,6 +170,23 @@ test('G3: files already dirty at start are not blamed on the agent unless it cha
   assert.ok(scopeViolations(root, 'builder', start, snap).some((v) => v.startsWith('G4')));
 }));
 
+test('G3 (A3): files only the main session committed while the agent ran are not blamed on it; its own and later edits are', () => withRepo('feature/build/F1', (root) => {
+  const start = sh(root, 'rev-parse', 'HEAD');
+  const commit = (path, text, agent) => {
+    mkdirSync(join(root, path, '..'), { recursive: true });
+    writeFileSync(join(root, path), text);
+    sh(root, 'add', path);
+    sh(root, 'commit', '-q', '-m', `${path}\n\nAgent: ${agent}`);
+  };
+  commit('docs/ui/research/new.md', '# research\n', 'main');
+  commit('.claude/scripts/design/coverage.mjs', '// x\n', 'main');
+  assert.deepEqual(scopeViolations(root, 'investigator', start), [], 'main-session commits during the run are not the agent\'s');
+  commit('src/A.cs', 'namespace A;\n', 'tester');
+  assert.ok(scopeViolations(root, 'investigator', start).some((v) => v.includes('src/A.cs')), 'an agent-trailered commit is still checked');
+  writeFileSync(join(root, 'docs', 'ui', 'research', 'new.md'), '# changed again, uncommitted\n');
+  assert.ok(scopeViolations(root, 'investigator', start).some((v) => v.includes('docs/ui/research/new.md')), 'an uncommitted change after the main commit is still attributed');
+}));
+
 test('G3 + G2 second leg: a tester body in src/ blocks at stop; a throwing stub passes', () => withRepo('feature/build/F1', (root) => {
   const start = sh(root, 'rev-parse', 'HEAD');
   writeFileSync(join(root, 'src', 'Existing.cs'), 'namespace X;\npublic sealed class P\n{\n    public int Go() => throw new NotImplementedException();\n}\n');

@@ -1,0 +1,18 @@
+{
+  "kind": "directions",
+  "node": "DC",
+  "output": "docs/ui/directions.json",
+  "brief": ["## 1. Context"],
+  "reads": [
+    "docs/ui-requirements.md",
+    "docs/ui/research/prior-art-agent-traces.md",
+    "docs/ui/research/prior-art-ci-traceability.md",
+    "docs/ui/research/prior-art-workbench.md",
+    "docs/ui/research/mood-type-icons.md",
+    "docs/ui/research/trail-inventory.md",
+    "docs/ui/research/api-inventory.md",
+    "docs/ui/flows.md",
+    "docs/ui/screens.json",
+    "docs/ui/components.md"
+  ]
+}
