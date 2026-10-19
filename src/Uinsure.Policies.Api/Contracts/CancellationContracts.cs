@@ -35,9 +35,10 @@ public sealed record CancellationQuoteResponse(
     IReadOnlyList<QuoteRefundResponse> Refunds,
     DateOnly QuotedOn);
 
+// MVC reads a positional record's constraints from the constructor parameters; [property:] makes it throw.
 public sealed record RecordClaimRequest(
-    [property: Required] DateOnly? ClaimDate,
-    [property: MaxLength(500)] string? Description);
+    [Required] DateOnly? ClaimDate,
+    [MaxLength(500)] string? Description);
 
 // E5 body. The claim nested in PolicyResponse is ClaimResponse.
 public sealed record RecordClaimResponse(
