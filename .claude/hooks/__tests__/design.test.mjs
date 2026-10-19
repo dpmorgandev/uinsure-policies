@@ -18,7 +18,7 @@ import { lintDesign } from '../../scripts/design/lint.mjs';
 import { coverageProblems } from '../../scripts/design/coverage.mjs';
 import { directionsProblems, contrast, TOKENS } from '../../scripts/design/validate-directions.mjs';
 import { deriveTokens, familiesFromRow } from '../../scripts/design/derive-tokens.mjs';
-import { splitStates, roster, kitProblems } from '../../scripts/design/audit-kit.mjs';
+import { splitStates, roster, kitProblems, slug, reviewPage, MAX_SHOT_HEIGHT } from '../../scripts/design/audit-kit.mjs';
 import { scaffold, barrel, FILES } from '../../scripts/design/scaffold-web.mjs';
 import { existsSync } from 'node:fs';
 
@@ -462,6 +462,23 @@ test('A6 audit: every catalogued state must be tagged; unknown tags, missing ico
   has({ specimens: ['icons'] }, /no type specimen/);
   assert.ok(kitProblems(expected, { ...full, tags: [] }).some((p) => /fails closed/.test(p)));
   assert.ok(kitProblems([], full).some((p) => /fails closed/.test(p)));
+});
+
+test('A6 review: one shot per state per width, measured overflow stated, over-tall shots flagged', () => {
+  assert.equal(slug('422 multi (no field path: listed, not placed)'), '422-multi-no-field-path-listed-not-placed');
+  assert.equal(slug('`—` (hook saw none)'), 'hook-saw-none');
+  const shots = [
+    { group: 'field', label: 'invalid', files: { 1440: { src: '_shots/1440/field--invalid.png', height: 300 }, 390: { src: '_shots/390/field--invalid.png', height: MAX_SHOT_HEIGHT + 1 } } },
+    { group: 'field', label: 'required', files: { 1440: { src: '_shots/1440/field--required.png', height: 300 } } },
+  ];
+  const html = reviewPage(shots, [{ width: 1440, pageWidth: 1440, over: [] }, { width: 390, pageWidth: 1099, over: [{ id: 'app-shell', right: 1470 }] }]);
+  assert.match(html, /<section id="field"><h2>field<\/h2>/);
+  assert.equal(html.match(/<img /g).length, 3, 'one image per state per width it was shot at');
+  assert.match(html, /1440 wide:<\/b> the page is 1440 wide \(no horizontal overflow\)/);
+  assert.match(html, /390 wide:<\/b> the page is 1099 wide \(709px of horizontal overflow\); content past the viewport in <a href="#app-shell">app-shell<\/a> \(to 1470\)/);
+  assert.match(html, /past Chromium's paint limit, may be blank/);
+  assert.doesNotMatch(html, /kitchen-sink-1440\.png/, 'no full-page shot');
+  assert.match(reviewPage([{ group: 'a<b', label: 'x', files: {} }], []), /a&lt;b/, 'escaped');
 });
 
 test('A6 scaffold: writes the root config once and never overwrites; the barrel lists component folders', () => withDesignRepo((root) => {
