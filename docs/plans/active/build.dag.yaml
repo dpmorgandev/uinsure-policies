@@ -312,7 +312,7 @@ nodes:
     rules: []
     cuttable: true
     budget: 3h
-    status: in_progress
+    status: hitl
     attempt: 3
     branch: feature/build/F5
     worktree: .claude/worktrees/build-F5
