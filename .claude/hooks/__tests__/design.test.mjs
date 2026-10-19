@@ -60,7 +60,9 @@ function renderFixture(root, attempt = 1) {
     mkdirSync(join(root, e.file, '..'), { recursive: true });
     writeFileSync(join(root, e.file), '| rule | plan/node |\n| GET-1 | build/F2 |\n  - id: F2\n# heading\n| — | Status |\n"event":"pause1"\n"event":"gate.red"\nRule IDs: GET-1\n| 1 | GET-1 | x |\n| 5 | 94a7473 | red | tests |\n');
   }
-  writeFileSync(join(root, MOCKUPS.directionsFrom), JSON.stringify({ version: 1, territories: [{ name: TERRITORY, governingIdea: 'order is the proof', signatureMove: { explorer: 'a spine', workbench: 'three rungs' } }] }));
+  writeFileSync(join(root, MOCKUPS.directionsFrom), JSON.stringify({ version: 1, territories: [{ name: TERRITORY, governingIdea: 'order is the proof', signatureMove: { explorer: 'a spine', workbench: 'three rungs' }, derivedStyle: { type: { sans: 'T3', mono: 'T3' } } }] }));
+  mkdirSync(join(root, 'docs', 'ui', 'research'), { recursive: true });
+  writeFileSync(join(root, 'docs', 'ui', 'research', 'mood-type-icons.md'), '| ID | Pairing |\n|---|---|\n| T3 | Source Sans 3 + Source Code Pro | OFL-1.1 |\n');
   return renderPrompt({ root, stage: 'mockups', direction: TERRITORY, screen: 'rule', attempt });
 }
 
@@ -126,7 +128,10 @@ test('round 2: a mockups prompt carries its territory verbatim from directions.j
   const prompt = renderFixture(root);
   assert.match(prompt, /## Territory: idea-one[\s\S]*"governingIdea": "order is the proof"/);
   assert.match(prompt, /`docs\/ui\/mockups\/r2\/idea-one\/rule\.html`/);
+  assert.match(prompt, /### Its type, from `docs\/ui\/research\/mood-type-icons\.md`, verbatim[\s\S]*\| T3 \| Source Sans 3 \+ Source Code Pro \|/, 'A5: the T-id resolves to its research row');
   assert.throws(() => renderPrompt({ root, stage: 'mockups', direction: 'case-file', screen: 'rule' }), /not a territory/);
+  writeFileSync(join(root, 'docs', 'ui', 'research', 'mood-type-icons.md'), '| T1 | IBM Plex |\n');
+  assert.throws(() => renderPrompt({ root, stage: 'mockups', direction: TERRITORY, screen: 'rule' }), /type T3 is not in/);
 }));
 
 // ---------- G16: receipt and artifact gate ----------

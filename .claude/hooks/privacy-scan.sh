@@ -17,10 +17,17 @@ cat "$committed" > "$patterns"
 grep -vE '^(#|!|$)' "$patterns" | tr -d '\r' > "$patterns.deny"
 sed -n 's/^!//p' "$patterns" | tr -d '\r' > "$patterns.allow"
 
-# The denylist matches itself, so it is never scanned.
+# The denylist matches itself, so it is never scanned. Raster images are skipped too (guardrails A5):
+# their compressed bytes match the text patterns by chance (seven random bytes in a PNG read as an email), and
+# the ones this repo commits are the design screenshots, rendered pixels with no text metadata. Every
+# other file, binary or not, is scanned.
 files=()
 for f in "$@"; do
-  [ "$f" -ef "$committed" ] || files+=("$f")
+  [ "$f" -ef "$committed" ] && continue
+  case "$(printf '%s' "$f" | tr '[:upper:]' '[:lower:]')" in
+    *.png|*.jpg|*.jpeg|*.gif|*.webp) continue ;;
+  esac
+  files+=("$f")
 done
 [ "${#files[@]}" -gt 0 ] || exit 0
 
