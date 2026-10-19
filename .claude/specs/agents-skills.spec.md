@@ -281,3 +281,66 @@ Every agent sees it: Claude Code loads it into the main session and into each di
 8. ~~Security sees the reviewer's verdict~~ **Resolved:** neither sees the other's; both run in parallel.
 9. Resolved (David, 2026-10-17): the review packet only, with no shell, as the Contract says. Revisit if F1 investigations stall.
 10. Orchestration.spec to adopt the findings JSON and the investigator route (see "Differences to reconcile"). **(open, orchestration)**
+
+---
+
+## Amendment A1 (2026-10-19): the UI design slice. DRAFT; Decision pending (David)
+
+Settles: `docs/ui-requirements.md` §3 "Agents and skills" for the design phases (G2 mockups first), under
+`efficiency.spec.md` EFF-5, EFF-6, EFF-7, EFF-8, EFF-13. Its guards: `guardrails.spec.md` Amendment A1.
+
+### Research
+
+- **Spike (2026-10-19, main session): an agent defined only in a worktree is not dispatchable.** A probe
+  agent written to `.claude/worktrees/ui/.claude/agents/probe-ui.md` was rejected with "Agent type
+  'probe-ui' not found" and the main checkout's roster listed. This confirms the F0a spike ruling (the
+  main checkout's agents govern) for an agent created after session start. **Consequence:**
+  `ui-designer` is usable only once it is in the main checkout's working tree, so the slice reaches
+  `main` by a harness PR (guardrails G14 harness route) before any design stage runs.
+- **The trail only records `feature/*` and `bug/*` branches** (`lib/trace.mjs` `planNodeFromBranch`).
+  Design work committed straight to `ui` would leave no activity trail, defeating the porting rule's
+  "the trail proves what was read" leg (EFF-6).
+- **agentflow's `ui-designer`** (`agentflow_phase3/.claude/agents/ui-designer.md`, 270 lines) preloads 10
+  platform skills, writes artifacts to disk and returns "file path and status only" (lines 159–167).
+  Only the file-vs-message split and the web method carry over (EFF-7, EFF-13).
+
+### Options
+
+- **A. Design stages straight to `ui`** (the brief's current rule): no trail, because the hooks don't
+  map the `ui` branch.
+- **B. One branch per design stage** (`feature/ui/<stage>`, PR into `ui`): the existing hooks trace it
+  unchanged, and David's PR merge doubles as the stage gate.
+- **C. Teach `trace.mjs` that `ui` means plan `ui`, node `design`:** a change to a library every F3 hook
+  imports.
+
+**Recommendation: B.** No change to shared trace code, a full trail per stage, and the gate is a merge
+David already performs. It amends the brief's "direct commits to `ui` until G5": research, specs and
+catalogs still go direct; **any stage that dispatches a design agent** goes through its own branch.
+
+### Contract additions
+
+**Roster row** (beside the six):
+
+| Agent | Role | Inputs | Output (final JSON) | `tools` | `disallowedTools` | model / effort | `skills:` | Write scope (hook-enforced) | Never |
+|---|---|---|---|---|---|---|---|---|---|
+| **ui-designer** | Writes one design artifact per dispatch (a mockup screen in one direction; later a kit page or a screen) as static HTML, following `interface-craft` | **only** a prompt rendered by script from the stage's template (G15): stage, direction, screen, and the mandates and source excerpts the template copies in verbatim | receipt `{agent: "ui-designer", stage, direction, screen, status: "written"\|"blocked", files: [repo-relative paths], notes}`, `notes` ≤ 600 characters; never artifact content | Read, Grep, Glob, Write, Edit | Agent, Skill, Bash, PowerShell, NotebookEdit, WebFetch, WebSearch | sonnet / high | interface-craft | `docs/ui/mockups/**`, `docs/ui/kit/**`, `docs/ui/screens/**` | write outside its scope; put artifact content in its message, or prose in an artifact; fetch anything external; reference a font, image or script by external URL; show a number, status or name that isn't in its prompt's data excerpt (HONEST-1); describe its own pixels as evidence |
+
+No Bash: screenshots, lint and every gate run in the parent (EFF-3, EFF-8). No Skill tool: it can't reach
+for a user-level or plugin taste skill in place of `interface-craft` (EFF-6).
+
+**Skills:**
+
+| Skill | Kind | Used by | Reads / Writes |
+|---|---|---|---|
+| `interface-craft` | preloaded, contract-only | ui-designer | Reads: its prompt only. Writes: the one path the prompt names. Ported and trimmed from agentflow's `interface-craft` (476 lines → 160) under the porting rule. Changes: no photography (the trail is the place); no Tailwind CDN bootstrap (one self-contained file, tokens as CSS custom properties, both themes); the self-check checks text, since the agent can't see its render. Its good/dead exemplar pair is written in the skill from this project's own data (the SELL-5 rule page); HTML exemplars follow from the direction chosen at G2 |
+| `/mockups` | stage skill, main session | David → main session | Reads: `docs/ui/styles.md`, `docs/ui/screens.json`, `docs/ui/components.md`, `docs/ui/research/trail-inventory.md`, and the trail files the template excerpts. Writes: `docs/ui/mockups/<direction>/<screen>.html` (via ui-designer), `docs/ui/mockups/review.html` and PNGs (via the screenshot script), and the stage's `loop.jsonl` events |
+
+`/stylesheet` and `/screens` follow the same shape and are specified once G2 is passed (built on first
+need, as `/plan-feature` was).
+
+**The universal rules hold unchanged** for ui-designer: no Agent, no Skill, no spec reads, the harness
+lock, one JSON object as the final message.
+
+**Design-stage branches** (Option B): `feature/ui/DM` (mockups, G2), `feature/ui/DK` (kit and stylesheet,
+G3), `feature/ui/DS` (screens, G4), each in `.claude/worktrees/ui-<stage>`, PR into `ui`, David merges.
+Main-session commits carry `Agent: main`, `Plan: ui`, `Node: <stage>`.

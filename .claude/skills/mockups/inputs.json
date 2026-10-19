@@ -1,0 +1,32 @@
+{
+  "outputDir": "mockups",
+  "node": "DM",
+  "directions": {
+    "case-file": "## Style 0: Case file",
+    "instrument": "## Style 1: Instrument",
+    "chronology": "## Style 2: Chronology"
+  },
+  "screens": {
+    "overview": {
+      "excerpts": [
+        { "file": "docs/trace/requirements-matrix.md" },
+        { "file": "docs/plans/active/build.dag.yaml", "match": "^  - id: |^    (title|kind|status|attempt|pr|depends_on|rules):" },
+        { "file": "docs/trace/build/F0b/README.md", "head": 14 },
+        { "file": "docs/trace/build/F1/README.md", "head": 14 },
+        { "file": "docs/trace/build/F1b/README.md", "head": 14 },
+        { "file": "docs/trace/build/F2/README.md", "head": 14 },
+        { "file": "docs/trace/build/F2/loop.jsonl", "match": "\"event\":\"(pause1|steer\\(|signoff\\(|merged\\(|attempt\\+\\+|investigation\\.opened)" }
+      ]
+    },
+    "rule": {
+      "excerpts": [
+        { "file": "docs/requirements.md", "match": "^\\| (GET-1|—) \\|" },
+        { "file": "docs/trace/requirements-matrix.md", "match": "^\\| (rule|GET-1) \\|" },
+        { "file": "docs/trace/build/F2/walkthrough.md", "match": "^(# |\\| # |\\|---|\\| \\d+ \\| [0-9a-f]+ \\| (red|stub|green|refactor) )" },
+        { "file": "docs/trace/build/F2/README.md", "head": 14 },
+        { "file": "docs/trace/build/F2/loop.jsonl", "match": "\"event\":\"(gate\\.(red|stub|green|refactor)|verdict\\(|attempt\\+\\+|signoff\\(|merged\\(|pr\\()" },
+        { "file": "docs/qa/build-F2.md", "match": "^(Rule IDs:|\\| (Tester|Date|Commit signed off|Steps passed|Defects raised|Verdict|Signature) \\||\\| 1 \\| GET-1 \\|)" }
+      ]
+    }
+  }
+}

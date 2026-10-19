@@ -1,0 +1,102 @@
+// Renders a design agent's prompt from a stage's checked-in template and inputs (guardrails G15,
+// efficiency EFF-5, EFF-10). Every section is a verbatim slice of a source file, so nothing can be
+// summarised away. The same function runs in the dispatch guard, which denies any ui-designer prompt
+// that isn't byte-identical to its rendering.
+//   node .claude/scripts/design/render-prompt.mjs <stage> <direction> <screen> [--attempt <n>] [--root <repo>] [--out <file>]
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+
+const HARNESS = resolve(import.meta.dirname, '..', '..', '..');
+const HEADER = /^<!-- design-prompt v1 stage=([a-z-]+) direction=([a-z-]+) screen=([a-z-]+) attempt=([1-9]\d*) sha256=([0-9a-f]{64}) -->\n/;
+
+const lf = (text) => text.replace(/\r\n/g, '\n');
+const readText = (file) => {
+  if (!existsSync(file)) throw new Error(`missing source: ${file}`);
+  return lf(readFileSync(file, 'utf8'));
+};
+
+// The block from a heading line to the next heading of the same or higher level.
+export function section(text, heading) {
+  const lines = text.split('\n');
+  const start = lines.findIndex((l) => l.trim() === heading.trim());
+  if (start < 0) throw new Error(`heading not found: ${heading}`);
+  const level = /^#+/.exec(heading)[0].length;
+  const end = lines.findIndex((l, i) => i > start && /^#+ /.test(l) && /^#+/.exec(l)[0].length <= level);
+  return lines.slice(start, end < 0 ? undefined : end).join('\n').trimEnd();
+}
+
+// One excerpt: a whole file, or the lines matching `match`, or the first `head` lines.
+export function excerpt(root, spec) {
+  const text = readText(join(root, spec.file));
+  let lines = text.trimEnd().split('\n');
+  if (spec.match) lines = lines.filter((l) => new RegExp(spec.match).test(l));
+  if (spec.head) lines = lines.slice(0, spec.head);
+  if (!lines.length) throw new Error(`excerpt is empty: ${spec.file} ${spec.match ?? ''}`);
+  const selector = spec.match ? ` (lines matching \`${spec.match}\`)` : spec.head ? ` (first ${spec.head} lines)` : '';
+  return `### \`${spec.file}\`${selector}\n\n\`\`\`text\n${lines.join('\n')}\n\`\`\``;
+}
+
+// Attempt n > 1 carries why attempt n-1 failed, verbatim from the trail file the stage skill wrote
+// (efficiency EFF-4): docs/trace/ui/<node>/feedback/<direction>-<screen>-<n>.txt.
+export function feedbackFile(root, node, direction, screen, attempt) {
+  return join(root, 'docs', 'trace', 'ui', node, 'feedback', `${direction}-${screen}-${attempt}.txt`);
+}
+
+export function renderPrompt({ root, stage, direction, screen, attempt = 1 }) {
+  if (!Number.isInteger(attempt) || attempt < 1) throw new Error(`bad attempt: ${attempt}`);
+  const dir = join(HARNESS, '.claude', 'skills', stage);
+  const inputs = JSON.parse(readText(join(dir, 'inputs.json')));
+  const template = readText(join(dir, 'template.md'));
+  const heading = inputs.directions[direction];
+  if (!heading) throw new Error(`unknown direction: ${direction}`);
+  const spec = inputs.screens[screen];
+  if (!spec) throw new Error(`screen ${screen} is not part of stage ${stage}`);
+
+  const styles = readText(join(root, 'docs', 'ui', 'styles.md'));
+  const entry = JSON.parse(readText(join(root, 'docs', 'ui', 'screens.json'))).app.screens.find((s) => s.id === screen);
+  if (!entry) throw new Error(`screen ${screen} is not in docs/ui/screens.json`);
+  const components = readText(join(root, 'docs', 'ui', 'components.md')).split('\n')
+    .filter((l) => entry.components.some((c) => l.startsWith(`| ${c} |`)));
+
+  const fill = {
+    stage, direction, screen,
+    output: `docs/ui/${inputs.outputDir}/${direction}/${screen}.html`,
+    shared_constraints: section(styles, '## Shared constraints (all three directions)'),
+    style: section(styles, heading),
+    screen_entry: JSON.stringify(entry, null, 2),
+    components: ['| ID | Purpose | States | Uses | From |', '|---|---|---|---|---|', ...components].join('\n'),
+    data: spec.excerpts.map((e) => excerpt(root, e)).join('\n\n'),
+    attempt: String(attempt),
+    feedback: attempt === 1
+      ? 'None: this is the first attempt.'
+      : `Attempt ${attempt - 1} failed these checks; fix every one:\n\n\`\`\`text\n${readText(feedbackFile(root, inputs.node, direction, screen, attempt)).trimEnd()}\n\`\`\``,
+  };
+  const body = template.replace(/\{\{(\w+)\}\}/g, (_, k) => {
+    if (!(k in fill)) throw new Error(`template placeholder has no value: ${k}`);
+    return fill[k];
+  }).trimEnd() + '\n';
+  const sha = createHash('sha256').update(body).digest('hex');
+  return `<!-- design-prompt v1 stage=${stage} direction=${direction} screen=${screen} attempt=${attempt} sha256=${sha} -->\n${body}`;
+}
+
+// The header's inputs, or null when the prompt has no valid header.
+export function parseHeader(prompt) {
+  const m = HEADER.exec(lf(String(prompt ?? '')));
+  return m ? { stage: m[1], direction: m[2], screen: m[3], attempt: Number(m[4]), sha: m[5] } : null;
+}
+
+// Prompts compare after line-ending and trailing-whitespace normalisation only.
+export const samePrompt = (a, b) => lf(a).trimEnd() === lf(b).trimEnd();
+
+if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {
+  const [stage, direction, screen] = process.argv.slice(2);
+  const opt = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : null; };
+  const attempt = Number(opt('--attempt') ?? 1);
+  const prompt = renderPrompt({ root: resolve(opt('--root') ?? process.cwd()), stage, direction, screen, attempt });
+  const out = opt('--out');
+  if (out) {
+    mkdirSync(dirname(out), { recursive: true });
+    writeFileSync(out, prompt);
+  } else process.stdout.write(prompt);
+}

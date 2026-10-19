@@ -1,0 +1,9 @@
+{
+  "name": "design-tools",
+  "private": true,
+  "type": "module",
+  "description": "Screenshot review for the UI design stages (guardrails A1). Lint and render need no dependencies.",
+  "devDependencies": {
+    "playwright": "1.62.0"
+  }
+}
