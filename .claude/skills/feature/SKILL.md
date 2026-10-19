@@ -53,6 +53,7 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 1. Dispatch `git` with `op: setup`, then `EnterWorktree({path: ".claude/worktrees/<plan>-<node>"})`.
 2. Gate: the branch name and worktree path match; `git rev-parse --show-toplevel` = the worktree;
    `git rev-parse --abbrev-ref @{u}` fails (the branch tracks nothing, so never `main`).
+2b. A plan whose files aren't on `origin/main` yet: its approval commit, as `/plan-bug` §8 describes.
 3. Commit the plan status `pending → in_progress`, `attempt: 1`, `branch` and `worktree`.
    Record `setup` and `state(in_progress)`.
 4. **Carry-overs:** each item in the newest snapshot's `## Carry-overs` becomes a task on this node
@@ -184,8 +185,7 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
 2. Dispatch the `tester` with `step: finding-red` and the findings path. Gate: each new test **fails** on
    the current HEAD. An untestable finding needs its stated reason; when every finding is untestable, the
    tester isn't dispatched and the reason is recorded in the `findings(…)` event.
-3. Dispatch the `builder` with the findings path and the red tests. Gate: those tests now pass, and the
-   build passes.
+3. Dispatch the `builder` with the findings path and the red tests. Gate: those tests and the build pass.
 4. Return to `orchestrator / gates`, then `review / review`. The route runs inside the current task; it
    is never a planned task.
 
