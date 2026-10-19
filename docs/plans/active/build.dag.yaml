@@ -342,10 +342,10 @@ nodes:
     rules: []
     cuttable: false
     budget: null
-    status: pending
-    attempt: 0
-    branch: null
-    worktree: null
+    status: in_progress
+    attempt: 1
+    branch: feature/build/F6
+    worktree: .claude/worktrees/build-F6
     pr: null
     qa: docs/qa/build-F6.md
     trace: docs/trace/build/F6/
