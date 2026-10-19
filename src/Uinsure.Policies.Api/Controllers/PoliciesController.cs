@@ -79,4 +79,41 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
         var response = recorded.Value.ToResponse(policyReference);
         return Created($"/policies/{response.PolicyReference}", response);
     }
+
+    // Stub: a canned body until the service is wired. Every value is one no renewal test expects.
+    [HttpPost("{reference}/renewals")]
+    [EnableRateLimiting("writes")]
+    public ActionResult<PolicyResponse> Renew(
+        string reference,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RenewPolicyRequest? request)
+    {
+        // The amount is required, so a missing body is a shape error (400), not a 415.
+        if (request is null)
+        {
+            ModelState.AddModelError(nameof(RenewPolicyRequest.Amount), "A request body with an amount is required.");
+            return ValidationProblem();
+        }
+
+        var policyReference = PolicyReference.Normalise(reference);
+        var start = new DateOnly(2000, 1, 1);
+        var end = new DateOnly(2000, 12, 31);
+        var response = new PolicyResponse(
+            policyReference.Value,
+            Contracts.PolicyType.BuyToLet,
+            Contracts.PolicyStatus.Expired,
+            9,
+            start,
+            end,
+            1.11m,
+            false,
+            false,
+            [],
+            new PropertyDto(),
+            [new TermResponse(9, start, end, 1.11m, "STUB-PAYMENT")],
+            [new PaymentResponse("STUB-PAYMENT", Contracts.PaymentMethod.Cheque, 1.11m)],
+            [],
+            [],
+            null);
+        return Created($"/policies/{policyReference.Value}", response);
+    }
 }
