@@ -254,6 +254,31 @@ test('completeness: a lost activity record or a bare Fixes-Finding passes only w
   assert.ok(completeness(t).reasons.some((x) => x.includes('Fixes-Finding I3')), 'a reconciliation names its own commit');
 });
 
+test('completeness: a green commit that under-declares a rule passes only when reconciled with evidence', () => {
+  const red = 'a'.repeat(40), green = 'b'.repeat(40);
+  const t = {
+    node: { owner: 'loop', kind: 'feature', rules: ['CANCEL-6'] }, nodeId: 'F3', activity: [], markers: { 'CANCEL-6': 1 }, qa: { 'CANCEL-6': 1 },
+    commits: [
+      { sha: red, subject: 'test(CANCEL-6): red', agent: 'tester', plan: 'build', node: 'F3', tdd: 'red', rules: ['CANCEL-6'], fixes: [] },
+      { sha: green, subject: 'feat(CANCEL-1c): domain green', agent: 'builder', plan: 'build', node: 'F3', tdd: 'green', rules: ['CANCEL-1c'], fixes: [] },
+    ],
+    loop: [{ event: 'gate.red', ok: true }, { event: 'gate.green', ok: true }, { event: 'gate.integrate', ok: true },
+      { event: 'reconciled(activity:aaaaaaa)', detail: 'x' }, { event: 'reconciled(activity:bbbbbbb)', detail: 'x' }],
+    verdicts: [], findings: [], findingIds: [],
+  };
+  const gap = (x) => x.includes('rule CANCEL-6 has no red commit before its green commit');
+  assert.ok(completeness(t).reasons.some(gap), 'an undeclared rule has no green');
+  t.loop.push({ event: 'reconciled(green:bbbbbbb:CANCEL-6)' });
+  assert.ok(completeness(t).reasons.some(gap), 'a reconciliation with no detail is not evidence');
+  t.loop.splice(-1, 1, { event: 'reconciled(green:bbbbbbb:CANCEL-6)', detail: 'gate.green@bbbbbbb: all 13 rules green in Domain.Tests' });
+  assert.ok(!completeness(t).reasons.some(gap), completeness(t).reasons.join('\n'));
+  t.commits[1].tdd = 'refactor';
+  assert.ok(completeness(t).reasons.some(gap), 'only a TDD: green commit can be reconciled as green');
+  t.commits[1].tdd = 'green';
+  t.commits.reverse();
+  assert.ok(completeness(t).reasons.some(gap), 'the reconciled green must still come after the red');
+});
+
 test('completeness: Fixes-Finding <round>/<id> resolves; a lost verdict passes only when reconciled', () => {
   const t = {
     node: { owner: 'loop', kind: 'feature', rules: [] }, nodeId: 'F1', activity: [], markers: {}, qa: {},
