@@ -16,6 +16,8 @@ public sealed class Term
     public decimal Amount { get; }
     public Payment? Payment { get; }
 
+    public int Days => End.DayNumber - Start.DayNumber + 1;
+
     public bool Covers(DateOnly date) => Start <= date && date <= End;
 
     // SELL-3: start + 1 year - 1 day; a 29 Feb start has no anniversary, so it ends on 28 Feb.
