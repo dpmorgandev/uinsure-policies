@@ -79,4 +79,29 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
         var response = recorded.Value.ToResponse(policyReference);
         return Created($"/policies/{response.PolicyReference}", response);
     }
+
+    [HttpPost("{reference}/renewals")]
+    [EnableRateLimiting("writes")]
+    public async Task<ActionResult<PolicyResponse>> Renew(
+        string reference,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RenewPolicyRequest? request,
+        CancellationToken cancellationToken)
+    {
+        // The amount is required, so a missing body is a shape error (400), not a 415.
+        if (request is null)
+        {
+            // ValidationProblem() does not camel-case keys, so the wire name is spelled out.
+            ModelState.AddModelError("amount", "A request body with an amount is required.");
+            return ValidationProblem();
+        }
+
+        var policyReference = PolicyReference.Normalise(reference);
+        var renewal = await service.Renew(policyReference, request.Amount!.Value, request.PaymentMethod?.ToDomain(), cancellationToken);
+        if (!renewal.IsSuccess)
+        {
+            return this.ToProblem(renewal.Violations);
+        }
+
+        return Created($"/policies/{policyReference.Value}", renewal.Value.ToResponse());
+    }
 }

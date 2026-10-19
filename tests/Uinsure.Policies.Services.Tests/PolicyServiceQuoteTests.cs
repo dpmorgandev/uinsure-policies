@@ -9,8 +9,8 @@ using Xunit;
 
 namespace Uinsure.Policies.Services.Tests;
 
-// COULD-1 at the service: PolicyService.Quote is the cancel calculation, read only. It loads the
-// policy, reads UK today once, asks policy.Quote, and saves nothing: no SaveChanges, no Add, no
+// COULD-1 at the service: PolicyService.QuoteCancellation is the cancel calculation, read only. It loads the
+// policy, reads UK today once, asks policy.QuoteCancellation, and saves nothing: no SaveChanges, no Add, no
 // refund reference, and the policy stays uncancelled.
 //   The default stored term runs 2026-11-08 to 2027-11-07 (365 days), 527.18. A term starting 2027-07-01 runs
 //   to 2028-06-30 (366 days). At 23:30 UTC on 30 June 2027 (BST) the UK date is already 1 July.

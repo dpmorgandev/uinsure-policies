@@ -1,0 +1,59 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T05:48:45Z",
+  "plan": "build",
+  "node": "F4",
+  "attempt": 1,
+  "agent": "security",
+  "agent_id": "a0cc59878ed549320",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F4",
+    "attempt": 1,
+    "base_sha": "d477dbd5fad5f1e22147dc74ef5c6b9281057893",
+    "head_sha": "b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19",
+    "diff_fingerprint": "aa2b588677e600a62d03d5281fb8a7e7452d260e",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red",
+      "gate.stub",
+      "gate.green",
+      "gate.refactor",
+      "gate.finding-red",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.vulnerable",
+      "gate.qa"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API7:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "API1:2023 n/a: no auth or tenancy; the reference is the only key.",
+      "API2:2023 n/a: authentication is out of scope.",
+      "API5:2023 n/a: no roles. POST /policies/{ref}/renewals would be a privileged or agent-only function in a real deployment.",
+      "API10:2023 n/a: no upstream APIs. The only HttpClient matches in the diff are test helper extensions in tests/, none in src/.",
+      "Delta since A1.2 (821391d, d931d20, b5ca22e): 821391d is the QA script (docs only). d931d20 is a test only (RenewShapeTests.cs). b5ca22e changes PoliciesController.Renew only. A null body now adds the model error under the literal key \"amount\" and returns ValidationProblem(), where before the key was \"Amount\". There are no new routes, DTOs, packages or config.",
+      "API3:2023 met: RenewPolicyRequest is still a separate DTO with only amount and paymentMethod. The new error key is a static literal and echoes no client input. The response mapping is unchanged and exposes no Version or internal ids.",
+      "API4:2023 met: the renewals route still has [EnableRateLimiting(\"writes\")]. Amount is [Required] and capped at 1,000,000.00 with 2 decimal places, under the server-wide 64 KB body limit. A missing body is a cheap 400 before any service call. The null check means request.Amount!.Value is only reached with a non-null request, and [Required] with the automatic model validation filter rejects a null Amount first.",
+      "API6:2023 met: the controller change sits before the service call and changes no business-flow logic. The renewal-window, RENEW-6, Version concurrency and payment=term-amount checks from A1.2 are unchanged. A request with no body cannot reach Policy.Renew, so it cannot create a term or a refund.",
+      "API8:2023 met: the 400 body is a ProblemDetails with a fixed message. It has no exception text or stack trace, and the diff adds no logging, developer exception page or secrets.",
+      "API9:2023 met: the real E6 action is in place. gate.stubs shows no NotImplementedException in src/. gate.run shows Postman F4 Renew 54 requests with 0 failed at head. I did not inspect the OpenAPI document itself (light check).",
+      "NET: grep of the diff found no FromSqlRaw, ExecuteSqlRaw or SqlQueryRaw. It found no double or float, no DateTime.Now/UtcNow/Today and no Log* calls. It found no credentials, local paths or personal emails. The diff has no csproj changes, and gate.vulnerable at b5ca22e reports 8 projects and none vulnerable.",
+      "Observation, not a finding (carried from A1.2): Policy.Renew reads CurrentTerm(today).Payment!.Method when AutoRenew is true. This holds while every term of an auto-renewing policy is created with a payment. It would be a 500 with no leak if stored data broke that invariant. I did not run the build or tests; the check rests on the code and the gate receipts."
+    ]
+  }
+}

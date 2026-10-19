@@ -96,6 +96,25 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
             : Result<CancellationQuoteResult>.Failure([.. quote.Violations]);
     }
 
+    public async Task<Result<PolicyDetails>> Renew(PolicyReference reference, decimal amount, PaymentMethod? method, CancellationToken ct)
+    {
+        var today = UkCalendar.Today(clock);
+        var policy = await repository.GetByReference(reference, ct);
+        if (policy is null)
+        {
+            return Result<PolicyDetails>.Failure(NotFound(reference));
+        }
+
+        var renewal = policy.Renew(amount, method, today, references.Payment);
+        if (!renewal.IsSuccess)
+        {
+            return Result<PolicyDetails>.Failure([.. renewal.Violations]);
+        }
+
+        await repository.SaveChanges(ct);
+        return Result<PolicyDetails>.Success(Details(policy, today));
+    }
+
     public async Task<Result<RecordedClaim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
     {
         var today = UkCalendar.Today(clock);

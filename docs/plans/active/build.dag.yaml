@@ -264,7 +264,7 @@ nodes:
       - {id: t15, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: done}
       - {id: t16, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: done}
       - {id: t17, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: done}
-      - {id: t18, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
+      - {id: t18, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: done}
   - id: F4
     title: Renew
     kind: feature
@@ -273,11 +273,11 @@ nodes:
     rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5]
     cuttable: false
     budget: null
-    status: pending
-    attempt: 0
-    branch: null
-    worktree: null
-    pr: null
+    status: done
+    attempt: 1
+    branch: feature/build/F4
+    worktree: .claude/worktrees/build-F4
+    pr: 28
     qa: docs/qa/build-F4.md
     trace: docs/trace/build/F4/
     acceptance:
@@ -286,23 +286,23 @@ nodes:
       - "CANCEL-5: cancelling a renewed policy ends it; the current term follows the normal rules and a future term is refunded in full"
       - "RENEW-3a creates a payment using the request method or the current term's method, RENEW-5 rejects an amount <= 0 with 422, and RENEW-6 returns 409 for a cancelled policy"
     tasks:
-      - {id: t1, role: tester, step: red, layer: acceptance, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "Renew acceptance suite, every success and failure row, plus cancelling a renewed policy; Postman F4 folder; throwing stubs; F4 ids out of rule-coverage.pending.txt (empty after this)", status: pending}
-      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub POST /policies/{ref}/renewals with a canned body", status: pending}
-      - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the Renew stub in Postman, read the acceptance tests; go or change", status: pending}
-      - {id: t4, role: tester, step: red, layer: domain, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "Domain.Tests for policy.Renew and cancel-after-renew: window edges end − 31/−30/0/+1, payment or unpaid term, amount > 0, cancelled → conflict, cheque on auto-renew, future term refunded in full", status: pending}
-      - {id: t5, role: builder, step: green, layer: domain, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "policy.Renew appends the next term; Cancel handles a future term", status: pending}
-      - {id: t6, role: tester, step: red, layer: services, rules: [RENEW-1/2, RENEW-3a], title: "Services.Tests: renewal window measured from UK today; payment method defaults to the current term's", status: pending}
-      - {id: t7, role: builder, step: green, layer: services, rules: [RENEW-1/2, RENEW-3a], title: "PolicyService.Renew with UK today and the method default", status: pending}
-      - {id: t8, role: builder, step: green, layer: persistence, rules: [RENEW-4], title: "Appended terms persisted under the same reference with the Version check; migration if the schema changes", status: pending}
-      - {id: t9, role: builder, step: green, layer: api, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "Real renewals endpoint: 422 violations, 409 for a cancelled policy; whole acceptance suite green", status: pending}
-      - {id: t10, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
-      - {id: t11, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage (pending file empty), diff scope, no NotImplementedException in src", status: pending}
-      - {id: t12, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
-      - {id: t13, role: tester, step: qa, layer: null, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "QA script docs/qa/build-F4.md, steps tagged per rule", status: pending}
-      - {id: t14, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
-      - {id: t15, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: pending}
-      - {id: t16, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
-      - {id: t17, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: pending}
+      - {id: t1, role: tester, step: red, layer: acceptance, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "Renew acceptance suite, every success and failure row, plus cancelling a renewed policy; Postman F4 folder; throwing stubs; F4 ids out of rule-coverage.pending.txt (empty after this)", status: done}
+      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub POST /policies/{ref}/renewals with a canned body", status: done}
+      - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the Renew stub in Postman, read the acceptance tests; go or change", status: done}
+      - {id: t4, role: tester, step: red, layer: domain, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "Domain.Tests for policy.Renew and cancel-after-renew: window edges end − 31/−30/0/+1, payment or unpaid term, amount > 0, cancelled → conflict, cheque on auto-renew, future term refunded in full; each renewal payment's amount equals its term's amount, so refund-at-most-paid holds (F3 security)", status: done}
+      - {id: t5, role: builder, step: green, layer: domain, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "policy.Renew appends the next term; Cancel handles a future term", status: done}
+      - {id: t6, role: tester, step: red, layer: services, rules: [RENEW-1/2, RENEW-3a], title: "Services.Tests: renewal window measured from UK today; payment method defaults to the current term's; fix the stale header comment in PolicyServiceQuoteTests.cs naming the old Quote methods (F3 review A2.3 R1)", status: done}
+      - {id: t7, role: builder, step: green, layer: services, rules: [RENEW-1/2, RENEW-3a], title: "PolicyService.Renew with UK today and the method default", status: done}
+      - {id: t8, role: builder, step: green, layer: persistence, rules: [RENEW-4], title: "Appended terms persisted under the same reference with the Version check; migration if the schema changes", status: done}
+      - {id: t9, role: builder, step: green, layer: api, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "Real renewals endpoint: 422 violations, 409 for a cancelled policy; whole acceptance suite green", status: done}
+      - {id: t10, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: done}
+      - {id: t11, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage (pending file empty), diff scope, no NotImplementedException in src", status: done}
+      - {id: t12, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: done}
+      - {id: t13, role: tester, step: qa, layer: null, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "QA script docs/qa/build-F4.md, steps tagged per rule", status: done}
+      - {id: t14, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: done}
+      - {id: t15, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: done}
+      - {id: t16, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: done}
+      - {id: t17, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: done}
       - {id: t18, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
   - id: F5
     title: IaC + pipeline (evidence, never deployed)
@@ -352,7 +352,7 @@ nodes:
     acceptance:
       - "Every item in docs/readme-checklist.md is ticked and links to the README section that satisfies it; F5's items say 'cut' if F5 was cut"
     tasks:
-      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "README.md covering every docs/readme-checklist.md item, each ticked with a link to its section; states that the rate limits are per instance and that validation error keys are camelCase (an unknown query key ?REFERENCE is reported as reference)", status: pending}
+      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "README.md covering every docs/readme-checklist.md item, each ticked with a link to its section; states that the rate limits are per instance and that validation error keys are camelCase (an unknown query key ?REFERENCE is reported as reference); known limits: no cap on claims per policy (David), and no application log line for successful or 4xx outcomes", status: pending}
       - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "Every checklist item ticked and linked; links resolve; build and tests still green", status: pending}
       - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
       - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F6.md", status: pending}

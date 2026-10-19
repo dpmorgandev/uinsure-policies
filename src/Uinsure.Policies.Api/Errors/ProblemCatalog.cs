@@ -20,6 +20,11 @@ internal static class ProblemCatalog
         [RuleIds.Could2a] = "Claim date in the future",
         [RuleIds.Could2b] = "Claim date outside cover",
         [RuleIds.Could2c] = "Claim on a cancelled policy",
+        [RuleIds.Renew12] = "Outside the renewal window",
+        [RuleIds.Renew3b] = "Payment method sent for an unpaid renewal",
+        [RuleIds.Renew5] = "Renewal amount must be greater than zero",
+        [RuleIds.Renew6] = "Cancelled policy cannot be renewed",
+        [RuleIds.Could3] = "Cheque not allowed for auto-renewal",
     };
 
     public static int StatusFor(ViolationKind kind) => kind switch

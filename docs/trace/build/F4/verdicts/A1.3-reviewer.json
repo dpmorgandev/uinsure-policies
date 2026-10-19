@@ -1,0 +1,89 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T05:50:21Z",
+  "plan": "build",
+  "node": "F4",
+  "attempt": 1,
+  "agent": "reviewer",
+  "agent_id": "a4dd7889cfd06b8af",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F4",
+    "attempt": 1,
+    "base_sha": "d477dbd5fad5f1e22147dc74ef5c6b9281057893",
+    "head_sha": "b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19",
+    "diff_fingerprint": "aa2b588677e600a62d03d5281fb8a7e7452d260e",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red@c3af8320ab02f15c87befffa343c37a68dfe9b8d",
+      "gate.stub@48ce40f6f8fb5d9086be6d92f2760415333f9592",
+      "gate.red@7042d048e4b20d283a9b0eb8c330ccfa32db5ce3",
+      "gate.green@31d137a2acda143a82cd8151427ad2144b11d20d",
+      "gate.red@433e573600d816c100fac0733c1e339ec9adf930",
+      "gate.green@c025985f8755c935c9ee6fa5be44644a0913498b",
+      "gate.green@521fd7cf9f553ced50ebdde01bf42032314f7f92",
+      "gate.green@0c600d52c79b0c6e5e1369de8a4a8ca0b61e985a",
+      "gate.run@0c600d52c79b0c6e5e1369de8a4a8ca0b61e985a",
+      "gate.refactor@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.test@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.stubs@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.finding-red@8f174d931b34538216b0a764b09f8947b774f82d",
+      "gate.green@ed44a602f6a0fbc33bcb0dd544053551bb5b9f69",
+      "gate.test@ed44a602f6a0fbc33bcb0dd544053551bb5b9f69",
+      "gate.qa@821391d138b0647a8adcf4e462eb3904286cafda",
+      "gate.finding-red@d931d20fe6dea8e1f8bc026edc6058d6be6a81f9",
+      "gate.green@b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19",
+      "gate.build@b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19",
+      "gate.test@b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19",
+      "gate.scope@b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19",
+      "gate.stubs@b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19",
+      "gate.run@b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19",
+      "gate.vulnerable@b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19"
+    ],
+    "rules_covered": [
+      "RENEW-1/2",
+      "RENEW-1",
+      "RENEW-2",
+      "RENEW-3a",
+      "RENEW-3b",
+      "RENEW-4",
+      "RENEW-5",
+      "RENEW-6",
+      "COULD-3",
+      "CANCEL-5"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "RENEW-4",
+        "severity": "P2",
+        "file": "docs/qa/build-F4.md",
+        "line": 196,
+        "what": "QA script is out of date at HEAD: commit under test is ed44a60 (line 5), step 34 and candidate defect 1 still report key Amount, and step 45 (line 217) says the no-body test doesn't pin the key.",
+        "why": "tdd-outside-in QA template: 'Commit under test: <sha>' must be the commit David runs. At ed44a60, step 34's own expected value (amount) fails. At b5ca22e it passes, and Renewal_with_no_body_is_rejected_with_400 now pins errors == [\"amount\"] (RenewShapeTests.cs 1804 in diff.patch). The notes at lines 254-266 still present a defect that d931d20/b5ca22e closed. This is not code, and the diff fingerprint excludes docs/qa, but it must be refreshed before David's QA pause, or the script will mislead him.",
+        "route_to": "tester"
+      },
+      {
+        "id": "R2",
+        "rule_id": "RENEW-4",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Controllers/PoliciesController.cs",
+        "line": 94,
+        "what": "Fix commit b5ca22e uses the fix(...) prefix but has no Fixes-Finding trailer (trailers.txt 354-360), so the trail doesn't link it to QA step 34.",
+        "why": "requirements-trace, order and integrity: 'A fix(…) commit carries Fixes-Finding'. gate.finding-red@d931d20 says commit-msg G9 has no id form for a QA finding (a harness queue item), so this is a harness gap rather than agent drift. Non-blocking, because the red-then-green pair is evidenced by gate.finding-red@d931d20 (1 failed: Expected \"amount\", Actual \"Amount\") and gate.green@b5ca22e (637/637).",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "QA step 34 defect: RESOLVED in code and test. PoliciesController.Renew line 94 now calls ModelState.AddModelError(\"amount\", \"A request body with an amount is required.\"), which matches api.md line 46 (errors{\"amount\": [...]}) and every other E6 shape key. The comment on line 93 is accurate: ControllerBase.ValidationProblem() goes through ProblemDetailsFactory directly and bypasses ValidationProblems.FromModelState (Errors/ValidationProblems.cs line 15), the only place keys are camel-cased. The literal key is a defensible one-line fix. Routing the no-body case through ValidationProblems.FromModelState(ControllerContext) would also work and would remove the second 400 path, but that is optional and not a finding. Quote's ValidationProblem() key nameof(cancellationDate) is already camelCase.",
+      "The step 34 test is stronger, not weaker. d931d20 changes only RenewShapeTests.cs (gate.finding-red diff tests/** only). Renewal_with_no_body_is_rejected_with_400 keeps ProblemAssert.ValidationErrors (400, application/problem+json, title, instance, traceId, no ruleId) and PolicyStateAssert.ReadsBackUnchanged. It adds Assert.Equal([\"amount\"], keys): exactly one entry, compared case-sensitively. It failed for the right reason at d931d20 and passes at b5ca22e. I couldn't read the pre-d931d20 blob (I run no commands), but the QA note (line 263) and step 45 (line 217) say it previously asserted only a non-empty errors, so nothing was removed. The other shape tests already proved camelCase keys, because ProblemAssert.HasError uses the case-sensitive JsonElement.TryGetProperty.",
+      "Whole node re-judged at b5ca22e. The only src change since the A1.2 PASS at ed44a60 is one changed line plus a comment in PoliciesController.cs. Policy.Renew (RENEW-6 409 alone, then RENEW-1/2, 3b, 5 and COULD-3 collected, RENEW-4 term from LatestTerm.End + 1, payment only when auto-renewing), PolicyService.Renew (UK today read once and used for the domain call and Details), the repository append, RuleIds.Order and ProblemCatalog titles all match requirements.md rows 82, 90-95 and 106 and api.md 62-67. The TDD order still holds in trailers.txt: acceptance reds, then stub 48ce40f, then domain reds and green 31d137a, then services reds and green c025985, then persistence 521fd7c, then api green 0c600d5, then the A1 fix reds and green ed44a60, then QA red d931d20 and green b5ca22e.",
+      "Stub-proof success rows hold: every success test goes through RenewAndReadBack. That asserts 201 + Location, then the full E6 body and the GET read-back via RenewedPolicyAssert.ReadsBack: contract shape, sold details, status, current term, every term, payments with distinct references, refunds and cancellation, with money compared as raw JSON text. The builder default (603.27, no method) isn't the api.md example (389.50 by Card). In gate.stub, only the 10 400-shape tests passed.",
+      "Leftovers: gate.stubs@b5ca22e found no NotImplementedException in src/. The diff uses no banned time or rounding API. gate.test@b5ca22e shows 637/637, including RuleCoverageTests. gate.run@b5ca22e shows Postman F4 Renew with 0 failures. gate.vulnerable is clean.",
+      "Carried over, not re-raised: A1.2/R1 (P2). The tester's Services.Tests retargeting is inside builder green ed44a60. That is history and is unchanged in this round."
+    ]
+  }
+}

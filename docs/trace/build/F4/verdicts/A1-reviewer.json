@@ -1,0 +1,93 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T05:03:03Z",
+  "plan": "build",
+  "node": "F4",
+  "attempt": 1,
+  "agent": "reviewer",
+  "agent_id": "a445ad3dfbbffc9bc",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F4",
+    "attempt": 1,
+    "base_sha": "d477dbd5fad5f1e22147dc74ef5c6b9281057893",
+    "head_sha": "0d73fcd4ea999071c8051ec990b898e11836d07c",
+    "diff_fingerprint": "ff954c44fc9e0e7b04bc1567d3c5faf5020c9002",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red@c3af8320ab02f15c87befffa343c37a68dfe9b8d",
+      "gate.stub@48ce40f6f8fb5d9086be6d92f2760415333f9592",
+      "gate.red@7042d048e4b20d283a9b0eb8c330ccfa32db5ce3",
+      "gate.green@31d137a2acda143a82cd8151427ad2144b11d20d",
+      "gate.red@433e573600d816c100fac0733c1e339ec9adf930",
+      "gate.green@c025985f8755c935c9ee6fa5be44644a0913498b",
+      "gate.green@521fd7cf9f553ced50ebdde01bf42032314f7f92",
+      "gate.green@0c600d52c79b0c6e5e1369de8a4a8ca0b61e985a",
+      "gate.run@0c600d52c79b0c6e5e1369de8a4a8ca0b61e985a",
+      "gate.refactor@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.build@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.test@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.scope@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.stubs@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.run@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.vulnerable@ceeb36cd31df3362a13c3db11bc5932b1909d1f0"
+    ],
+    "rules_covered": [
+      "RENEW-1/2",
+      "RENEW-1",
+      "RENEW-2",
+      "RENEW-3a",
+      "RENEW-3b",
+      "RENEW-4",
+      "RENEW-5",
+      "RENEW-6",
+      "COULD-3",
+      "CANCEL-5"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "RENEW-1/2",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Controllers/PoliciesController.cs",
+        "line": 105,
+        "what": "E6 calls service.Renew and then service.Get, so UK today is read twice in one request. The response's status and current term can use a different date from the window check.",
+        "why": "api.md Conventions says 'Today ... computed once per request'. Renew returning Result<Term> (signatures.md) forces a second read, so the contract and the signature conflict. The only effect is a midnight edge on the response view, not on the rule decision.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "RENEW-3b",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Domain/Policies/Policy.cs",
+        "line": 159,
+        "what": "The RENEW-3b violation adds a 'paymentMethod' extension, but the contract matrix lists no extensions for RENEW-3b.",
+        "why": "api.md rule × status matrix, row E6 RENEW-3b: the extensions column is '—'. It's a small extra the contract doesn't ask for (code-quality: invented requirements). It's harmless, but it isn't in the contract.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "RENEW-4",
+        "severity": "P2",
+        "file": "tests/Uinsure.Policies.Api.Tests/RenewShapeTests.cs",
+        "line": 1462,
+        "what": "The shape test Renewal_with_a_startDate_is_rejected_with_400_as_an_unknown_field doesn't end in _with_400, which is the stub gate's shape-test naming convention.",
+        "why": "tdd-outside-in step 2: only a 400 shape test (…_with_400) may pass on the stub. The orchestrator accepted it as a shape test in gate.stub and queued the naming nit. This finding records it. The line number is in the review packet's diff.patch.",
+        "route_to": "tester"
+      }
+    ],
+    "notes": [
+      "TDD order (trailers.txt): the Api.Tests red commits f37f1e7..c3af832 come before the stub 48ce40f. The stub comes before the domain reds dd38687..7042d04, which come before domain green 31d137a. Services reds 3122bc4 and 433e573 come before services green c025985, then persistence green 521fd7c, then api green 0c600d5. Every node rule's red commit comes before its green commit.",
+      "No weakening after red: activity.jsonl shows no Write or Edit to tests/Uinsure.Policies.Api.Tests after 04:01 (acceptance red), and none to Domain.Tests or Services.Tests after their red commits. Builders only read test files. The scratch files ZzProbe.cs, ScratchSeededCancelCheck.cs and the postman *.tmp.js files were deleted and aren't in the diff.",
+      "Stub-proof: every success row goes through RenewAndReadBack. That asserts 201 + Location, then checks the E6 body and the GET read-back in full via RenewedPolicyAssert (contract member set, sold details, status, currentTermNumber, every term's dates/amount/payment link, payments, refunds, cancellation). Each test sets its own literal amounts and dates. The RenewalRequestBuilder default (603.27, no method) isn't the api.md example (389.50 Card). Derived end dates and CANCEL-5 refunds are hand-worked literals. In gate.stub, only the 10 400-shape tests passed.",
+      "Boundaries: RENEW-1 has end-31 rejected, end-30 accepted and the BST edge. RENEW-2 has the end date accepted, end+1 rejected and the BST edge. RENEW-5 has 0.01 accepted and 0.00 and a negative rejected (422), and 1,000,000.00 accepted with 1,000,000.01 and 3 dp rejected (400, H6). Services.Tests cover BST and GMT on both edges and check the clock is read once inside Renew.",
+      "Status codes match api.md: RENEW-6 is 409 on its own, ahead of the 422s. RENEW-1/2, 3b, 5 and COULD-3 are 422 and collected in RuleIds.Order. GET-1 is 404 on E6. type /problems/renew-1-2 comes from ProblemCatalog.TypeFor.",
+      "I withdrew a possible finding that the no-body 400 key is 'Amount'. ControllerBase.ValidationProblem() goes through InvalidModelStateResponseFactory, which is ValidationProblems.FromModelState, and that camel-cases the keys.",
+      "Leftovers: gate.stubs found no NotImplementedException in src/. The diff uses no banned time or rounding API. In RenewPolicyRequest, 'amount % 0.01m' is a scale check, not rounding. RenewPolicyRequest repeats SellPolicyRequest's amount-shape check. That's the second copy, which the rule of three tolerates.",
+      "The orchestrator's plan/chore commits carry Agent/Plan/Node but no Rule or TDD trailer, as in earlier nodes. Every loop commit (tester/builder) carries all five."
+    ]
+  }
+}
