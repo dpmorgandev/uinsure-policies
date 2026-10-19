@@ -60,6 +60,20 @@ function directionsFill(root, inputs, { direction, screen, attempt }) {
   };
 }
 
+// A territory names its type by research ID (T1..T5); the designer needs the families. The rows for its
+// IDs, verbatim from the research's typography table (guardrails A5). A missing ID fails the render.
+function typeRows(root, territory) {
+  const file = 'docs/ui/research/mood-type-icons.md';
+  const lines = readText(join(root, file)).split('\n');
+  const ids = [...new Set([territory.derivedStyle?.type?.sans, territory.derivedStyle?.type?.mono].filter(Boolean))];
+  const rows = ids.map((id) => {
+    const row = lines.find((l) => l.startsWith(`| ${id} |`));
+    if (!row) throw new Error(`type ${id} is not in ${file}`);
+    return row;
+  });
+  return `### Its type, from \`${file}\`, verbatim\n\n\`\`\`text\n${rows.join('\n')}\n\`\`\``;
+}
+
 // A direction's block. Round 2 (agents-skills A3): a territory, verbatim from the creative director's
 // docs/ui/directions.json, named by its kebab-case `name`. Round 1: a `## Style` section of styles.md.
 function directionStyle(root, inputs, styles, direction) {
@@ -67,7 +81,7 @@ function directionStyle(root, inputs, styles, direction) {
     const doc = JSON.parse(readText(join(root, inputs.directionsFrom)));
     const t = (doc.territories ?? []).find((x) => x.name === direction);
     if (!t) throw new Error(`unknown direction: ${direction} is not a territory in ${inputs.directionsFrom}`);
-    return `## Territory: ${direction}\n\nFrom \`${inputs.directionsFrom}\`, verbatim.\n\n\`\`\`json\n${JSON.stringify(t, null, 2)}\n\`\`\``;
+    return `## Territory: ${direction}\n\nFrom \`${inputs.directionsFrom}\`, verbatim.\n\n\`\`\`json\n${JSON.stringify(t, null, 2)}\n\`\`\`\n\n${typeRows(root, t)}`;
   }
   const heading = inputs.directions?.[direction];
   if (!heading) throw new Error(`unknown direction: ${direction}`);

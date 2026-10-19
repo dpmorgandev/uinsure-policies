@@ -573,6 +573,20 @@ test('G10: the privacy scan flags a local absolute path and passes clean text', 
   }
 });
 
+test('G10 (A5): a screenshot whose compressed bytes look like an email is skipped; the same bytes in a .bin still hit', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'privacy-'));
+  try {
+    const bytes = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from(['G', 'MI.Kj'].join('@'))]); // the real false positive, built at runtime
+    writeFileSync(join(dir, 'shot.PNG'), bytes);
+    writeFileSync(join(dir, 'blob.bin'), bytes);
+    const scan = (f) => spawnSync('bash', [join(ROOT, '.claude', 'hooks', 'privacy-scan.sh'), join(dir, f)], { cwd: ROOT, encoding: 'utf8' }).status;
+    assert.equal(scan('shot.PNG'), 0, 'raster images are skipped, case-insensitively');
+    assert.equal(scan('blob.bin'), 1, 'other binaries are still scanned');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('G13: line caps (agents 120, preloaded skills 200, architecture 150, main-session skills 250, descriptions 3, CLAUDE.md 80)', () => {
   for (const f of readdirSync(join(ROOT, '.claude', 'agents')).filter((f) => f.endsWith('.md'))) {
     const rel = `.claude/agents/${f}`;

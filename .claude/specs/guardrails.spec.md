@@ -486,3 +486,22 @@ positives for commits trailered `Agent: main`. The self-test runs in pre-push.
 - **G14's design route accepts a digit in the stage name** (`feature/ui/DM2`). It was `D[A-Z]+`, which
   sent `DM2` down the verdict path and would have denied its PR. Fixture added.
 - **David's G2 concept is recorded in `docs/ui/concept.md`.** `styles.md` is round 1's archive.
+
+## Amendment A5 (2026-10-19): G10 false positive on screenshots; typefaces resolved in prompts
+
+- **G10 skips raster images** (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, case-insensitive) in
+  `privacy-scan.sh`.
+  - **Found by running it:** round 2's mockup commit was blocked because two screenshots' compressed
+    bytes matched the email pattern: seven- and eight-byte runs of the form letters, at-sign, letters, dot,
+    letters. (They aren't quoted here, because quoting them trips G10 in this file.) Round 1's 24
+    screenshots passed only by luck.
+  - **Why only images:** the images this repo commits are our own Playwright renders, with no text
+    metadata. Every other file, binary or not, is still scanned. `grep -I` (skip all binaries) was
+    rejected because a PDF's metadata can carry a name or email.
+  - **Fixture:** the real false-positive bytes in a `.PNG` pass; the same bytes in a `.bin` still hit.
+- **G15's mockups render appends each territory's type rows**, verbatim from the typography table in
+  `docs/ui/research/mood-type-icons.md`.
+  - **Why:** round 2's territories named their type by research ID (`"sans": "T3"`), so designers had to
+    guess the families. One fell back to system fonts.
+  - **Closed:** a T-id missing from the table fails the render.
+  - **Fixture:** a T-id resolves to its research row; a missing one throws.
