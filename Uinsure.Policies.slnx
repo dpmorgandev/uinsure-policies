@@ -1,4 +1,37 @@
 <Solution>
+  <Folder Name="/build/">
+    <File Path="BannedSymbols.txt" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/docs/">
+    <File Path="README.md" />
+    <File Path="docs/design.md" />
+    <File Path="docs/readme-checklist.md" />
+    <File Path="docs/requirements.md" />
+  </Folder>
+  <Folder Name="/infrastructure/">
+    <File Path="infrastructure/README.md" />
+    <File Path="infrastructure/main.bicep" />
+  </Folder>
+  <Folder Name="/infrastructure/modules/">
+    <File Path="infrastructure/modules/appservice.bicep" />
+    <File Path="infrastructure/modules/monitoring.bicep" />
+    <File Path="infrastructure/modules/network.bicep" />
+    <File Path="infrastructure/modules/sql.bicep" />
+  </Folder>
+  <Folder Name="/infrastructure/params/">
+    <File Path="infrastructure/params/dev.bicepparam" />
+    <File Path="infrastructure/params/prod.bicepparam" />
+    <File Path="infrastructure/params/test.bicepparam" />
+  </Folder>
+  <Folder Name="/infrastructure/pipelines/">
+    <File Path="infrastructure/pipelines/azure-pipelines.yml" />
+    <File Path="infrastructure/pipelines/check-pipeline.py" />
+    <File Path="infrastructure/pipelines/pipeline.schema.json" />
+    <File Path="infrastructure/pipelines/stage-template.yml" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj" />
     <Project Path="src/Uinsure.Policies.Domain/Uinsure.Policies.Domain.csproj" />
@@ -10,5 +43,9 @@
     <Project Path="tests/Uinsure.Policies.Architecture.Tests/Uinsure.Policies.Architecture.Tests.csproj" />
     <Project Path="tests/Uinsure.Policies.Domain.Tests/Uinsure.Policies.Domain.Tests.csproj" />
     <Project Path="tests/Uinsure.Policies.Services.Tests/Uinsure.Policies.Services.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/postman/">
+    <File Path="tests/postman/Uinsure.Policies.postman_collection.json" />
+    <File Path="tests/postman/local.postman_environment.json" />
   </Folder>
 </Solution>
