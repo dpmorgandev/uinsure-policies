@@ -78,7 +78,10 @@ public sealed class Policy
         new(reference, type, autoRenew, hasClaims, holders, property, terms, claims, cancellation);
 
     // COULD-1: the cancel decision, read only. Cancel applies exactly this.
-    public Result<CancellationQuote> Quote(DateOnly? on, DateOnly today)
+    // Removed once tests move to QuoteCancellation
+    public Result<CancellationQuote> Quote(DateOnly? on, DateOnly today) => QuoteCancellation(on, today);
+
+    public Result<CancellationQuote> QuoteCancellation(DateOnly? on, DateOnly today)
     {
         var date = ValidateCancellationDate(on, today);
         if (!date.IsSuccess)
@@ -106,7 +109,7 @@ public sealed class Policy
 
     public Result<Cancellation> Cancel(DateOnly? on, DateOnly today, Func<string> refundReference)
     {
-        var quote = Quote(on, today);
+        var quote = QuoteCancellation(on, today);
         if (!quote.IsSuccess)
         {
             return Result<Cancellation>.Failure([.. quote.Violations]);

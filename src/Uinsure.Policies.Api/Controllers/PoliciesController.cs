@@ -61,7 +61,7 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
         }
 
         var policyReference = PolicyReference.Normalise(reference);
-        var quote = await service.Quote(policyReference, date, cancellationToken);
+        var quote = await service.QuoteCancellation(policyReference, date, cancellationToken);
         return quote.IsSuccess ? quote.Value.ToResponse(policyReference) : this.ToProblem(quote.Violations);
     }
 
@@ -70,7 +70,7 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
     public async Task<ActionResult<RecordClaimResponse>> RecordClaim(string reference, RecordClaimRequest request, CancellationToken cancellationToken)
     {
         var policyReference = PolicyReference.Normalise(reference);
-        var recorded = await service.RecordNumberedClaim(policyReference, request.ClaimDate!.Value, request.Description, cancellationToken);
+        var recorded = await service.RecordClaim(policyReference, request.ClaimDate!.Value, request.Description, cancellationToken);
         if (!recorded.IsSuccess)
         {
             return this.ToProblem(recorded.Violations);

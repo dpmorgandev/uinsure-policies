@@ -80,7 +80,15 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         return cancellation;
     }
 
-    public async Task<Result<CancellationQuoteResult>> Quote(PolicyReference reference, DateOnly? on, CancellationToken ct)
+    // Removed once tests move to QuoteCancellation
+    public Task<Result<CancellationQuoteResult>> Quote(PolicyReference reference, DateOnly? on, CancellationToken ct) =>
+        QuoteCancellation(reference, on, ct);
+
+    // Removed once tests move to RecordClaim
+    public Task<Result<RecordedClaim>> RecordNumberedClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct) =>
+        RecordClaim(reference, claimDate, description, ct);
+
+    public async Task<Result<CancellationQuoteResult>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct)
     {
         var today = UkCalendar.Today(clock);
         var policy = await repository.GetByReference(reference, ct);
@@ -90,13 +98,13 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         }
 
         // COULD-1: a quote is read-only, so it never saves.
-        var quote = policy.Quote(on, today);
+        var quote = policy.QuoteCancellation(on, today);
         return quote.IsSuccess
             ? Result<CancellationQuoteResult>.Success(new CancellationQuoteResult(quote.Value, today))
             : Result<CancellationQuoteResult>.Failure([.. quote.Violations]);
     }
 
-    public async Task<Result<RecordedClaim>> RecordNumberedClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
+    public async Task<Result<RecordedClaim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
     {
         var today = UkCalendar.Today(clock);
         var policy = await repository.GetByReference(reference, ct);
