@@ -233,7 +233,7 @@ nodes:
     rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c]
     cuttable: false
     budget: null
-    status: in_progress
+    status: hitl
     attempt: 2
     branch: feature/build/F3
     worktree: .claude/worktrees/build-F3
