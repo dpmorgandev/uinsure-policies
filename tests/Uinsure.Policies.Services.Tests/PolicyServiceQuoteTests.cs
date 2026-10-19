@@ -2,14 +2,15 @@ using Microsoft.Extensions.Time.Testing;
 using Uinsure.Policies.Domain.Common;
 using Uinsure.Policies.Domain.Policies;
 using Uinsure.Policies.Domain.Rules;
+using Uinsure.Policies.Services.Commands;
 using Uinsure.Policies.Services.Tests.Builders;
 using Uinsure.Policies.Services.Tests.Support;
 using Xunit;
 
 namespace Uinsure.Policies.Services.Tests;
 
-// COULD-1 at the service: PolicyService.QuoteCancellation is the cancel calculation, read only. It loads the
-// policy, reads UK today once, asks policy.QuoteCancellation, and saves nothing: no SaveChanges, no Add, no
+// COULD-1 at the service: PolicyService.Quote is the cancel calculation, read only. It loads the
+// policy, reads UK today once, asks policy.Quote, and saves nothing: no SaveChanges, no Add, no
 // refund reference, and the policy stays uncancelled.
 //   The default stored term runs 2026-11-08 to 2027-11-07 (365 days), 527.18. A term starting 2027-07-01 runs
 //   to 2028-06-30 (366 days). At 23:30 UTC on 30 June 2027 (BST) the UK date is already 1 July.
@@ -30,7 +31,7 @@ public sealed class PolicyServiceQuoteTests
         var result = await QuoteAt(TestClock.Now, repository, policy.Reference, null);
 
         Assert.True(result.IsSuccess, "The quote was expected to succeed.");
-        Assert.Equal([new RefundCalculation(527.18m, "CANCEL-1a", 365, 0, 365)], result.Value);
+        Assert.Equal([new RefundCalculation(527.18m, "CANCEL-1a", 365, 0, 365)], result.Value.Quote.Terms);
         AssertNothingChanged(policy, repository);
     }
 
@@ -47,7 +48,7 @@ public sealed class PolicyServiceQuoteTests
         var result = await QuoteAt(BstLateEvening, repository, policy.Reference, null);
 
         Assert.True(result.IsSuccess, "The quote was expected to succeed.");
-        Assert.Equal([new RefundCalculation(527.18m, "CANCEL-1b", 366, 1, 365)], result.Value);
+        Assert.Equal([new RefundCalculation(527.18m, "CANCEL-1b", 366, 1, 365)], result.Value.Quote.Terms);
         AssertNothingChanged(policy, repository);
     }
 
@@ -81,14 +82,14 @@ public sealed class PolicyServiceQuoteTests
         var repository = new StoredPolicyRepository(policy);
         var service = new PolicyService(repository, _references, new FakeTimeProvider(TestClock.Now));
 
-        var quote = await service.QuoteCancellation(policy.Reference, new DateOnly(2026, 11, 23), TestContext.Current.CancellationToken);
+        var quote = await service.Quote(policy.Reference, new DateOnly(2026, 11, 23), TestContext.Current.CancellationToken);
         Assert.Equal(0, repository.SaveChangesCalls);
         var cancellation = await service.Cancel(policy.Reference, new DateOnly(2026, 11, 23), TestContext.Current.CancellationToken);
 
         Assert.True(quote.IsSuccess, "The quote was expected to succeed.");
         Assert.True(cancellation.IsSuccess, "The cancellation was expected to succeed.");
-        Assert.Equal([new RefundCalculation(504.07m, "CANCEL-1c", 365, 16, 349)], quote.Value);
-        Assert.Equal(quote.Value, cancellation.Value.Terms);
+        Assert.Equal([new RefundCalculation(504.07m, "CANCEL-1c", 365, 16, 349)], quote.Value.Quote.Terms);
+        Assert.Equal(quote.Value.Quote.Terms, cancellation.Value.Terms);
         Assert.Equal(1, repository.SaveChangesCalls);
     }
 
@@ -101,14 +102,14 @@ public sealed class PolicyServiceQuoteTests
         var clock = new CountingTimeProvider(TestClock.Now);
         var service = new PolicyService(new StoredPolicyRepository(policy), _references, clock);
 
-        var result = await service.QuoteCancellation(policy.Reference, null, TestContext.Current.CancellationToken);
+        var result = await service.Quote(policy.Reference, null, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess, "The quote was expected to succeed.");
         Assert.Equal(1, clock.UtcNowReads);
     }
 
-    private Task<Result<IReadOnlyList<RefundCalculation>>> QuoteAt(DateTimeOffset utcNow, StoredPolicyRepository repository, PolicyReference reference, DateOnly? on) =>
-        new PolicyService(repository, _references, new FakeTimeProvider(utcNow)).QuoteCancellation(reference, on, TestContext.Current.CancellationToken);
+    private Task<Result<CancellationQuoteResult>> QuoteAt(DateTimeOffset utcNow, StoredPolicyRepository repository, PolicyReference reference, DateOnly? on) =>
+        new PolicyService(repository, _references, new FakeTimeProvider(utcNow)).Quote(reference, on, TestContext.Current.CancellationToken);
 
     private void AssertNothingChanged(Policy policy, StoredPolicyRepository repository)
     {
