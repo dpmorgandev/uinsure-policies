@@ -154,6 +154,34 @@ check("db_owner" in lower and "database-scoped" in lower and "not a member of th
       "I8: template must state the SQL principal is a database-scoped user (db_owner), not a member of the server admin group")
 check("bootstrap" in lower, "I8: template must describe the one-off bootstrap an admin runs")
 
+# Re-review A2 (R2, R3, S1). Added red.
+# R2: service connections resolve at compile time, so every azureSubscription is a template parameter, never $(...).
+all_steps = [s for j in template["stages"][0]["jobs"] for s in (j.get("steps") or j.get("strategy", {}).get("runOnce", {}).get("deploy", {}).get("steps", []))]
+subs = [s["inputs"]["azureSubscription"] for s in all_steps if "azureSubscription" in s.get("inputs", {})]
+check(bool(subs) and all(re.fullmatch(r"\$\{\{\s*parameters\.\w+\s*\}\}", str(v)) for v in subs),
+      "A2/R2: every azureSubscription must be a template parameter expression, not a runtime $(...) macro: " + ", ".join(map(str, subs)))
+check("$(sqlServiceConnection)" not in text and "sqlServiceConnection" in pipeline_text.replace("$(sqlServiceConnection)", ""),
+      "A2/R2: azure-pipelines.yml must pass the SQL service connection as a template parameter for each environment")
+
+# R3: the deployment job's pool is a named self-hosted pool, policies-<env>-vnet.
+deploy_pool = deploy.get("pool")
+check(isinstance(deploy_pool, dict) and re.fullmatch(r"policies-\$\{\{\s*parameters\.environmentName\s*\}\}-vnet", str(deploy_pool.get("name", ""))) is not None,
+      "A2/R3: the deployment job's pool must have name policies-<env>-vnet")
+
+# S1: NSGs on both subnets; SQL NSG allows 1433 only from the app subnet and an agent range, denies the rest.
+net = strip_comments((ROOT / "modules" / "network.bicep").read_text(encoding="utf-8"))
+check("Microsoft.Network/networkSecurityGroups" in net, "A2/S1: network.bicep must declare a network security group")
+check(len(re.findall(r"networkSecurityGroup\s*:", net)) >= 2, "A2/S1: each subnet must be associated with a network security group")
+check(re.search(r"privateEndpointNetworkPolicies:\s*'Enabled'", net) is not None, "A2/S1: the private-endpoint subnet needs privateEndpointNetworkPolicies 'Enabled'")
+check(re.search(r"(?i)param\s+\w*agent\w*\s+string", net) is not None, "A2/S1: network.bicep needs an agent address-range parameter")
+check(re.search(r"destinationPortRange:\s*'1433'", net) is not None and re.search(r"access:\s*'Allow'", net) is not None,
+      "A2/S1: the SQL NSG must allow inbound 1433")
+check(re.search(r"(?s)access:\s*'Deny'.*?direction:\s*'Inbound'|direction:\s*'Inbound'.*?access:\s*'Deny'", net) is not None,
+      "A2/S1: the SQL NSG must deny all other inbound traffic")
+check(re.search(r"sourceAddressPrefix(es)?:[^\n]*(appIntegration|10\.20\.1\.0/24)", net) is not None,
+      "A2/S1: the 1433 allow rule must take its source from the app-integration subnet")
+# A2/R4 (comment wording about the leaked pipeline token) cannot be tested; the fix dispatch rewords it.
+
 if errors:
     print("pipeline check FAILED")
     for e in errors:
