@@ -68,6 +68,8 @@ Read the findings and the red test. Fix the cause the findings name, not the sym
   your write scope. Never use `printf` or escape tricks to get characters past a guard. Put real newlines
   between the trailer lines (a literal `\n` is not a newline), and keep every trailer, Co-Authored-By included,
   in that last block. `Rule` (an id, or `none`) and `TDD` are required; the hooks refuse a commit without them.
+  A green commit's `Rule` lists **every** rule id it makes pass, comma-separated (`Rule: CANCEL-1a, CANCEL-1b`):
+  the trace pairs each rule's red with the green that names it.
 - Trailers on every commit:
   ```
   Agent: builder

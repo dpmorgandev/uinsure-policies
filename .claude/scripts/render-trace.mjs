@@ -170,10 +170,18 @@ export function completeness(t, { archive = false } = {}) {
   }
   const knownIds = new Set([...t.findings, ...(t.findingIds ?? []), ...t.verdicts.flatMap((v) => (v.verdict?.findings ?? []).map((f) => f.id))]);
   for (const c of t.commits) for (const id of c.fixes) if (!knownIds.has(id) && !reconciledFor('fixes', c.sha, id)) r.push(`Fixes-Finding ${id} in ${c.sha.slice(0, 7)} resolves to nothing`);
+  // A green commit whose Rule trailer under-declares the rules it made pass (F3: one trailer per layer, though the
+  // gate.green receipt shows every rule green) passes only when reconciled(green:<sha7>:<rule>) names a TDD: green
+  // commit, the rule's red comes before it, and the event's detail points at the gate receipt. History is not rewritten.
+  const reconciledGreen = (id) => t.commits.findIndex((c) => c.tdd === 'green' && t.loop.some((e) => {
+    const m = /^reconciled\(green:([0-9a-f]{7,40}):([\w-]+)\)$/.exec(e.event ?? '');
+    return m && c.sha.startsWith(m[1]) && m[2] === id && e.detail;
+  }));
   for (const id of rules) {
     if (!t.markers[id]) r.push(`rule ${id} has no test marker`);
     const red = t.commits.findIndex((c) => c.tdd === 'red' && c.rules.includes(id));
-    const green = t.commits.findIndex((c) => c.tdd === 'green' && c.rules.includes(id));
+    const declared = t.commits.findIndex((c) => c.tdd === 'green' && c.rules.includes(id));
+    const green = declared >= 0 ? declared : reconciledGreen(id);
     if (red < 0 || green < 0 || red > green) r.push(`rule ${id} has no red commit before its green commit`);
     if (!t.qa[id]) r.push(`rule ${id} has no QA step`);
   }
