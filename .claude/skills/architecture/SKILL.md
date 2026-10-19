@@ -15,11 +15,11 @@ Binding for all `src/` and `tests/` work. Read `signatures.md` before touching a
 Uinsure.Policies.slnx  global.json  Directory.Build.props  Directory.Packages.props  BannedSymbols.txt
 src/Uinsure.Policies.Domain/        BCL only: no PackageReference, no ProjectReference
   Policies/  Policy.cs (aggregate root) Term Policyholder Property Payment Refund Claim Cancellation
-             PolicyReference PolicyType PaymentMethod PolicyStatus
+             CancellationQuote QuotedRefund PolicyReference PolicyType PaymentMethod PolicyStatus
   Rules/     RefundCalculator RefundCalculation RuleIds
   Common/    Result RuleViolation ViolationKind Money
 src/Uinsure.Policies.Services/      IPolicyService ← PolicyService (orchestrates only: load → today → domain → save)
-  Commands/SellPolicy, Commands/PolicyDetails (read model)  IPolicyRepository  PersistenceConflictException
+  Commands/SellPolicy, PolicyDetails, CancellationQuoteResult, RecordedClaim (read models)  IPolicyRepository  PersistenceConflictException
   UkCalendar  IReferenceGenerator ← ReferenceGenerator (payment and refund references, injected)
 src/Uinsure.Policies.Persistence/   PoliciesDbContext  PoliciesDbContextFactory  Records/ (internal *Record)  PolicyRecordMapper
   Configurations/ (map the records, never Domain)  Migrations/ (SQL Server)  PolicyRepository (internal sealed)  DatabaseOptions
