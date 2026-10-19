@@ -1,0 +1,109 @@
+parameters:
+  - name: environmentName
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: dependsOn
+    type: string
+  - name: location
+    type: string
+    default: uksouth
+
+stages:
+  - stage: Deploy_${{ parameters.environmentName }}
+    displayName: Deploy ${{ parameters.environmentName }}
+    dependsOn: ${{ parameters.dependsOn }}
+    jobs:
+      - deployment: Deploy
+        displayName: Deploy to ${{ parameters.environmentName }}
+        pool:
+          vmImage: ubuntu-latest
+        # The environment carries the approval check; only policies-prod has one.
+        environment: policies-${{ parameters.environmentName }}
+        variables:
+          # Per-environment values (sqlAdminGroupObjectId, tenantId) live in a variable group, not in the repo.
+          - group: policies-${{ parameters.environmentName }}
+          - name: drop
+            value: $(Pipeline.Workspace)/drop
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: What-if
+                  inputs:
+                    azureSubscription: ${{ parameters.azureServiceConnection }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az deployment sub what-if \
+                        --name policies-${{ parameters.environmentName }}-$(Build.BuildId) \
+                        --location ${{ parameters.location }} \
+                        --template-file $(drop)/infrastructure/main.bicep \
+                        --parameters $(drop)/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
+                        --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId) tenantId=$(tenantId)
+
+                - task: AzureCLI@2
+                  name: infra
+                  displayName: Deploy infrastructure
+                  inputs:
+                    azureSubscription: ${{ parameters.azureServiceConnection }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      outputs=$(az deployment sub create \
+                        --name policies-${{ parameters.environmentName }}-$(Build.BuildId) \
+                        --location ${{ parameters.location }} \
+                        --template-file $(drop)/infrastructure/main.bicep \
+                        --parameters $(drop)/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
+                        --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId) tenantId=$(tenantId) \
+                        --query properties.outputs --output json)
+                      echo "##vso[task.setvariable variable=resourceGroupName]$(echo "$outputs" | jq -r .resourceGroupName.value)"
+                      echo "##vso[task.setvariable variable=appName]$(echo "$outputs" | jq -r .appName.value)"
+                      echo "##vso[task.setvariable variable=appHostName]$(echo "$outputs" | jq -r .appHostName.value)"
+                      echo "##vso[task.setvariable variable=sqlServerFqdn]$(echo "$outputs" | jq -r .sqlServerFqdn.value)"
+                      echo "##vso[task.setvariable variable=sqlDatabaseName]$(echo "$outputs" | jq -r .sqlDatabaseName.value)"
+
+                # Idempotent: the script from `dotnet ef migrations script --idempotent` skips applied migrations.
+                # The service principal signs in with its Entra token (it belongs to the SQL admin group); no SQL password exists.
+                # The agent needs go-sqlcmd (the `sqlcmd` on ubuntu-latest).
+                - task: AzureCLI@2
+                  displayName: Apply migrations
+                  inputs:
+                    azureSubscription: ${{ parameters.azureServiceConnection }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      sqlcmd -S "$(sqlServerFqdn)" -d "$(sqlDatabaseName)" \
+                        --authentication-method ActiveDirectoryAzCli \
+                        -b -i $(drop)/migrations.sql
+
+                - task: AzureCLI@2
+                  displayName: Grant the app's managed identity database access
+                  inputs:
+                    azureSubscription: ${{ parameters.azureServiceConnection }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      sqlcmd -S "$(sqlServerFqdn)" -d "$(sqlDatabaseName)" \
+                        --authentication-method ActiveDirectoryAzCli -b \
+                        -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '$(appName)') CREATE USER [$(appName)] FROM EXTERNAL PROVIDER; ALTER ROLE db_datareader ADD MEMBER [$(appName)]; ALTER ROLE db_datawriter ADD MEMBER [$(appName)];"
+
+                - task: AzureCLI@2
+                  displayName: Deploy app
+                  inputs:
+                    azureSubscription: ${{ parameters.azureServiceConnection }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az webapp deploy \
+                        --resource-group "$(resourceGroupName)" \
+                        --name "$(appName)" \
+                        --src-path $(drop)/app.zip \
+                        --type zip
+
+                - script: |
+                    curl --fail --silent --show-error \
+                      --retry 10 --retry-delay 15 --retry-all-errors \
+                      https://$(appHostName)/health/ready
+                  displayName: Smoke test /health/ready

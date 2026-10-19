@@ -1,0 +1,75 @@
+# Evidence only: never connected to Azure DevOps, never run.
+# build/test -> dev -> test -> prod, all three deployments from one stage template.
+# Prod waits for the approval configured on the 'policies-prod' Azure DevOps environment.
+trigger:
+  branches:
+    include: [main]
+
+pr: none
+
+variables:
+  - name: buildConfiguration
+    value: Release
+  - name: dotnetSdkVersion
+    value: 10.0.x
+
+stages:
+  - stage: Build
+    displayName: Build and test
+    jobs:
+      - job: BuildTest
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: UseDotNet@2
+            displayName: Install .NET SDK
+            inputs:
+              packageType: sdk
+              version: $(dotnetSdkVersion)
+
+          - script: dotnet build Uinsure.Policies.slnx --configuration $(buildConfiguration) -warnaserror
+            displayName: Build
+
+          - script: dotnet test --solution Uinsure.Policies.slnx --configuration $(buildConfiguration)
+            displayName: Test
+
+          - script: |
+              mkdir -p $(Build.ArtifactStagingDirectory)/drop
+              dotnet tool install --global dotnet-ef
+              export PATH="$PATH:$HOME/.dotnet/tools"
+              dotnet ef migrations script --idempotent \
+                --project src/Uinsure.Policies.Persistence \
+                --startup-project src/Uinsure.Policies.Api \
+                --output $(Build.ArtifactStagingDirectory)/drop/migrations.sql
+            displayName: Generate idempotent migration script
+
+          - script: |
+              dotnet publish src/Uinsure.Policies.Api --configuration $(buildConfiguration) \
+                --output $(Build.ArtifactStagingDirectory)/publish
+              mkdir -p $(Build.ArtifactStagingDirectory)/drop
+              cd $(Build.ArtifactStagingDirectory)/publish
+              zip -r $(Build.ArtifactStagingDirectory)/drop/app.zip .
+              cp -r $(Build.SourcesDirectory)/infrastructure $(Build.ArtifactStagingDirectory)/drop/infrastructure
+            displayName: Package app and infrastructure
+
+          - publish: $(Build.ArtifactStagingDirectory)/drop
+            artifact: drop
+            displayName: Publish drop artifact
+
+  - template: stage-template.yml
+    parameters:
+      environmentName: dev
+      azureServiceConnection: sc-policies-dev
+      dependsOn: Build
+
+  - template: stage-template.yml
+    parameters:
+      environmentName: test
+      azureServiceConnection: sc-policies-test
+      dependsOn: Deploy_dev
+
+  - template: stage-template.yml
+    parameters:
+      environmentName: prod
+      azureServiceConnection: sc-policies-prod
+      dependsOn: Deploy_test
