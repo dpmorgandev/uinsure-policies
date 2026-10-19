@@ -4,5 +4,5 @@ public interface IReferenceGenerator
 {
     string Payment();
 
-    public string Refund() => throw new NotImplementedException();
+    string Refund();
 }

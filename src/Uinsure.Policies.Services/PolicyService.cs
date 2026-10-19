@@ -56,21 +56,66 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         var policy = await repository.GetByReference(reference, ct);
         if (policy is null)
         {
-            return Result<PolicyDetails>.Failure(Violation(
-                RuleIds.Get1,
-                ViolationKind.NotFound,
-                $"No policy with reference '{reference.Value}'.",
-                reference));
+            return Result<PolicyDetails>.Failure(NotFound(reference));
         }
 
         return Result<PolicyDetails>.Success(Details(policy, today));
     }
 
-    public Task<Result<Cancellation>> Cancel(PolicyReference reference, DateOnly? on, CancellationToken ct) => throw new NotImplementedException();
+    public async Task<Result<Cancellation>> Cancel(PolicyReference reference, DateOnly? on, CancellationToken ct)
+    {
+        var today = UkCalendar.Today(clock);
+        var policy = await repository.GetByReference(reference, ct);
+        if (policy is null)
+        {
+            return Result<Cancellation>.Failure(NotFound(reference));
+        }
 
-    public Task<Result<IReadOnlyList<RefundCalculation>>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct) => throw new NotImplementedException();
+        var cancellation = policy.Cancel(on, today, references.Refund);
+        if (cancellation.IsSuccess)
+        {
+            await repository.SaveChanges(ct);
+        }
 
-    public Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct) => throw new NotImplementedException();
+        return cancellation;
+    }
+
+    public async Task<Result<IReadOnlyList<RefundCalculation>>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct)
+    {
+        var today = UkCalendar.Today(clock);
+        var policy = await repository.GetByReference(reference, ct);
+        if (policy is null)
+        {
+            return Result<IReadOnlyList<RefundCalculation>>.Failure(NotFound(reference));
+        }
+
+        // COULD-1: a quote is read-only, so it never saves.
+        return policy.QuoteCancellation(on, today);
+    }
+
+    public async Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
+    {
+        var today = UkCalendar.Today(clock);
+        var policy = await repository.GetByReference(reference, ct);
+        if (policy is null)
+        {
+            return Result<Claim>.Failure(NotFound(reference));
+        }
+
+        var claim = policy.RecordClaim(claimDate, description, today);
+        if (claim.IsSuccess)
+        {
+            await repository.SaveChanges(ct);
+        }
+
+        return claim;
+    }
+
+    private static RuleViolation NotFound(PolicyReference reference) => Violation(
+        RuleIds.Get1,
+        ViolationKind.NotFound,
+        $"No policy with reference '{reference.Value}'.",
+        reference);
 
     private static PolicyDetails Details(Policy policy, DateOnly today) =>
         new(policy, policy.CurrentTerm(today), policy.StatusOn(today));
