@@ -63,7 +63,7 @@ Where the brief was unclear I took a sensible view. The full list, one row per r
   (RENEW-3b). A cancelled policy cannot be renewed (`409`, RENEW-6).
 - **A claim means a £0 refund** (COULD-2, [Could-haves](docs/requirements.md#could-haves-all-in-scope)). Claims
   are recorded with `POST /policies/{reference}/claims`.
-- **No £0 Refund record is created.** The cancellation response still lists every term with `refundAmount` 0.00.
+- **No £0 Refund record is created.** The cancellation response still lists every term, including those with `refundAmount` 0.00.
 - **Status is derived** from today (Pending, Active, Expired, Cancelled) and never stored.
 - **Errors:** `400` for shape, `404` unknown reference, `409` state conflicts, and `422` for the rules that can be
   broken (SELL-2, SELL-4, SELL-5, SELL-7, RENEW-1/2, RENEW-3b, RENEW-5, CANCEL-3, CANCEL-7, COULD-2a, COULD-2b,

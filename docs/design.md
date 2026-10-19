@@ -170,9 +170,9 @@ first (tested).
 
 ### No refunds of zero
 
-A cancellation creates a Refund only for an amount above £0. A term with a claim (COULD-2) or an unpaid
-renewal term (RENEW-3b) gets no Refund record. Its calculation is still in the response, with `ruleApplied`
-`COULD-2` or `UNPAID-TERM` and `refundAmount` 0.00.
+A cancellation creates a Refund only for an amount above £0. If the policy has a claim (COULD-2), none of its
+paid terms gets a Refund record; an unpaid renewal term (RENEW-3b) gets none either. Their calculations are
+still in the response, with `ruleApplied` `COULD-2` or `UNPAID-TERM` and `refundAmount` 0.00.
 
 ### Terms
 

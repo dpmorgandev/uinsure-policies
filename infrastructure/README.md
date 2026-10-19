@@ -72,7 +72,7 @@ running it by hand against another branch (see the branch control step in [One-t
 ## Schema check
 
 The claim is exactly this: the YAML is valid against the schema; template expansion, `${{ }}` expressions,
-task inputs, service connections and environments are not checked.
+task inputs, service connections and environments are not checked against Azure DevOps.
 
 The checker does assert that each `AzureCLI@2` step of the deploying stage has the inputs `azureSubscription`,
 `scriptType`, `scriptLocation` and `inlineScript`, and that every `azureSubscription` is a template parameter. It
@@ -104,8 +104,7 @@ would pause the what-if stage first.
 4. One Entra group per environment as the SQL admin (that environment's deploy identity plus a break-glass
    human), named `sg-policies-sql-admins-<env>`. Its object ID goes in the variable group `policies-<env>` as
    `sqlAdminGroupObjectId`. The `.bicepparam` files hold an all-zero placeholder.
-5. The environments `policies-dev`, `policies-test` and `policies-prod`, which aren't auto-created from YAML,
-   with the Approval check on prod.
+5. The environments `policies-dev`, `policies-test` and `policies-prod`, with the Approval check on prod.
 6. A branch control check on each environment `policies-<env>`, on the three agent pools and on the service
    connections, allowing `refs/heads/main` only. Without it, nothing in the repo stops a manual run of another
    branch from reaching the privileged agents and the connections.
