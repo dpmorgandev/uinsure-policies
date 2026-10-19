@@ -8,7 +8,7 @@ with TDD, one feature at a time. Every rule, its ID and the interpretation taken
 
 ## How to run it
 
-**Prerequisites:** the .NET 10 SDK (`global.json` pins 10.0.100 and rolls forward to the latest installed 10.0 feature band, so any newer 10.0 SDK is accepted).
+**Prerequisites:** the .NET 10 SDK (`global.json` pins 10.0.100 with `rollForward` set to `latestFeature`).
 The Postman CLI is only needed for the Postman collection.
 
 **Run the API** (SQLite, schema created at start-up, nothing to configure):
@@ -73,7 +73,7 @@ Where the brief was unclear I took a sensible view. The full list, one row per r
 ## Known limits
 
 - No authentication, so the reference is the only key. See the [security scope](docs/design.md#security-scope).
-- If deployed as written, the API would be reachable from the internet with no WAF, Front Door or IP restriction.
+- The Bicep sets no WAF, Front Door or IP restriction in front of the API.
 - Rate limits are counted per instance. Claims are not idempotent and have no cap per policy.
 - The tests run on SQLite. No test runs against a SQL Server database; the pre-push hook generates the
   idempotent migration script.
