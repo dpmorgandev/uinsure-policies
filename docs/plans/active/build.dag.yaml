@@ -312,7 +312,7 @@ nodes:
     rules: []
     cuttable: true
     budget: 3h
-    status: hitl
+    status: done
     attempt: 3
     branch: feature/build/F5
     worktree: .claude/worktrees/build-F5
@@ -332,7 +332,7 @@ nodes:
       - {id: t5, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: done}
       - {id: t6, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md and README; chore(trace) commit; completeness check passes", status: done}
       - {id: t7, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: done}
-      - {id: t8, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: sign-off from walkthrough.md and the QA script", status: pending}
+      - {id: t8, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: sign-off from walkthrough.md and the QA script", status: done}
       - {id: t9, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
   - id: F6
     title: README
