@@ -1,6 +1,7 @@
 # Evidence only: never connected to Azure DevOps, never run.
 # build/test -> dev -> test -> prod, all three deployments from one stage template.
-# Prod waits for the approval configured on the 'policies-prod' Azure DevOps environment.
+# Each environment is two stages: WhatIf_<env> (no environment, runs unapproved), then Deploy_<env>.
+# Prod waits for the approval configured on the 'policies-prod' Azure DevOps environment only, after WhatIf_prod.
 trigger:
   branches:
     include: [main]

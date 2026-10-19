@@ -40,7 +40,6 @@
             "stage": { "type": "string" },
             "displayName": { "type": "string" },
             "dependsOn": { "type": ["string", "array"] },
-            "condition": { "type": "string" },
             "jobs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/job" } }
           },
           "additionalProperties": false

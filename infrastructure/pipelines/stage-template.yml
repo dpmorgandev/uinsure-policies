@@ -12,13 +12,17 @@ parameters:
     default: uksouth
 
 stages:
-  - stage: Deploy_${{ parameters.environmentName }}
-    displayName: Deploy ${{ parameters.environmentName }}
+  # Azure DevOps evaluates an environment's checks when a stage starts. The what-if therefore has its own stage, with
+  # no environment, so it runs and prints before the approval on Deploy_<env> is asked for.
+  # The approval check must live on the policies-<env> environment only. Never put one on the ARM service connection
+  # or the policies-<env> variable group that this stage uses, or this stage would pause first.
+  # Accepted residual risk: this unapproved stage uses the same subscription-scope ARM connection as the deployment
+  # (a separate what-if connection was considered and rejected). The policies-<env> variable group must stay
+  # secret-free, because it is also read before approval.
+  - stage: WhatIf_${{ parameters.environmentName }}
+    displayName: What-if ${{ parameters.environmentName }}
     dependsOn: ${{ parameters.dependsOn }}
     jobs:
-      # The what-if is a regular job with no environment, so it runs before any approval is asked for. The approver
-      # reviews this job's output before approving the gated Deploy job below. It needs only the ARM connection,
-      # so a Microsoft-hosted pool is enough.
       - job: WhatIf
         displayName: What-if ${{ parameters.environmentName }}
         pool:
@@ -42,9 +46,12 @@ stages:
                   --parameters $(Pipeline.Workspace)/drop/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
                   --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)
 
+  - stage: Deploy_${{ parameters.environmentName }}
+    displayName: Deploy ${{ parameters.environmentName }}
+    dependsOn: WhatIf_${{ parameters.environmentName }}
+    jobs:
       - deployment: Deploy
         displayName: Deploy to ${{ parameters.environmentName }}
-        dependsOn: WhatIf
         # SQL has no public endpoint, so the whole job runs on a self-hosted pool whose agents sit in a network
         # that reaches the private endpoint and resolves privatelink.database.windows.net (peered to, or the
         # same as, the VNet that infrastructure/modules/network.bicep creates), with the agents' address range inside
@@ -52,7 +59,7 @@ stages:
         # The agent needs az, jq, go-sqlcmd (`sqlcmd`) and curl.
         pool:
           name: policies-${{ parameters.environmentName }}-vnet
-        # The environment carries the approval check; only policies-prod has one.
+        # The only environment in this template, and the only place an approval check may live; only policies-prod has one.
         environment: policies-${{ parameters.environmentName }}
         variables:
           # Per-environment values live in a variable group, not in the repo:
