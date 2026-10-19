@@ -14,6 +14,12 @@ internal static class ProblemCatalog
         [RuleIds.Sell4] = "Wrong number of policyholders",
         [RuleIds.Sell5] = "Policyholder under 16",
         [RuleIds.Sell7] = "Policy amount must be greater than zero",
+        [RuleIds.Cancel3] = "Cancellation date in the past",
+        [RuleIds.Cancel4] = "Policy already cancelled",
+        [RuleIds.Cancel7] = "Cancellation date after the end of cover",
+        [RuleIds.Could2a] = "Claim date in the future",
+        [RuleIds.Could2b] = "Claim date outside cover",
+        [RuleIds.Could2c] = "Claim on a cancelled policy",
     };
 
     public static int StatusFor(ViolationKind kind) => kind switch

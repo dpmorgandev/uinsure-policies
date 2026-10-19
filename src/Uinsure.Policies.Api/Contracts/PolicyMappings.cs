@@ -1,5 +1,6 @@
 using Riok.Mapperly.Abstractions;
 using Uinsure.Policies.Domain.Policies;
+using Uinsure.Policies.Domain.Rules;
 using Uinsure.Policies.Services.Commands;
 
 namespace Uinsure.Policies.Api.Contracts;
@@ -20,7 +21,6 @@ internal static partial class PolicyMappings
         new Property(request.Property!.AddressLine1!, request.Property.AddressLine2, request.Property.AddressLine3, request.Property.Postcode!),
         ToDomain(request.PaymentMethod!.Value));
 
-    // Still canned until a later node supplies the data: refunds, claims and cancellation (empty, empty, null).
     // The policy-level dates and amount are the current term's (GET-1).
     public static PolicyResponse ToResponse(this PolicyDetails details)
     {
@@ -40,10 +40,46 @@ internal static partial class PolicyMappings
             ToDto(policy.Property),
             [.. policy.Terms.Select((t, index) => new TermResponse(index + 1, t.Start, t.End, t.Amount, t.Payment?.Reference))],
             [.. policy.Terms.Where(t => t.Payment is not null).Select(t => new PaymentResponse(t.Payment!.Reference, ToDto(t.Payment.Method), t.Payment.Amount))],
-            [],
-            [],
-            null);
+            [.. (policy.Cancellation?.Refunds ?? []).Select(refund => new RefundResponse(refund.Reference, ToDto(refund.Method), refund.Amount, refund.PaymentReference))],
+            [.. policy.Claims.Select((claim, index) => new ClaimResponse(ClaimReference(policy.Reference, index + 1), claim.ClaimDate, claim.Description))],
+            policy.Cancellation is { } cancellation
+                ? new CancellationSummary(cancellation.CancellationDate, cancellation.RuleApplied, cancellation.TotalRefund)
+                : null);
     }
+
+    public static CancellationResponse ToResponse(this Cancellation cancellation, PolicyReference reference) => new(
+        reference.Value,
+        cancellation.CancellationDate,
+        cancellation.RuleApplied,
+        cancellation.TotalRefund,
+        ToTerms(cancellation.Terms),
+        [.. cancellation.Refunds.Select(refund => new CancellationRefundResponse(refund.Reference, ToDto(refund.Method), refund.Amount, refund.PaymentReference))]);
+
+    // A quote creates nothing, so its refunds are worked out by the cancel's own rule: a paid term whose
+    // calculation is above 0 (CANCEL-2, no £0 refund).
+    public static CancellationQuoteResponse ToQuote(this Policy policy, IReadOnlyList<RefundCalculation> terms, DateOnly cancellationDate, DateOnly quotedOn) => new(
+        policy.Reference.Value,
+        cancellationDate,
+        terms[policy.Terms.ToList().IndexOf(policy.CurrentTerm(cancellationDate))].RuleApplied,
+        terms.Sum(term => term.Amount),
+        ToTerms(terms),
+        [.. policy.Terms
+            .Select((term, index) => (term.Payment, terms[index].Amount))
+            .Where(refund => refund.Payment is not null && refund.Amount > 0)
+            .Select(refund => new QuoteRefundResponse(ToDto(refund.Payment!.Method), refund.Amount, refund.Payment.Reference))],
+        quotedOn);
+
+    // A claim has no stored reference of its own: it is the policy's reference and the claim's place in its list.
+    public static RecordClaimResponse ToClaimResponse(this Policy policy, int claimNumber)
+    {
+        var claim = policy.Claims[claimNumber - 1];
+        return new RecordClaimResponse(ClaimReference(policy.Reference, claimNumber), policy.Reference.Value, claim.ClaimDate, claim.Description, policy.HasClaims);
+    }
+
+    private static string ClaimReference(PolicyReference policy, int claimNumber) => $"CLM-{policy.Value}-{claimNumber}";
+
+    private static List<CancellationTermResponse> ToTerms(IReadOnlyList<RefundCalculation> terms) =>
+        [.. terms.Select((term, index) => new CancellationTermResponse(index + 1, term.RuleApplied, term.TermDays, term.UsedDays, term.UnusedDays, term.Amount))];
 
     private static partial Domain.Policies.PolicyType ToDomain(PolicyType type);
 

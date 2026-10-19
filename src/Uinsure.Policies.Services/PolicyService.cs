@@ -118,7 +118,7 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         reference);
 
     private static PolicyDetails Details(Policy policy, DateOnly today) =>
-        new(policy, policy.CurrentTerm(today), policy.StatusOn(today));
+        new(policy, policy.CurrentTerm(today), policy.StatusOn(today), today);
 
     private static RuleViolation DuplicateReference(PolicyReference reference) => Violation(
         RuleIds.Sell1,

@@ -34,6 +34,6 @@ public sealed record PaymentResponse(string Reference, PaymentMethod Type, decim
 
 public sealed record RefundResponse(string Reference, PaymentMethod Type, decimal Amount, string PaymentReference);
 
-public sealed record ClaimResponse(string Reference, DateOnly ClaimDate, string Description);
+public sealed record ClaimResponse(string Reference, DateOnly ClaimDate, string? Description);
 
 public sealed record CancellationSummary(DateOnly CancellationDate, string RuleApplied, decimal TotalRefund);

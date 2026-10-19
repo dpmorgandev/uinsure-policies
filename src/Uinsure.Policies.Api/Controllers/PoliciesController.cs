@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.RateLimiting;
@@ -34,35 +35,59 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
         return result.IsSuccess ? result.Value.ToResponse() : this.ToProblem(result.Violations);
     }
 
-    // Stub (F3 t2): canned bodies until the real service call replaces them.
     [HttpPost("{reference}/cancellation")]
     [EnableRateLimiting("writes")]
-    public ActionResult<CancellationResponse> Cancel(
+    public async Task<ActionResult<CancellationResponse>> Cancel(
         string reference,
-        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] CancelPolicyRequest? request)
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] CancelPolicyRequest? request,
+        CancellationToken cancellationToken)
     {
-        return StatusCode(201, new CancellationResponse(
-            reference, new DateOnly(2000, 1, 1), "STUB", 7.77m,
-            [new CancellationTermResponse(1, "STUB", 7, 3, 4, 7.77m)],
-            [new CancellationRefundResponse("STUB-REF", Contracts.PaymentMethod.Cheque, 7.77m, "STUB-PAY")]));
+        var policyReference = PolicyReference.Normalise(reference);
+        var result = await service.Cancel(policyReference, request?.CancellationDate, cancellationToken);
+        return result.IsSuccess ? StatusCode(StatusCodes.Status201Created, result.Value.ToResponse(policyReference)) : this.ToProblem(result.Violations);
     }
 
     [HttpGet("{reference}/cancellation-quote")]
-    public ActionResult<CancellationQuoteResponse> Quote(string reference, [FromQuery, Required] DateOnly? cancellationDate)
+    public async Task<ActionResult<CancellationQuoteResponse>> Quote(
+        string reference,
+        [FromQuery, Required] string? cancellationDate,
+        CancellationToken cancellationToken)
     {
-        var date = new DateOnly(2000, 1, 1);
-        return new CancellationQuoteResponse(
-            reference, date, "STUB", 7.77m,
-            [new CancellationTermResponse(1, "STUB", 7, 3, 4, 7.77m)],
-            [new QuoteRefundResponse(Contracts.PaymentMethod.Cheque, 7.77m, "STUB-PAY")],
-            date);
+        // Strict input: the model binder for a query DateOnly also takes "11/30/2026", so the format is checked here.
+        if (!DateOnly.TryParseExact(cancellationDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            ModelState.AddModelError(nameof(cancellationDate), "The cancellation date must be a date in the form yyyy-MM-dd.");
+            return ValidationProblem();
+        }
+
+        // The policy is read first: it answers the 404, and it supplies the payments and today for the response.
+        var policyReference = PolicyReference.Normalise(reference);
+        var found = await service.Get(policyReference, cancellationToken);
+        if (!found.IsSuccess)
+        {
+            return this.ToProblem(found.Violations);
+        }
+
+        var quote = await service.QuoteCancellation(policyReference, date, cancellationToken);
+        return quote.IsSuccess
+            ? found.Value.Policy.ToQuote(quote.Value, date, found.Value.Today)
+            : this.ToProblem(quote.Violations);
     }
 
     [HttpPost("{reference}/claims")]
     [EnableRateLimiting("writes")]
-    public ActionResult<RecordClaimResponse> RecordClaim(string reference, RecordClaimRequest request)
+    public async Task<ActionResult<RecordClaimResponse>> RecordClaim(string reference, RecordClaimRequest request, CancellationToken cancellationToken)
     {
-        var response = new RecordClaimResponse("STUB-CLM", reference, new DateOnly(2000, 1, 1), "stub", true);
-        return Created($"/policies/{reference}", response);
+        var policyReference = PolicyReference.Normalise(reference);
+        var recorded = await service.RecordClaim(policyReference, request.ClaimDate!.Value, request.Description, cancellationToken);
+        if (!recorded.IsSuccess)
+        {
+            return this.ToProblem(recorded.Violations);
+        }
+
+        // The new claim is the last in the policy's list.
+        var stored = await service.Get(policyReference, cancellationToken);
+        var response = stored.Value.Policy.ToClaimResponse(stored.Value.Policy.Claims.Count);
+        return Created($"/policies/{response.PolicyReference}", response);
     }
 }
