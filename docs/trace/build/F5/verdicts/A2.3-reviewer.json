@@ -1,0 +1,57 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:27:30Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "ae3d43ead39ce2f8c",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 2,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "88ff4bbd208644c94173bcf0c92de6c45ba010a3",
+    "diff_fingerprint": "a67464d221f2475ab2e86e59207f3e902233fce3",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.finding-red@781815a",
+      "gate.green@88ff4bb",
+      "gate.bicep@88ff4bb",
+      "gate.pipeline-schema@88ff4bb",
+      "gate.build@88ff4bb",
+      "gate.test@88ff4bb",
+      "gate.scope@88ff4bb",
+      "gate.stubs@88ff4bb",
+      "gate.run@88ff4bb",
+      "gate.vulnerable@88ff4bb"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "anti-oracle: A2/S1 checker assertions",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/check-pipeline.py",
+        "line": 200,
+        "what": "The scoped S1 checks don't prove 'only from the app subnet and agent range, denies the rest'. A second Allow rule, or an extra source in the existing allow, still passes",
+        "why": "Line 171 claims more than lines 200-212 prove. The allow check is satisfied if any one 1433 rule has both prefixes (substring `in`). Nothing rejects other Allow rules or extra sources. Mutant 1: add 'allow-sql-any' (Inbound, Allow, Tcp, sourceAddressPrefix '*', 1433, priority 200) to privateEndpointNsg. allows=[100,200], deny=4000, so every check passes, yet 1433 is open to the whole VNet and peers, which is the S1 exposure. Mutant 2: sourceAddressPrefixes [appIntegrationPrefix, agentAddressPrefix, 'VirtualNetwork'] also passes. Mutant 3: an Allow on port '*' isn't in `allows`, so it isn't checked at all. The deny check also ignores protocol and destinationAddressPrefix. The infrastructure at HEAD is correct (one allow with exactly two sources, then deny-all at 4000). The gap is only in the oracle. This is the same class as A2.2 R1 but a different mutant, and 781815a didn't close it. Per David's instruction for this round, this P2 is carried with no further fix round.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "F5 is an evidence node with no rule IDs, so rules_covered and rules_missing are both empty. The verdict is PASS because the only finding (R1) is P2. Per David's instruction for A2.3, it is carried with no fix round.",
+      "A2.2 R1: RESOLVED. At HEAD, check-pipeline.py lines 194-198 find the snet-private-endpoints subnet, take the NSG symbol from its networkSecurityGroup id, and read only that resource block. The allow, source, deny and the new priority-order checks (lines 200-212) run on that NSG's rules alone, so the app NSG's deny-all can no longer satisfy them. Every step fails closed: a missing subnet, reference or block adds an error, and a priority that isn't a literal int raises, which still exits non-zero. Activity 316 shows the orchestrator's mutant deleting network.bicep lines 55-67, exactly privateEndpointNsg's deny-all-inbound, while keeping the app NSG's. The checker FAILS on it with the scoped deny message and the priority check (gate.finding-red@781815a). 781815a is traited red but passes on HEAD by design. It is an oracle-strength fix shown by a mutant, the same accepted pattern as A2 R3.",
+      "A2.2 R2: RESOLVED. The stage-template.yml pool comment (lines 21-24) now says the agents' network must be peered to or the same as the network.bicep VNet, with their range inside agentAddressPrefix, because the NSG allows 1433 only from that range. Line 91 replaces the 'allowed by the pool' wording with the same statement. Both match network.bicep at HEAD. The placement of line 91, after the bootstrap block, is slightly odd but true.",
+      "A2.2 R3: RESOLVED. In dev, test and prod.bicepparam (lines 10-11), the comment now says the range is not a secret and is committed per environment, and it gives the replace-before-first-deployment instruction. Comment and mechanism agree, since there is no pipeline override and none is claimed. Nit, not a finding: line 8 still reads 'Placeholder ids ... overrides them' in the plural, but it now covers only sqlAdminGroupObjectId.",
+      "Checker weakening between c4032df and HEAD: NONE FOUND, with one caveat. I can't run git diff, so this rests on the activity log, the A2.2 verdict's description of the old lines and the HEAD text. 781815a was a single builder Edit to check-pipeline.py (activity 309). A2.2 described the old S1 allow and deny checks (old lines 177-180) as scans of the whole of network.bicep. At HEAD each has a counterpart with the same predicates run on a strictly narrower set, plus new constraints: Inbound, Tcp, both source prefixes, and deny priority greater than allow priority. The other assertions A2.2 listed are present unchanged at HEAD: I1-I8, the I5 vmImage check, A2 R2 compile-time azureSubscription, A2 R3 pool name, and the four S1 declaration, association, privateEndpointNetworkPolicies and agent-parameter checks. 88ff4bb touched no checker. The builder a3958b8 edited only stage-template.yml and the three param files (activity 320-332). gate.green@88ff4bb records that no non-comment line changed, from the orchestrator's filtered diff (activity 334).",
+      "TDD order: 781815a (red, checker only) precedes 88ff4bb (green, comments only). Both carry the Agent, Plan, Node, Rule and TDD trailers. 88ff4bb has no Fixes-Finding trailer. This is the already-carried G9 harness item (A2 R1), so I'm not raising it again. The I8 message at check-pipeline.py line 151 still says 'service connection variable'. That stale wording was noted at A2.2 and is not weaker.",
+      "Whole node at HEAD: subscription-scope hand-written Bicep. gate.bicep@88ff4bb shows main.bicep and build-params dev, test and prod exit 0 with zero warnings. One stage template for dev, then test, then prod, with what-if before sub create. The prod approval sits on the policies-prod environment. The self-hosted pool is policies-<env>-vnet. Migrations come from the idempotent script, applied with sqlcmd -b over a separate SQL service connection. The app's database user is created by SID from the user-assigned identity clientId. The smoke test is curl --fail on /health/ready. SQL is Entra-only with public access disabled, a private endpoint and a privatelink DNS zone. The NSGs sit on both subnets, with privateEndpointNetworkPolicies Enabled. Basic-auth publishing is off for scm and ftp. No secrets are present, and az was never run.",
+      "src/ and tests/ are unchanged. gate.stubs@88ff4bb finds no NotImplementedException. gate.build@88ff4bb shows 0 warnings, gate.test@88ff4bb shows 637/637 including RuleCoverageTests, and gate.scope@88ff4bb shows 16 paths with 0 outside the allowed set. No banned time or rounding API is in the diff.",
+      "Carried from A2.2 for David to be ready to defend (not a finding): sql.bicep leaves the connection policy at Default. Private-endpoint traffic is then expected to use 1433 only. If the policy is ever set to Redirect, ports 11000-11999 would also need an allow rule. I'm not certain how Default treats private-endpoint traffic."
+    ]
+  }
+}

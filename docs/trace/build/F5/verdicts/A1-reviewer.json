@@ -1,0 +1,83 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T06:56:26Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 1,
+  "agent": "reviewer",
+  "agent_id": "afa3bd966c50726c2",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 1,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "2888bdbb21b9bb6cb9e376e878d4278776a136cc",
+    "diff_fingerprint": "e28047f95e547a30f91150af7b242990fc009839",
+    "verdict": "FAIL",
+    "gate_refs": [
+      "gate.write@7131a01",
+      "gate.bicep@7131a01",
+      "gate.pipeline-schema@7131a01",
+      "gate.build@7131a01",
+      "gate.test@7131a01",
+      "gate.scope@7131a01",
+      "gate.stubs@7131a01",
+      "gate.run@7131a01",
+      "gate.vulnerable@7131a01"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "F5-acceptance: managed identity to Entra-only SQL",
+        "severity": "P1",
+        "file": "infrastructure/modules/sql.bicep",
+        "line": 11,
+        "what": "Pipeline runs CREATE USER ... FROM EXTERNAL PROVIDER as a service principal, but the SQL server has no identity with Graph/Directory Readers rights, so the grant step fails",
+        "why": "This acceptance line needs the app's managed identity to reach Entra-only SQL. The pipeline signs in as the service-connection principal (stage-template.yml line 90) and runs CREATE USER [$(appName)] FROM EXTERNAL PROVIDER. When a service principal runs that statement, Azure SQL looks up the name in Microsoft Graph using the logical server's own identity. That identity needs User.Read.All, GroupMember.Read.All and Application.Read.All, or the Directory Readers role. sql.bicep gives the server no identity block, and neither the template nor its comments name the prerequisite. As written, the first deploy to any environment fails at the 'Grant the app's managed identity database access' step, and the app's identity never gets a database user. checker and bicep build only test the text, so neither can catch this. David must be able to defend this line, and an Azure reviewer will ask about this exact step.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "F5-acceptance: idempotent migrations",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/azure-pipelines.yml",
+        "line": 38,
+        "what": "dotnet-ef is installed globally with no version, so the migration script's tool version depends on the day the pipeline runs",
+        "why": "This is the dotnet-ef pinning carry-over (9.0.9 vs runtime 10.0.13), which every snapshot from F0b to F4 assigned to F5 (docs/qa/build-F0b.md step 18 note). The pipeline now repeats the problem: the version of the idempotent script's generator is not reproducible, and it can drift from EF Core 10.0.13 in Directory.Packages.props. pre-push uses `dotnet tool restore`, but the repo has no tool manifest.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "code-quality: dead code",
+        "severity": "P2",
+        "file": "infrastructure/modules/appservice.bicep",
+        "line": 51,
+        "what": "Output principalId is declared but never consumed by main.bicep or the pipeline",
+        "why": "This is on the slop list as an unused member. The grant step looks the identity up by appName, so nothing reads principalId.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R4",
+        "rule_id": "code-quality: speculative generality",
+        "severity": "P2",
+        "file": "infrastructure/main.bicep",
+        "line": 31,
+        "what": "tenantId is a parameter with a zero-GUID placeholder in all three param files and a pipeline override, though a subscription deployment already knows its tenant",
+        "why": "tenant().tenantId is available at subscription scope. The parameter adds a placeholder per environment, a variable-group entry and an override argument to the what-if and create commands, and no rule needs any of them.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "F5 has no rule IDs, so rules_covered and rules_missing are both empty. The verdict is FAIL only because of the P1 R1.",
+      "Acceptance met apart from R1: hand-written subscription-scope Bicep with three modules; bicep build and build-params pass for dev, test and prod (gate.bicep); build -> dev -> test -> prod from one stage template; AzureCLI@2 what-if before sub create; the prod approval sits on the policies-prod environment; an idempotent migration script applied with sqlcmd; curl --fail /health/ready smoke test; offline schema check with a mutation proof (gate.pipeline-schema); APPLICATIONINSIGHTS_CONNECTION_STRING set as an app setting; a managed-identity connection string; azureADOnlyAuthentication true with no administrator login or password.",
+      "az was never run: gate.bicep says so, and no az command appears in F5 activity.jsonl.",
+      "TDD order does not apply because this is an evidence node with no red or green commits. Builder commit 7131a01 has Rule: none and no TDD: trailer, because none of the TDD values fits a docs write. This matches the harness carry-over about a TDD value for commits like this, so I have not raised it as a finding.",
+      "gate.stubs shows no NotImplementedException in src/. src/ and tests/ are unchanged in this diff, so there is no new banned time or rounding API.",
+      "Outside this diff, for David: Program.cs trusts X-Forwarded-Proto only from 10/8, 172.16/12 and 192.168/16. Please confirm that App Service Linux front ends reach the container from those ranges. If they don't, non-/health requests get the https-required 400, and the /health/ready smoke test can't detect it."
+    ]
+  }
+}

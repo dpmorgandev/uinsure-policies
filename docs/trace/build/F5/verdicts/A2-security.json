@@ -1,0 +1,68 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:10:08Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "aa505811f9aafb2e4",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 2,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "4012f0e53d8079d47a6fcd91b15e629d50c56844",
+    "diff_fingerprint": "d124d5d1c3ee984ceea3fdfe2214478a13d25244",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.finding-red",
+      "gate.green",
+      "gate.bicep",
+      "gate.pipeline-schema",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.vulnerable"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API8:2023",
+        "severity": "P2",
+        "file": "infrastructure/modules/network.bicep",
+        "line": 11,
+        "what": "Neither subnet has an NSG, so the SQL private endpoint on 1433 is reachable from the whole VNet and from any network peered to it (the self-hosted agent network).",
+        "why": "Network hardening. SQL is Entra-only and has no public endpoint, so this is not exploitable by itself. An NSG on the integration subnet, with privateEndpointNetworkPolicies enabled on the endpoint subnet, would allow 1433 only from the app subnet and the agent range. Non-blocking for evidence-only IaC.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "Previous findings, A1 to A2. S1 (public SQL plus the 0.0.0.0 AllowAzureServices rule) is RESOLVED: sql.bicep sets publicNetworkAccess Disabled, has no firewall rule and no 0.0.0.0, and adds a private endpoint with groupId sqlServer, a privatelink private DNS zone, a VNet link and a DNS zone group. The zone name comes from environment().suffixes.sqlServerHostname, so it resolves to privatelink.database.windows.net. The app has VNet integration on a subnet delegated to Microsoft.Web/serverFarms. The endpoint IP is private, so the default RFC1918-only routing is enough and no route-all setting is needed.",
+      "S2 (basic-auth publishing) is RESOLVED: appservice.bicep declares basicPublishingCredentialsPolicies for both scm and ftp, each as its own resource with allow false, and ftpsState stays Disabled. az webapp deploy uses the Entra service connection, so nothing depends on basic auth.",
+      "S3 (the pipeline principal is a standing SQL server admin) is RESOLVED in substance. The migration and grant steps use a separate $(sqlServiceConnection) whose principal is a database-scoped user with db_owner on the policies database only. It is not in the server admin group, and the template states this and describes the admin bootstrap. Residual: db_owner can read all policy data. That is the usual price of running EF migrations and creating users, and it is recorded in the template, so it is an accepted trade-off and not a finding. The app's own user gets only db_datareader and db_datawriter.",
+      "S4 (unpinned dotnet-ef) is RESOLVED: azure-pipelines.yml installs dotnet-ef --version 10.0.13, which equals Microsoft.EntityFrameworkCore.Design 10.0.13 in Directory.Packages.props. The checker asserts the equality.",
+      "Identity design, reviewed with no defect found. The user-assigned identity is attached only to the app. The connection string uses Authentication=Active Directory Managed Identity with User Id set to the identity's clientId, which is an identifier and not a credential. I checked the SID derivation in the grant step against the uniqueidentifier byte order. The first three GUID groups are byte-swapped (6,4,2,0 then 10,8 then 14,12) and the last 16 hex characters are kept as they are. That matches CONVERT(varbinary(16), CAST(clientId AS uniqueidentifier)). CREATE USER ... WITH SID = ..., TYPE = E therefore needs no Graph lookup and no Directory Readers role. FROM EXTERNAL PROVIDER appears only in comments, in the human-run admin bootstrap. A malformed or null clientId gives an invalid SID and sqlcmd -b fails closed.",
+      "Injection in the sqlcmd -Q string: the only interpolated values are $(appName), a Bicep deployment output derived from the fixed name app-policies-<env>, and $sid, which is hex derived from a GUID output. Neither is attacker-controlled. The user creation is idempotent (IF NOT EXISTS).",
+      "tenantId is now tenant().tenantId from the deployment context. There is no tenantId parameter, and the pipeline passes no tenantId=. No secrets, local paths or personal emails were found in infrastructure/. The param files hold all-zero placeholder GUIDs, and the real sqlAdminGroupObjectId comes from the policies-<env> variable group. Entra-only SQL has no password. The App Insights connection string is an ingestion endpoint.",
+      "Trust boundaries moved outside the repo, as with the prod approval in A1. The policies-<env>-vnet self-hosted pools, the SQL service connections, the database-scoped bootstrap, and peering of the agent network to the VNet are not defined in the repo and cannot be verified from the diff. The deploy stage runs on those agents from pr: none, main-only triggers, so only merged code reaches them. Say in the README that these are prerequisites, and that the agent hosts are privileged: they have network reach to the private SQL endpoint and run with the service connections.",
+      "Operational observation, not a finding: every environment uses the same VNet address space, 10.20.0.0/16. One agent network cannot be peered to more than one environment. The template says one pool per environment, which avoids the problem. The pipeline's ARM connection also needs subscription-scope rights, because the deployment is az deployment sub create. That is unchanged since A1 and is the normal cost of the design.",
+      "Carried from A1, unchanged and not introduced by this diff. httpsOnly means App Service redirects plain HTTP before the API's 400 /problems/https-required path is reached. Program.cs trusts forwarded headers only from 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16 and never uses ASPNETCORE_FORWARDEDHEADERS_ENABLED. Document how App Service's front end fits that. The README (F6) is the place.",
+      "Out-of-scope items recorded as n/a. API1:2023: no auth or tenancy. API2:2023: auth is out of scope; the infrastructure identity design was reviewed above and is sound. API5:2023: no roles. API7:2023: no outbound URL fetching, and the diff touches no src/ files. API10:2023: no upstream APIs.",
+      "API3, API4, API6 and API9 are marked covered because the diff changes only infrastructure/** and the docs trace and plan files. It touches no DTOs, request limits, refund flows or routes, so the checks are vacuously met. The scope gate confirms 0 paths outside the allowed set.",
+      "NET extras: no .cs in the diff, so raw SQL, decimal money and logging have nothing to inspect. gate.vulnerable reports 8 projects with no vulnerable packages. The pinned dotnet-ef 10.0.13 matches the approved EF Core version. check-pipeline.py needs PyYAML and jsonschema, which are undeclared. That is dev tooling only and is not shipped.",
+      "Gates read: gate.bicep passes with zero warnings, gate.pipeline-schema passes with a mutation check naming I6, I5 and I2/I7, and gate.green shows the I1 to I8 reds going green. I did not run az. This is a static review of the HEAD files and the packet diff."
+    ]
+  }
+}

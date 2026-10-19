@@ -1,0 +1,63 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:40:51Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "a114a0bcb05b4d255",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 2,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "c2af74d3ca52985af3b10f62e470bda3ba8febb5",
+    "diff_fingerprint": "a99b990d335c1e67141c3999b8ff95ed6c7bc5e0",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.write",
+      "gate.bicep",
+      "gate.pipeline-schema",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.vulnerable",
+      "gate.qa",
+      "gate.finding-red",
+      "gate.green"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API8:2023",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/stage-template.yml",
+        "line": 34,
+        "what": "The pre-approval WhatIf job on a hosted agent uses the same subscription-scope ARM service connection as Deploy, so prod ARM access is exercised with no approval gate.",
+        "why": "API8 hardening, least privilege. The job needs only what-if (read) rights. Residual risk is limited: the pipeline triggers only on main with pr: none, and David merges. A bad merge to main could still use the prod ARM connection without the policies-prod approval. Suggested: a Reader-plus-what-if connection for this job, or service-connection checks (branch control, approval). Not blocking for an evidence-only pipeline that is never run.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "Out items recorded as n/a: API1 (no auth or tenancy; the reference is the only key), API2 (auth out of scope), API5 (no roles), API7 (no outbound URL fetching; this diff touches only infrastructure and docs, no src/), API10 (no upstream APIs).",
+      "Round scope: the diff since A2.3 splits the stage template into a WhatIf job and an approval-gated Deploy job, and changes check-pipeline.py. The packet diff also carries the earlier F5 infrastructure and docs/qa changes, which are unchanged since A2.3.",
+      "New unapproved job, what it introduces: it is a hosted ubuntu-latest agent with no environment. It runs az deployment sub what-if with --name, which creates no deployment and changes no resources. It downloads the drop artifact built in the same run, so what the approver reviews is the artifact Deploy later applies (same-run integrity). The pipeline triggers only on main with pr: none, so no fork or PR code reaches the job, and the YAML and Bicep it executes are already merged to main.",
+      "The WhatIf job links the policies-<env> variable group before approval. It holds only sqlAdminGroupObjectId, an Entra group object id, which is not a secret. If secrets are later added to that group, move them out of the unapproved job's reach. Worth recording as a P2 note.",
+      "No secrets in the diff: Bicep has no @secure parameters and SQL is Entra-only with no password. check-pipeline.py scans for secret-looking literals, and the grep of infrastructure/ found none. The SQL steps still use the separate sqlServiceConnection, and Deploy stays on the self-hosted VNet pool. what-if output in logs carries resource configuration only (no personal data).",
+      "SQL extras: no FromSqlRaw or ExecuteSqlRaw in the diff, and no .cs changes, so the money, logging and package checks are unchanged. gate.vulnerable (head c2af74d) reports 8 projects, none vulnerable. The Deploy job's inline sqlcmd interpolates $(appName) from Bicep outputs, which is pipeline-controlled and not user input.",
+      "API3, API4, API6 and API9 are unaffected by this diff (no src/ changes) and are recorded as met by the unchanged A2.3 baseline. API8 is met: no committed secrets or connection strings."
+    ]
+  }
+}

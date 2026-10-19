@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:25:56Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "ad87c08e1df74eb12",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 2,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "88ff4bbd208644c94173bcf0c92de6c45ba010a3",
+    "diff_fingerprint": "a67464d221f2475ab2e86e59207f3e902233fce3",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.finding-red",
+      "gate.green",
+      "gate.bicep",
+      "gate.pipeline-schema",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.vulnerable"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "Delta since A2.2 (PASS, no findings): 781815a changes only check-pipeline.py, and 88ff4bb is comment-only (stage-template.yml agent-network comment, three param-file comments). gate.green at 88ff4bb says no non-comment line changed. The patch shows the Bicep, the pipeline YAML and the SQL steps unchanged from what A2.2 reviewed.",
+      "781815a (checker): the S1 assertions are now read from the NSG that snet-private-endpoints actually references. The rules checked are the 1433 Tcp allow, its sources (app-integration prefix and agentAddressPrefix), the deny-all, and deny priority above allow priority. This closes the earlier gap where the app NSG's deny-all could satisfy the check. Per gate.finding-red, a scratch copy without the SQL NSG deny-all fails. The change is test tooling only and adds no attack surface. It has no secrets, no network calls, and runs under python -I.",
+      "88ff4bb (comments): the added text says the agent network must be peered to or inside the VNet, with its range inside agentAddressPrefix. The param-file comments say the range is committed per environment (not a secret) and must be narrow, never 0.0.0.0/0 or a /8. This matches network.bicep, where the 1433 allow takes its sources only from [appIntegrationPrefix, agentAddressPrefix]. The comments overstate nothing.",
+      "Carried hygiene observation, not raised as a finding: agentAddressPrefix has no @minLength or CIDR validation, and the checker does not reject 0.0.0.0/0 or a /8. The narrow-range expectation now lives in the param comments. Real exposure is low: SQL is Entra-only with publicNetworkAccess Disabled, and the value comes from a reviewed param file. It is worth one README line in F6.",
+      "Re-checked and unchanged: SQL publicNetworkAccess Disabled, no 0.0.0.0 firewall rule, Entra-only auth with no password, a private endpoint with a privatelink DNS zone, NSGs on both subnets (privateEndpointNetworkPolicies Enabled; allow 1433 at 100, deny-all at 4000), httpsOnly, minTls 1.2, ftpsState Disabled, and basic-auth publishing disabled for scm and ftp. The app uses a user-assigned identity with a managed-identity connection string (no password) and the App Insights connection string as an app setting. The SQL steps use the separate sqlServiceConnection parameter, and dotnet-ef is pinned to 10.0.13. The sqlcmd -Q string interpolates only $(appName) and a hex SID built from the deployment outputs. No secrets, local paths or personal emails in infrastructure/; the param files hold all-zero placeholder GUIDs.",
+      "n/a (Out of scope): API1:2023 (no auth or tenancy; the reference is the only key), API2:2023 (auth is out of scope), API5:2023 (no roles; POST /claims would be an admin function in real life), API7:2023 (no outbound URL fetching; the diff touches no src/), API10:2023 (no upstream APIs; pricing is client-supplied).",
+      "API3, API4, API6, API8 (application side) and API9 are marked covered because the node's diff is infrastructure/** plus docs and trace files only (gate.scope: 0 paths outside the allowed set). It touches no DTOs, request-size or rate limits, refund or cancel flows, error handling or routes, and the application code is unchanged.",
+      "NET extras: no .cs file in the diff, so raw SQL, decimal money and logging have nothing to inspect. gate.vulnerable at 88ff4bb: 8 projects, none vulnerable. No new packages. check-pipeline.py needs PyYAML and jsonschema and is not in the .NET package list.",
+      "Carried to the F6 README, outside the repo and unchanged by this diff: the policies-<env>-vnet pools, the SQL service connections, the database-scoped bootstrap and the agent network peering are prerequisites outside the repo, and the agent hosts are privileged. It should also say how httpsOnly and App Service forwarded headers fit the API's private-range-only forwarded-header trust.",
+      "Evidence base: a static read of the packet diff and gates.jsonl, and the A2.2 security verdict for context. I ran no commands and did not run az."
+    ]
+  }
+}

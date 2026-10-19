@@ -1,0 +1,79 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:19:43Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "a8680f9075a2bf61e",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 2,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "c4032dfa3603398fde7ec2773807cd8e270c1172",
+    "diff_fingerprint": "97a849f72c083ccf58033718eff31cc2be5b4b49",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.finding-red@538b490",
+      "gate.green@c4032df",
+      "gate.bicep@c4032df",
+      "gate.pipeline-schema@c4032df",
+      "gate.build@c4032df",
+      "gate.test@c4032df",
+      "gate.scope@c4032df",
+      "gate.stubs@c4032df",
+      "gate.run@c4032df",
+      "gate.vulnerable@c4032df"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "anti-oracle: A2/S1 checker assertions",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/check-pipeline.py",
+        "line": 179,
+        "what": "The S1 deny and allow-1433 checks scan all of network.bicep. If the private-endpoint NSG's deny-all is deleted, the checker still passes on the app NSG's deny-all",
+        "why": "This is the same weakness A2 R3 found in I5. The deny regex at lines 179-180 and the 1433/Allow checks at lines 177-178 aren't tied to the NSG on snet-private-endpoints. Take the mutant with the deny-all-inbound rule removed from privateEndpointNsg. Default AllowVnetInBound would then let the whole VNet and any peered network reach 1433, which is exactly the S1 exposure. The checker still passes because appIntegrationNsg matches 'direction Inbound ... access Deny'. The message 'the SQL NSG must deny all other inbound traffic' claims more than the check proves. The infrastructure at HEAD is correct. The gap is in the oracle. gate.pipeline-schema@c4032df names a mutant for R3 only, none for S1.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "code-quality: comments must be true and explainable",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/stage-template.yml",
+        "line": 90,
+        "what": "'The agent's network also needs to be allowed by the pool' is unclear and out of date. Since S1, the agents must fall inside agentAddressPrefix (the NSG allow) and be peered",
+        "why": "A pool doesn't allow networks. After c4032df the real requirement is that the agents' range is in the 1433 allow rule (agentAddressPrefix, network.bicep) and that their network is peered to or inside the VNet. The pool comment at lines 21-24 doesn't mention the NSG range either. An agent outside agentAddressPrefix fails the migrations step. That fails closed, but the template sends the operator in the wrong direction. Code-quality rule: a comment explains the why, and it must be true.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "F5-acceptance: no secrets / config by environment",
+        "severity": "P2",
+        "file": "infrastructure/params/dev.bicepparam",
+        "line": 10,
+        "what": "agentAddressPrefix is a committed placeholder (10.30.0.0/24, the same in all 3 envs). The comment says 'not committed', but the pipeline has no override, so a commit is the only way to set it",
+        "why": "sqlAdminGroupObjectId has a placeholder plus a variable-group override (--parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)). agentAddressPrefix has no such path, so 'the real address range ... is not committed. Set it before the first deployment' can only be done by committing it. An address range isn't a secret, so committing it is fine. But the comment and the mechanism contradict each other, and David will be asked which one is intended. The same text appears in test.bicepparam and prod.bicepparam, line 10.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "F5 has no rule IDs, so rules_covered and rules_missing are both empty. The verdict is PASS because R1-R3 are all P2. Per inv-001 rule 3, P2s raised at a re-review become carry-overs unless David rules otherwise.",
+      "A2 R2: RESOLVED. stage-template.yml declares sqlServiceConnection as a typed template parameter. Both SQL steps use ${{ parameters.sqlServiceConnection }}. azure-pipelines.yml passes literal sc-policies-<env>-sql for dev, test and prod, so the connection is resolved at compile time and resource authorization sees it. The variable-group comment now lists only sqlAdminGroupObjectId. The new checker assertion (every azureSubscription must fully match ${{ parameters.X }}, and $(sqlServiceConnection) must be absent) failed at 538b490 and passes at c4032df (gate.finding-red, gate.green). The old I8 assertion still rejects the ARM connection on the SQL steps. Its message still says 'service connection variable', which is stale wording but not weaker.",
+      "A2 R3: RESOLVED. check-pipeline.py lines 168-170 require deploy.pool.name to fully match policies-${{ parameters.environmentName }}-vnet. The orchestrator's mutant with the pool deleted fails it (gate.finding-red@538b490 detail, activity lines 245-250). The original I5 vmImage-absent check is kept alongside it, so this strengthens the oracle and loosens nothing.",
+      "A2 R4: RESOLVED. The comment now limits 'cannot administer the server' to the SQL service connection's token. It names the ARM path (subscription-scope rights can rewrite the Entra admin) as an accepted residual risk, and it states the first-run ordering, which was a note in A2. As far as I can judge from here, the statement is true. It's comment-only, so the red commit correctly carries no assertion for it.",
+      "A2 S1: RESOLVED in the infrastructure. Both subnets have an NSG. The private-endpoint subnet sets privateEndpointNetworkPolicies 'Enabled', so the NSG applies to the endpoint. The SQL NSG allows TCP 1433 from appIntegrationPrefix and agentAddressPrefix to the endpoint subnet at priority 100, and denies all other inbound at 4000, ahead of the default AllowVnetInBound. The integration subnet denies all inbound, which is fine because App Service integration is outbound only and NSGs are stateful. Peering keeps the agents' source IPs, so the allow rule works across a peer. See R1 for the strength of the matching oracle.",
+      "Checker weakening between 538b490 and c4032df: NONE. activity.jsonl lines 253-279 show the fix builder (a1a3d66) editing only network.bicep, main.bicep, the three .bicepparam files, azure-pipelines.yml and stage-template.yml. Its Bash commands only read the checker or ran it. 538b490 was one Edit (line 240) that appends a 'Re-review A2' block before 'if errors:'. Every A1 assertion described in the A2 verdict (I1-I8, including the I5 vmImage check and the per-block I6) is present unchanged at HEAD. I can't run git diff, so this rests on the activity log and the HEAD text.",
+      "TDD order: red 538b490 (exit 1, 9 failing lines for R2 and S1), then green c4032df (exit 0). R3 passed on the red commit by design, because it's an oracle fix shown to have teeth by a mutant. That is recorded in the receipt and isn't a pinned-pass problem.",
+      "Carried R1 (Fixes-Finding): c4032df also has no Fixes-Finding trailer. The commit body names A2/R2, A2/R4 and A2/S1 instead. This is the A2 R1 item David chose to carry (harness G9), so I'm not raising it again. Separately, the gate.green@c4032df cmd label still reads '(A1 fix)', a copy-over in the receipt. Its detail field is correct.",
+      "Not a finding, for David to be ready to defend: sql.bicep leaves the connection policy at Default. As I understand it, private-endpoint connections then go through Proxy on 1433 only, so the NSG's single port is enough. If anyone later sets the Redirect policy, 11000-11999 must be opened as well. I'm not certain how Default treats private-endpoint traffic.",
+      "Whole node at HEAD: subscription-scope hand-written Bicep. bicep build and build-params for dev, test and prod exit 0 with zero warnings (gate.bicep@c4032df). One stage template for dev, then test, then prod. what-if runs before sub create. The prod approval sits on policies-prod. The idempotent migration is applied with sqlcmd -b. The smoke test is curl --fail on /health/ready. APPLICATIONINSIGHTS_CONNECTION_STRING is an app setting. The app uses a user-assigned managed identity to reach Entra-only SQL over a private endpoint. Nothing is a secret. az was never run.",
+      "src/ and tests/ are unchanged in this diff. gate.stubs finds no NotImplementedException. gate.build is 0 warnings, gate.test is 637/637, and gate.scope shows 16 paths with 0 outside the allowed set."
+    ]
+  }
+}
