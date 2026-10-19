@@ -294,7 +294,7 @@ nodes:
       - {id: t6, role: tester, step: red, layer: services, rules: [RENEW-1/2, RENEW-3a], title: "Services.Tests: renewal window measured from UK today; payment method defaults to the current term's; fix the stale header comment in PolicyServiceQuoteTests.cs naming the old Quote methods (F3 review A2.3 R1)", status: done}
       - {id: t7, role: builder, step: green, layer: services, rules: [RENEW-1/2, RENEW-3a], title: "PolicyService.Renew with UK today and the method default", status: done}
       - {id: t8, role: builder, step: green, layer: persistence, rules: [RENEW-4], title: "Appended terms persisted under the same reference with the Version check; migration if the schema changes", status: done}
-      - {id: t9, role: builder, step: green, layer: api, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "Real renewals endpoint: 422 violations, 409 for a cancelled policy; whole acceptance suite green", status: pending}
+      - {id: t9, role: builder, step: green, layer: api, rules: [RENEW-1/2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5], title: "Real renewals endpoint: 422 violations, 409 for a cancelled policy; whole acceptance suite green", status: done}
       - {id: t10, role: builder, step: refactor, layer: null, rules: [], title: "Refactor with the full suite green", status: pending}
       - {id: t11, role: orchestrator, step: gates, layer: null, rules: [], title: "build -warnaserror, full test, rule coverage (pending file empty), diff scope, no NotImplementedException in src", status: pending}
       - {id: t12, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
