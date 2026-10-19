@@ -81,7 +81,7 @@ internal static partial class PolicyMappings
 
     private static partial Domain.Policies.PolicyType ToDomain(PolicyType type);
 
-    private static partial Domain.Policies.PaymentMethod ToDomain(PaymentMethod method);
+    public static partial Domain.Policies.PaymentMethod ToDomain(this PaymentMethod method);
 
     private static partial PolicyType ToDto(Domain.Policies.PolicyType type);
 

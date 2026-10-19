@@ -80,12 +80,12 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
         return Created($"/policies/{response.PolicyReference}", response);
     }
 
-    // Stub: a canned body until the service is wired. Every value is one no renewal test expects.
     [HttpPost("{reference}/renewals")]
     [EnableRateLimiting("writes")]
-    public ActionResult<PolicyResponse> Renew(
+    public async Task<ActionResult<PolicyResponse>> Renew(
         string reference,
-        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RenewPolicyRequest? request)
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RenewPolicyRequest? request,
+        CancellationToken cancellationToken)
     {
         // The amount is required, so a missing body is a shape error (400), not a 415.
         if (request is null)
@@ -95,25 +95,16 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
         }
 
         var policyReference = PolicyReference.Normalise(reference);
-        var start = new DateOnly(2000, 1, 1);
-        var end = new DateOnly(2000, 12, 31);
-        var response = new PolicyResponse(
-            policyReference.Value,
-            Contracts.PolicyType.BuyToLet,
-            Contracts.PolicyStatus.Expired,
-            9,
-            start,
-            end,
-            1.11m,
-            false,
-            false,
-            [],
-            new PropertyDto(),
-            [new TermResponse(9, start, end, 1.11m, "STUB-PAYMENT")],
-            [new PaymentResponse("STUB-PAYMENT", Contracts.PaymentMethod.Cheque, 1.11m)],
-            [],
-            [],
-            null);
-        return Created($"/policies/{policyReference.Value}", response);
+        var renewal = await service.Renew(policyReference, request.Amount!.Value, request.PaymentMethod?.ToDomain(), cancellationToken);
+        if (!renewal.IsSuccess)
+        {
+            return this.ToProblem(renewal.Violations);
+        }
+
+        // E6 answers with the whole policy, so it is read back after the renewal is saved.
+        var policy = await service.Get(policyReference, cancellationToken);
+        return policy.IsSuccess
+            ? Created($"/policies/{policyReference.Value}", policy.Value.ToResponse())
+            : this.ToProblem(policy.Violations);
     }
 }
