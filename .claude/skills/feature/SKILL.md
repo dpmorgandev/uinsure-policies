@@ -77,7 +77,7 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
     least one failed test, and you record which tests fail.
   - `git diff --name-only <task_start>..HEAD` ⊆ `tests/**` plus `src/**`. The `src/` lines are
     throw-only stubs; the hook enforces this, and you re-check that no `src/` line was removed.
-  - Every node rule has a `[Trait("Rule","<ID>")]` in Api.Tests (grep).
+  - Every node rule has a `[Trait("Rule","<ID>")]` in Api.Tests (grep). A combined id (`RENEW-1/2`) is checked as its split ids (`RENEW-1`, `RENEW-2`), as RuleCoverage parses it.
 
 **`builder / stub` (api)**
 - Dispatch. Then `gate.stub`:
@@ -85,7 +85,7 @@ receipts. You never write `src/` or `tests/` yourself, and you never take an age
   - Start `dotnet run --project src/Uinsure.Policies.Api --urls http://localhost:5080` in the background,
     and the node's routes answer with their happy-path status (curl). Stop the API.
   - **Every test with a node `Rule` trait fails** (Api.Tests, `--output Detailed`). One that passes fails
-    the gate, unless it's a 400 shape test (name ends `_with_400`). Record each pass in the receipt.
+    the gate, unless it's a 400 shape test (its name contains `_with_400`). Record each pass in the receipt.
 
 **`david / pause1`**: §6, Pause 1.
 
