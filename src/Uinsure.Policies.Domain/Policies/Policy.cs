@@ -34,6 +34,7 @@ public sealed class Policy
     public IReadOnlyList<Policyholder> Policyholders { get; }
     public Property Property { get; }
     public IReadOnlyList<Term> Terms { get; }
+    public Cancellation? Cancellation { get; }
 
     public Term LatestTerm => Terms[^1];
 
@@ -61,6 +62,12 @@ public sealed class Policy
         Property property,
         IReadOnlyList<Term> terms) =>
         new(reference, type, autoRenew, hasClaims, holders, property, terms);
+
+    public Result<IReadOnlyList<RefundCalculation>> QuoteCancellation(DateOnly? on, DateOnly today) => throw new NotImplementedException();
+
+    public Result<Cancellation> Cancel(DateOnly? on, DateOnly today, Func<string> refundReference) => throw new NotImplementedException();
+
+    public Result<Claim> RecordClaim(DateOnly claimDate, string? description, DateOnly today) => throw new NotImplementedException();
 
     // SELL-2, 4, 5 and 7 are all checked; none returns early.
     public static Result<Policy> Sell(
