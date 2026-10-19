@@ -1,0 +1,1532 @@
+diff --git a/docs/context/20261019-064330-f4-done-merged.md b/docs/context/20261019-064330-f4-done-merged.md
+new file mode 100644
+index 0000000..2eee434
+--- /dev/null
++++ b/docs/context/20261019-064330-f4-done-merged.md
+@@ -0,0 +1,73 @@
++---
++timestamp: 2026-10-19T06:43:30Z
++previous-context: 20261019-033747-f3-done-merged.md
++checkpoint: true
++status: in-progress
++plan: build
++node: F4
++phase: merge
++step: null
++attempt: 1
++branch: main
++worktree: null
++head: 67e3a4c
++tests: 637/637
++next-action: David picks the F5/F6/F7 order (file order puts F5 next); then /feature build <node>, whose SETUP commits the F4 trail tail
++open-decisions: 1
++---
++
++## Summary
++F4 Renew is merged (PR #28, merge commit 67e3a4c) at attempt 1, with no FAIL. The first review passed with three
++P2s, and David chose to fix all three. One needed harness PR #25 (Renew returns PolicyDetails). The QA pre-run found
++QA step 34 ("Amount" key), which was closed in-task. The trail check needed harness PR #27 (combined rule ids in
++commit trailers). David signed the QA 62/62. The F4 worktree and branch are removed.
++
++## Completed since last snapshot
++- F4 red, stub, domain/services/persistence/api green, refactor (0c600d5, ceeb36c, pre-rebase SHAs)
++- Review A1 PASS; P2s R1-R3 closed: reds e28851e/150fa27, rename 8f174d9, green ed44a60 (pre-rebase SHAs)
++- Harness PR #25: IPolicyService.Renew returns Result<PolicyDetails> (7deb7c0)
++- QA script; QA step 34 closed: red d931d20, green b5ca22e; re-reviews A1.2 and A1.3 PASS (pre-rebase SHAs)
++- Harness PR #27: render-trace splits combined rule ids in Rule trailers (45e6f6c)
++- PR #28: integrate, trail OK, Postman F4 Renew 54/0, QA 62/62 signed (4ea2ae8), merged (67e3a4c)
++
++## Current state
++On main at 67e3a4c, tests 637/637. Two files are uncommitted in the main checkout: the F4 trail tail
++(docs/trace/build/F4/loop.jsonl with merged(67e3a4c), and docs/trace/build/F4/activity.jsonl with 5 post-trail lines). Both
++are committed by the next node's SETUP, as F3's tail was. Nothing is blocked.
++
++## Next action
++David orders the remaining nodes. /feature takes the first pending node in file order, which is F5 (IaC + pipeline,
++cuttable, 3h budget). F7 is cut if it hasn't started by 12:00, and F5 by 14:00. Running F6 first needs F5 cut or
++deferred by David. The chosen node's SETUP commits the F4 trail tail and places these carry-overs.
++
++## Carry-overs
++- README known limits: no cap on claims per policy (F3 security A2.3 S1); no application log line for successful or 4xx outcomes (F3 and F4 QA) — F6 README (already in F6 t1)
++- For David's review in the F6 README: E6 detail texts differ from the contract examples (RENEW-1/2, RENEW-6, COULD-3); a multi-violation 422 has no top-level rule extensions; `"paymentMethod": null` counts as no method (no test pins it); enum names are case-insensitive (from F1) — F4 QA notes
++- Policy.Renew reads CurrentTerm(today).Payment! on auto-renew; this holds by invariant (every auto-renewing term is paid) — F4 security observation, for the README design notes
++- Lesson required at archive: F2 reached attempt 3 (draft from inv-001) — planning.spec Lessons
++- Harness items (next harness PR, made from the main checkout via ExitWorktree, never as Git Bash hand-offs):
++  - pr-body: refactor column prints `undefined`; the Attempts line repeats rounds without naming A1/A1.2/A1.3 and omits gate FAILs and investigations
++  - commit-msg G9: Fixes-Finding id forms for reviewer, security and QA findings (A1/R1, QA step 34); a TDD value for coverage and retarget commits
++  - a sanctioned tester commit for a test retarget that a signature change forces (F4 A1.2 R1: it rode in builder green)
++  - gate.stub / gate.red: a sanctioned way to pin tests that already pass at red
++  - the integrate-receipt exception for docs/qa
++  - gate.postman(pass) is rejected by the event grammar (recorded as gate.postman); signoff can't take source: david
++  - dotnet-ef tool manifest 9.0.9 vs runtime 10.0.13 (F5)
++  - git.md no-escape rule; git agent trailers in a separate paragraph fail commit-msg; render rewrites requirements-matrix.md for a timestamp only
++  - guard blocks the PR-body attribution append and the tester's dev-db delete (*.db, -wal, -shm)
++  - ClientAbortLoggingMiddleware in the architecture tree; H6 wording "by value"; reconciled events in the README
++- Schedule: F7 is cut if not started by 12:00 Monday 2026-10-19, and F5 by 14:00 — build.plan.md
++
++## Open decisions
++- Node order: run F5 now (file order), or cut or defer F5 so F6 and F7 start before the 12:00 F7 cut — build.plan.md schedule
++
++## Decisions made
++- F4 review P2s: fix all three in-task (David, 2026-10-19), contract amendment by PR #25
++- .claude/specs/architecture.spec.md#decision (amendments: PR #18 quote and claim types; PR #25 Renew returns PolicyDetails)
++- docs/plans/active/inv-001.plan.md#recommendations (rule 3: P0/P1 close in-task; P2s at re-review become carry-overs)
++- No cap on claims per policy (David, 2026-10-19): a README known limit
++
++## Pointers
++- docs/plans/active/build.dag.yaml (F4 lines 268-306), docs/plans/active/build.plan.md
++- docs/trace/build/F4/ (walkthrough.md, README.md, verdicts A1, A1.2, A1.3), docs/qa/build-F4.md
++- PRs: #28 (F4), #25 and #27 (harness)
+diff --git a/docs/plans/active/build.dag.yaml b/docs/plans/active/build.dag.yaml
+index 2f01977..6a32396 100644
+--- a/docs/plans/active/build.dag.yaml
++++ b/docs/plans/active/build.dag.yaml
+@@ -312,10 +312,10 @@ nodes:
+     rules: []
+     cuttable: true
+     budget: 3h
+-    status: pending
+-    attempt: 0
+-    branch: null
+-    worktree: null
++    status: in_progress
++    attempt: 3
++    branch: feature/build/F5
++    worktree: .claude/worktrees/build-F5
+     pr: null
+     qa: docs/qa/build-F5.md
+     trace: docs/trace/build/F5/
+@@ -325,9 +325,9 @@ nodes:
+       - "APPLICATIONINSIGHTS_CONNECTION_STRING supplied as an app setting; managed identity to Entra-only SQL; no secrets"
+       - "az never run; nothing deployed"
+     tasks:
+-      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "Bicep modules, three param files and the pipeline YAML; bicep build and build-params for dev, test and prod; pipeline schema check", status: pending}
+-      - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "bicep build and build-params exit 0 for all three environments; pipeline schema check; build and tests still green", status: pending}
+-      - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
++      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "Bicep modules, three param files and the pipeline YAML; bicep build and build-params for dev, test and prod; pipeline schema check", status: done}
++      - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "bicep build and build-params exit 0 for all three environments; pipeline schema check; build and tests still green", status: done}
++      - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: done}
+       - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F5.md", status: pending}
+       - {id: t5, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
+       - {id: t6, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md and README; chore(trace) commit; completeness check passes", status: pending}
+@@ -352,7 +352,7 @@ nodes:
+     acceptance:
+       - "Every item in docs/readme-checklist.md is ticked and links to the README section that satisfies it; F5's items say 'cut' if F5 was cut"
+     tasks:
+-      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "README.md covering every docs/readme-checklist.md item, each ticked with a link to its section; states that the rate limits are per instance and that validation error keys are camelCase (an unknown query key ?REFERENCE is reported as reference); known limits: no cap on claims per policy (David), and no application log line for successful or 4xx outcomes", status: pending}
++      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "README.md covering every docs/readme-checklist.md item, each ticked with a link to its section; states that the rate limits are per instance and that validation error keys are camelCase (an unknown query key ?REFERENCE is reported as reference); known limits: no cap on claims per policy (David), and no application log line for successful or 4xx outcomes; F4 behaviours for David's review: E6 detail texts differ from the contract examples (RENEW-1/2, RENEW-6, COULD-3), a multi-violation 422 has no top-level rule extensions, a null paymentMethod counts as none, enum names are case-insensitive; design note: Policy.Renew relies on every auto-renewing term being paid (F4 security)", status: pending}
+       - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "Every checklist item ticked and linked; links resolve; build and tests still green", status: pending}
+       - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+       - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F6.md", status: pending}
+diff --git a/docs/plans/active/inv-002.plan.md b/docs/plans/active/inv-002.plan.md
+new file mode 100644
+index 0000000..18b6371
+--- /dev/null
++++ b/docs/plans/active/inv-002.plan.md
+@@ -0,0 +1,56 @@
++---
++plan_id: inv-002
++kind: investigation
++title: F5 what-if still precedes the prod approval
++created: 2026-10-19
++dag: null
++parent: build/F5
++---
++# inv-002: F5 what-if still precedes the prod approval
++## Question
++Why does the reviewer FAIL build/F5 at attempt 2 (A2.4), and is each cause in the infrastructure, the checker, or the orchestrator's briefs?
++## Hypothesis
++The orchestrator's fix brief for the QA what-if defect specified "two jobs in one stage", on a wrong model of
++Azure DevOps (environment checks are evaluated before a stage starts, for every resource it uses); the builder
++followed the brief and the red checker encoded the same model, so no gate could catch it. Disproved if approvals
++are evaluated per job, if the builder deviated from the brief, or if the brief asked for a separate stage.
++## Evidence
++- docs/trace/build/F5/verdicts/A2.4-reviewer.json: FAIL, P1 R1 (approval still precedes the what-if), P1 R2 (checker asserts job-level separation only), P2 R3 (QA line references stale)
++- docs/trace/build/F5/verdicts/A2.4-security.json: PASS, P2 S1 (the unapproved what-if uses the full subscription-scope ARM connection)
++- docs/qa/build-F5.md observation O1: located the defect at stage start and named a what-if-only stage
++- docs/trace/build/F5/loop.jsonl gate.qa (925fe90): restated O1 at job level ("inside the deployment job")
++- docs/trace/build/F5/activity.jsonl: the red and green builders edited without reading O1; both commit subjects say "in its own job"
++- infrastructure/pipelines/stage-template.yml at c2af74d: WhatIf job and the policies-<env> deployment job in one stage, Deploy_<env>
++- infrastructure/pipelines/check-pipeline.py: stage lookups by index (stages[0]) in four places; no stage-level assertion
++## Findings
++Yes: the cause is upstream of the builders, in how the orchestrator handed on the QA defect, and it carried into
++both the infrastructure and the checker. Findings: [findings/A2.4.md](../../trace/build/F5/findings/A2.4.md).
++- I1 (R1, new): stage-template.yml:15-56 puts the what-if job in the stage that consumes environment policies-<env>; checks run at stage start, so the prod approval precedes the what-if. The comment at :19-21 is false.
++- I2 (R2, new): check-pipeline.py:62, :76-86 assert job-level separation; :62-63, :153, :181 hard-code stages[0]; the stage schema allows a condition that could bypass the order. Red, green and the mutation proof all encoded the brief's model.
++- I3 (R3, new): docs/qa/build-F5.md cites pre-fix lines; the in-task QA route has no step that re-runs the script against the fixed head.
++- I4 (security S1, new): stage-template.yml:34 runs the unapproved what-if on the deploy connection with subscription write rights; an approval check on that connection would gate the what-if stage and bring the defect back.
++The exact brief text can't be cited: dispatch prompts are not recorded in the trail.
++## Recommendations
++```yaml recommendations
++- {kind: amend-node, target: build/F5, reason: "Two stages per environment: WhatIf_<env> (regular job, no environment) then Deploy_<env> (dependsOn WhatIf_<env>, no condition, the only stage on policies-<env>); approvals live on the environment only; fix the false comment. The brief quotes QA O1 verbatim, not a restatement", status: accepted}
++- {kind: amend-node, target: build/F5, reason: "Checker asserts the stage structure (what-if stage has no environment or deployment job; the deploying stage depends on it with no condition), finds stages and jobs by key never index, drops the redundant ordering check; mutation proofs are the c2af74d layout and a deploy stage with condition: always()", status: accepted}
++- {kind: amend-node, target: build/F5, reason: "The what-if stage gets its own lower-privilege ARM connection per environment (a custom role: Reader plus the what-if action, verified against the ARM docs) as a separate template parameter, listed with the out-of-repo prerequisites", status: rejected}
++- {kind: amend-node, target: build/F5, reason: "After the fix, the tester re-runs docs/qa/build-F5.md against the new head: every stage-template line re-cited, steps 17-18 and O1 rewritten, new commit under test", status: accepted}
++- {kind: feature, target: null, reason: "Record each agent dispatch prompt in the trail, so a brief can be audited when a FAIL traces back to it", status: rejected}
++```
++## Why
++The attempt-3 stop on build/F5: reviewer FAIL A2.4 after the in-task QA fix (red 6fe2b8d, fix c2af74d).
++## Approach
++Read-only: the F5 trail (loop, activity, verdicts A1 to A2.4, findings A1), the QA script and the two pipeline files
++at c2af74d; one investigator dispatch. Time box 30m from 07:43Z; it held (diagnosis by 07:47Z).
++## Rejected alternatives
++- An approval check on the ARM service connection instead of a separate what-if connection (security S1's second option): checks run for every protected resource a stage uses, so it would gate the what-if stage and reproduce the QA defect.
++- Recording the defect as a README known limit and moving on: David already ruled "fix now" at gate.qa, and an approver who can't see the what-if is the thing the acceptance pairing exists to prevent.
++- Another job-level fix inside one stage: the same fingerprint, which the ladder would escalate.
++## Prior work consulted
++docs/plans/active/inv-001.plan.md: rule 3 (P0/P1 close in-task; re-review P2s are carried). docs/plans/active/build.plan.md and build.dag.yaml: F5 acceptance. No lessons file entries on pipelines.
++## Attempt log
++- attempt 1 · verdicts/A1-reviewer.json FAIL · grant step's FROM EXTERNAL PROVIDER had no server identity for the Graph lookup (closed by the SID route)
++- attempt 2 · verdicts/A2, A2.2, A2.3 PASS · P2s closed in-task by David's rulings
++- attempt 2 · verdicts/A2.4-reviewer.json FAIL · QA what-if fix split jobs, not stages (the orchestrator's job-level restatement of QA O1)
++## Completion record
+diff --git a/docs/qa/build-F5.md b/docs/qa/build-F5.md
+new file mode 100644
+index 0000000..567cad1
+--- /dev/null
++++ b/docs/qa/build-F5.md
+@@ -0,0 +1,159 @@
++# QA script — build / F5 — IaC and pipeline (evidence, never deployed)
++
++Rule IDs: none (F5 is an evidence node; the step rows carry `—` in the Rule column and name the acceptance item they prove)
++Branch: feature/build/F5   Worktree: .claude/worktrees/build-F5
++Commit under test: b92de26 (HEAD when this script was written and run. The last infrastructure change is 88ff4bb, and the A2.3 reviewer and security verdicts are PASS. This script's own commit changes only this file. Record the SHA you test in the sign-off)
++API URL: none (nothing is served or deployed)   Environment: offline, from the worktree root
++
++F5 adds `infrastructure/`: hand-written Bicep (`main.bicep` at subscription scope and four modules), one `.bicepparam`
++per environment, and an Azure DevOps pipeline (`azure-pipelines.yml` plus one `stage-template.yml`) with an offline
++checker (`check-pipeline.py` against `pipeline.schema.json`). F5 changes nothing in `src/` or `tests/`. It is
++evidence only: the pipeline has never been connected to Azure DevOps, `az` is never run, and nothing is deployed. So
++every step below is offline. It either compiles or checks a file, or it reads a file at a line.
++
++## Acceptance items (from `docs/plans/active/build.dag.yaml`, node F5)
++
++| Tag | Acceptance item |
++|---|---|
++| AC1 | Hand-written Bicep modules at subscription scope; `bicep build` and `bicep build-params` succeed for dev, test and prod |
++| AC2 | Pipeline: build/test → dev → test → prod from one stage template; AzureCLI@2 with what-if; prod approval; idempotent migrations; curl `/health/ready` smoke; schema-checked offline |
++| AC3 | `APPLICATIONINSIGHTS_CONNECTION_STRING` supplied as an app setting; managed identity to Entra-only SQL; no secrets |
++| AC4 | `az` never run; nothing deployed |
++
++## Preconditions
++
++- [x] Bicep CLI on `PATH` (`bicep --version`). Run with: Bicep CLI version 0.48.1.
++- [x] Python with PyYAML and jsonschema. Run with: Python 3.13.2, PyYAML 6.0.2, jsonschema 4.23.0.
++- [x] `dotnet-ef` on `PATH`, for step 7 only. Run with: 9.0.9 (see note 3).
++- [x] No API is running from this worktree (a running API locks the build output that step 13 rebuilds).
++- [x] Nothing else is needed. No Azure sign-in, no Azure DevOps, no network access.
++
++Commands are for PowerShell, run from the worktree root. Inside the tables, `\|` is a Markdown escape: type a plain
++`|`. The longer commands with a pipe are written out here, and the table rows cite them by name:
++
++```powershell
++# C2: shape of the compiled template
++bicep build infrastructure/main.bicep --stdout | python -I -c "import json,sys; d=json.load(sys.stdin); print(next(v for k,v in d.items() if k.endswith('schema'))); print({k: v['type'] for k, v in d['parameters'].items()}); r=d['resources']; r=list(r.values()) if isinstance(r, dict) else r; print(len(r), [x['type'] for x in r]); print(sorted(d['outputs']))"
++
++# C3: the values one parameter file compiles to (replace dev with test or prod)
++bicep build-params infrastructure/params/dev.bicepparam --stdout | python -I -c "import json,sys; p=json.loads(json.load(sys.stdin)['parametersJson'])['parameters']; print({k: v['value'] for k, v in p.items()})"
++
++# C7: the Build stage's idempotent script, to the console (no file written); count the guarded blocks
++dotnet ef migrations script --idempotent --project src/Uinsure.Policies.Persistence --startup-project src/Uinsure.Policies.Api | Select-String -SimpleMatch "WHERE [MigrationId] = N'20261019014058_InitialCreate'" | Measure-Object
++
++# C8: the grant step's SID transform (stage-template.yml lines 115-116), on a fixed sample client id
++#   in Git Bash:
++g=$(echo 01234567-89ab-cdef-0123-456789abcdef | tr -d '-' | tr 'a-f' 'A-F'); echo "0x${g:6:2}${g:4:2}${g:2:2}${g:0:2}${g:10:2}${g:8:2}${g:14:2}${g:12:2}${g:16:16}"
++#   the reference, SQL Server's uniqueidentifier byte order (little-endian first three groups):
++python -I -c "import uuid; print('0x' + uuid.UUID('01234567-89ab-cdef-0123-456789abcdef').bytes_le.hex().upper())"
++```
++
++## Steps
++
++### A. Offline commands
++
++| # | Rule | Check | Steps / input | Expected | Actual | Pass/Fail |
++|---|---|---|---|---|---|---|
++| 1 | — | AC1 · `main.bicep` compiles | `bicep build infrastructure/main.bicep --stdout > $null; $LASTEXITCODE` | `0`. No error or warning line on the console (stdout goes to `$null`, so any line shown is a diagnostic) | `0`, no diagnostic line (Bicep 0.48.1) | PASS |
++| 2 | — | AC1 · subscription scope, compiled | Command C2 | Schema `…/2018-05-01/subscriptionDeploymentTemplate.json#`. Nine parameters, every one `string`, none `securestring` (`environmentName`, `location`, `workload`, `appServiceSku`, `sqlSkuName`, `sqlSkuTier`, `sqlAdminGroupName`, `sqlAdminGroupObjectId`, `agentAddressPrefix`). Five top-level resources: one `Microsoft.Resources/resourceGroups` and four `Microsoft.Resources/deployments` (the modules). Six outputs: `appHostName`, `appName`, `identityClientId`, `resourceGroupName`, `sqlDatabaseName`, `sqlServerFqdn` | Exactly as expected: the subscription schema, nine `string` parameters, `5 ['Microsoft.Resources/resourceGroups', 'Microsoft.Resources/deployments' ×4]`, the six outputs | PASS |
++| 3 | — | AC1 · dev parameters compile | `bicep build-params infrastructure/params/dev.bicepparam --stdout > $null; $LASTEXITCODE`, then command C3 | `0`, no diagnostic. Values: `environmentName` dev, `appServiceSku` B1, `sqlSkuName` Basic, `sqlSkuTier` Basic, `sqlAdminGroupName` sg-policies-sql-admins-dev, `sqlAdminGroupObjectId` 00000000-0000-0000-0000-000000000000 (placeholder), `agentAddressPrefix` 10.30.0.0/24 (placeholder) | `0`, no diagnostic; the seven values exactly as expected | PASS |
++| 4 | — | AC1 · test parameters compile | As step 3 with `test.bicepparam` (C3 with `test`) | `0`, no diagnostic. As step 3 but `environmentName` test and `sqlAdminGroupName` sg-policies-sql-admins-test | `0`, no diagnostic; values as expected | PASS |
++| 5 | — | AC1 · prod parameters compile | As step 3 with `prod.bicepparam` (C3 with `prod`) | `0`, no diagnostic. `environmentName` prod, `appServiceSku` P1v3, `sqlSkuName` GP_S_Gen5_1, `sqlSkuTier` GeneralPurpose, `sqlAdminGroupName` sg-policies-sql-admins-prod, the same two placeholders | `0`, no diagnostic; values as expected | PASS |
++| 6 | — | AC2 · pipeline schema-checked offline | `python -I infrastructure/pipelines/check-pipeline.py; $LASTEXITCODE` | `pipeline check passed`, then `0`. Both YAML files match `pipeline.schema.json`, and every rule the schema can't express holds (template order, what-if before create, AzureCLI@2 inputs, environment, migrations, smoke test, App Insights, SID grant, private SQL, NSGs; see the docstring and lines 37-212) | `pipeline check passed`, exit `0` | PASS |
++| 7 | — | AC2 · the migration script is idempotent | Command C7 | It runs (exit 0) and prints a script whose every block is guarded by `IF NOT EXISTS(SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20261019014058_InitialCreate')`: `Count : 19`. The script also creates `__EFMigrationsHistory` only `IF OBJECT_ID(...) IS NULL`. Re-running it on a migrated database therefore changes nothing | Exit `0`; 19 guarded blocks; line 2 is `IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL` | PASS |
++| 8 | — | AC3 · the app's database user is created by SID | Command C8: both lines | Both print `0x67452301AB89EFCD0123456789ABCDEF`: the template's byte swap equals SQL Server's `uniqueidentifier` byte order for the identity's client id | Both printed `0x67452301AB89EFCD0123456789ABCDEF` | PASS |
++| 9 | — | AC3 · no secrets in `infrastructure/` | `git grep -niE "password\|secret\|accountkey\|sharedaccess\|instrumentationkey\|@secure\|keyvault" -- infrastructure ":(exclude)infrastructure/pipelines/check-pipeline.py"` | Five lines, every one a comment that states an absence: `appservice.bicep:49`, `sql.bicep:11`, and line 10 of each `.bicepparam` ("Not a secret"). No value, no `@secure()` parameter, no Key Vault | Exactly those five comment lines | PASS |
++| 10 | — | AC4 · `az` appears only in the never-run template | `git grep -nE "(^\|[^[:alnum:]_-])az (deployment\|webapp\|login\|group\|sql\|account\|resource)" -- src tests infrastructure .githooks` | Three lines, all in `infrastructure/pipelines/stage-template.yml` inside AzureCLI@2 inline scripts: 48 (`az deployment sub what-if`), 63 (`az deployment sub create`), 128 (`az webapp deploy`). Nothing in `src/`, `tests/` or the git hooks calls `az` | Exactly those three lines | PASS |
++| 11 | — | AC4 · `az` is not even installed here | `Get-Command az -ErrorAction SilentlyContinue` | Prints nothing | Run as `which az` in Git Bash: `no az in (…)`. The Azure CLI is not on this machine's `PATH` | PASS |
++| 12 | — | AC4 · F5 touches no app code | `git merge-base HEAD main`, then `git diff --stat <that sha> HEAD -- src tests` | The merge base is `67e3a4c`. The diff prints nothing | Merge base `67e3a4c1bc788edc1bbcfee5a00cafb47dea8434`; the diff printed nothing. The branch's whole diff is `infrastructure/` (12 files) plus plan, context and F4 trace files | PASS |
++| 13 | — | regression · the suite is unchanged | `dotnet test --solution Uinsure.Policies.slnx` | 637 passed, 0 failed, 0 skipped (F4 signed off 637; F5 changed no test) | total 637, failed 0, succeeded 637, skipped 0 (all four test projects passed) | PASS |
++
++### B. Read-throughs (open the file at the line)
++
++Each row says where the acceptance item lives and what to look for. Actual records what was at those lines at b92de26.
++
++| # | Rule | Check | Steps / input | Expected | Actual | Pass/Fail |
++|---|---|---|---|---|---|---|
++| 14 | — | AC1 · subscription scope, hand-written modules | `infrastructure/main.bicep` 1, 39-43, 45-95 | Line 1 `targetScope = 'subscription'`. 39-43 create `rg-policies-<env>`. The four modules (`monitoring`, `network`, `sql`, `app`) are local files in `infrastructure/modules/`, each with `scope: rg` (46, 56, 67, 83). No registry or AVM module reference | As expected. All four `module` lines point at `'modules/<name>.bicep'` | PASS |
++| 15 | — | AC2 · build and test before any deployment | `infrastructure/pipelines/azure-pipelines.yml` 17-58 | Stage `Build`: `dotnet build … -warnaserror` (30), `dotnet test --solution` (33), the idempotent script (36-45), publish and zip the app with `infrastructure/` (47-54), one `drop` artifact (56-58). Trigger is `main` only (4-6), `pr: none` (8) | As expected | PASS |
++| 16 | — | AC2 · one stage template for dev, test and prod | `azure-pipelines.yml` 60-79; `stage-template.yml` 14-17 | Three `- template: stage-template.yml` uses with `environmentName` dev, test, prod and `dependsOn` Build, Deploy_dev, Deploy_test. The template defines one stage, `Deploy_${{ parameters.environmentName }}`. No environment has its own deployment steps | As expected. The three uses differ only in `environmentName`, the two service-connection names and `dependsOn` | PASS |
++| 17 | — | AC2 · AzureCLI@2, what-if before create | `stage-template.yml` 41-53, 55-75 | Step 1 is AzureCLI@2 `What-if`: `az deployment sub what-if` with the drop's `main.bicep` and `<env>.bicepparam`. Step 2 is AzureCLI@2 `Deploy infrastructure`: `az deployment sub create` with the same name, location, template and parameters, then the six outputs read into variables (70-75) | As expected. Both pass `--parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)` (53, 68). See note O1 on what the what-if does and does not gate | PASS |
++| 18 | — | AC2 · prod approval on `policies-prod` | `stage-template.yml` 19, 28-29; `azure-pipelines.yml` 3 | The job is a `deployment` job (19) with `environment: policies-${{ parameters.environmentName }}` (29). The comment (28) and the header (3) say the approval check is on `policies-prod` only. The check itself is Azure DevOps configuration and cannot be in the repo (step 32) | As expected | PASS |
++| 19 | — | AC2 · migrations applied from the idempotent script | `stage-template.yml` 93-103 | AzureCLI@2 `Apply migrations` runs `sqlcmd … --authentication-method ActiveDirectoryAzCli -b -i $(drop)/migrations.sql`, under the SQL service connection (97), before the app is deployed (121-132). `-b` fails the step on a SQL error | As expected. The script is the one step 7 generates (Build stage, `azure-pipelines.yml` 41-44); dotnet-ef pinned to 10.0.13 (39), equal to `Microsoft.EntityFrameworkCore.Design` in `Directory.Packages.props` line 12 | PASS |
++| 20 | — | AC2 · `curl /health/ready` smoke test | `stage-template.yml` 134-138; `src/Uinsure.Policies.Api/Program.cs` 127; `appservice.bicep` 43 | The last step is `curl --fail --silent --show-error --retry 10 --retry-delay 15 --retry-all-errors https://$(appHostName)/health/ready`; `appHostName` comes from the `main.bicep` output (99) via 72. The app maps `/health/ready` to the `ready`-tagged checks. App Service probes the same path | As expected | PASS |
++| 21 | — | AC3 · App Insights as an app setting | `appservice.bicep` 44-48; `monitoring.bicep` 15-27; `main.bicep` 90; `Program.cs` 74-77 | `APPLICATIONINSIGHTS_CONNECTION_STRING` is an `appSettings` entry (47) whose value is the Application Insights component's connection string, passed as a module output. It is not a pipeline variable and not a Key Vault reference. The app enables Azure Monitor only when the setting is non-empty | As expected. The component is workspace-based (`WorkspaceResourceId`, monitoring.bicep 22) | PASS |
++| 22 | — | AC3 · user-assigned identity to Entra-only SQL, user by SID | `appservice.bicep` 10-15, 30-34, 49-56, 76; `sql.bicep` 11, 20-27; `stage-template.yml` 105-119 | A user-assigned identity is attached to the site. The `Policies` connection string is `Authentication=Active Directory Managed Identity;User Id=<clientId>` with no password; `Database__Provider` is `SqlServer` (46), and the name `Policies` is what `PersistenceServiceCollectionExtensions.cs` 20 reads. SQL has an Entra group admin with `azureADOnlyAuthentication: true` and no `administratorLogin`. The grant step creates the user `WITH SID = $sid, TYPE = E` (no `FROM EXTERNAL PROVIDER`), then adds `db_datareader` and `db_datawriter` only. The `CREATE USER` is guarded by `IF NOT EXISTS`, so a re-run is harmless | As expected. The clientId flows `appservice.bicep` 76 → `main.bicep` 102 → `stage-template.yml` 75 → 115. Step 8 checks the byte order | PASS |
++| 23 | — | AC3 · private endpoint, no public SQL | `sql.bicep` 12, 19, 42-88; `appservice.bicep` 38; `network.bicep` 72-108 | `publicNetworkAccess: 'Disabled'`, no firewall rule. A private endpoint (`groupIds: ['sqlServer']`) in `snet-private-endpoints`, a `privatelink<sqlServerHostname>` private DNS zone linked to the VNet, and a zone group on the endpoint. The app joins `snet-app-integration` by `virtualNetworkSubnetId` | As expected. The zone name uses `environment().suffixes.sqlServerHostname` (61), not a hard-coded host | PASS |
++| 24 | — | AC3 · NSGs (read by eye) | `network.bicep` 11-33, 35-70, 79-103 | `snet-app-integration` has an NSG that denies all inbound at priority 4000. `snet-private-endpoints` has an NSG with **one** Allow rule (priority 100, Inbound, Tcp, port 1433, sources exactly `[appIntegrationPrefix, agentAddressPrefix]`, destination the PE subnet) and a deny-all inbound at 4000. `privateEndpointNetworkPolicies: 'Enabled'` (98) makes the NSG apply to the endpoint. Read this by eye: the checker does not prove "only" (note O2) | As expected: one Allow rule with exactly the two sources, then deny-all. No other rule in either NSG | PASS |
++| 25 | — | AC3 · no secrets, by design | `params/*.bicepparam` 8-12; `stage-template.yml` 30-33, 53, 68; `appservice.bicep` 61-72; `monitoring.bicep` 26 | No parameter is a secret: the admin group's object id is a placeholder overridden from the `policies-<env>` variable group at deploy time, and the agent range is committed as "not a secret". Basic-auth publishing (`scm`, `ftp`) is `allow: false`. The App Insights connection string is described as an ingestion endpoint, not a credential. Every SQL connection is Entra (steps 9, 22) | As expected | PASS |
++| 26 | — | AC4 · stated as never deployed | `azure-pipelines.yml` 1 | `# Evidence only: never connected to Azure DevOps, never run.` | As expected. Steps 10 and 11 back it | PASS |
++
++### C. Out-of-repo prerequisites a real deployment needs
++
++None of these exists, and none can be checked from here. Each row checks only that the repo **states** the
++prerequisite at the cited lines, so that a reader could stand the deployment up. PASS means "stated there".
++
++| # | Rule | Check | Steps / input | Expected | Actual | Pass/Fail |
++|---|---|---|---|---|---|---|
++| 27 | — | AC2 · three self-hosted agent pools | `stage-template.yml` 21-27 | Pools `policies-dev-vnet`, `policies-test-vnet`, `policies-prod-vnet`, one per environment. Their agents have `az`, `jq`, go-sqlcmd (`sqlcmd`) and `curl`. Microsoft-hosted agents can't reach the private endpoint | Stated at 21-27 (pool name at 27, tools at 25) | PASS |
++| 28 | — | AC3 · network reach: peering, DNS, agent range | `stage-template.yml` 21-24, 91; `params/*.bicepparam` 10-12; `network.bicep` 5-6, 78 | The agents' network is peered to (or is) `vnet-policies-<env>` (10.20.0.0/16) and resolves `privatelink.database.windows.net`. The agents' address range is inside `agentAddressPrefix`, and the `10.30.0.0/24` placeholder in each param file is replaced with the real, narrow range before the first deployment | Stated at those lines. Not stated: the private DNS zone is linked only to `vnet-policies-<env>` (`sql.bicep` 66-75), so the agents' own VNet needs its own zone link or DNS forwarding, made outside the repo. The peering can only be made after the first infrastructure deployment creates the VNet (note O4) | PASS |
++| 29 | — | AC2 · ARM service connections | `azure-pipelines.yml` 63, 70, 77; `stage-template.yml` 40, 80-82 | `sc-policies-dev`, `sc-policies-test`, `sc-policies-prod`, with subscription-scope rights (the deployment creates the resource group); they deploy resources and the app zip only | Stated | PASS |
++| 30 | — | AC3 · SQL service connections, least privilege | `azure-pipelines.yml` 64, 71, 78; `stage-template.yml` 77-82 | `sc-policies-<env>-sql`, separate from the ARM ones. Its principal is a database-scoped user with `db_owner` on `policies` and is not in the server admin group. The residual risk of the ARM connection is stated and accepted | Stated | PASS |
++| 31 | — | AC3 · Entra admin groups and variable groups | `params/*.bicepparam` 7-9; `stage-template.yml` 30-33 | Entra groups `sg-policies-sql-admins-<env>`. Variable groups `policies-<env>`, each holding `sqlAdminGroupObjectId` (the group's object id) | Stated | PASS |
++| 32 | — | AC2 · Azure DevOps environments and the prod approval | `stage-template.yml` 28-29; `azure-pipelines.yml` 3 | Environments `policies-dev`, `policies-test`, `policies-prod`; an approval check on `policies-prod` only | Stated | PASS |
++| 33 | — | AC3 · the one-off SQL bootstrap per environment | `stage-template.yml` 83-90 | After the first infrastructure deployment, a member of the admin group, connected to the `policies` database, runs `CREATE USER [<SQL connection principal>] FROM EXTERNAL PROVIDER; ALTER ROLE db_owner ADD MEMBER [...]`. Until then the first run fails at `Apply migrations` | Stated, with both statements and the expected first-run failure | PASS |
++
++## Exploratory notes / defects
++
++### Execution run, 2026-10-19 (tester agent, t4, at b92de26bb5c9f0de91e256049a9e2f0daf967721)
++
++**33 of 33 step rows PASS, 0 FAIL.** No defect raised.
++
++1. **Shell.** The commands were run from Git Bash, not PowerShell: `> /dev/null; echo $?` for `> $null; $LASTEXITCODE`,
++   `grep -c` for `Select-String … | Measure-Object` (step 7), `which az` for `Get-Command az` (step 11), and
++   `git grep` exactly as written (steps 9, 10, 12). Steps 1, 3, 4 and 5 left stderr on the console, so a Bicep
++   diagnostic would have shown; none did.
++2. **No build output written.** `bicep build` and `build-params` ran with `--stdout`, and step 7's script went to
++   the console, so no `main.json`, `.parameters.json` or `migrations.sql` was left in the worktree.
++3. **dotnet-ef version.** The tool on this machine is 9.0.9. Step 7 prints "The Entity Framework tools version
++   '9.0.9' is older than that of the runtime '10.0.13'" on stdout, then the script. The pipeline installs 10.0.13
++   (`azure-pipelines.yml` 39). The script I counted came from the 9.0.9 tool over the 10.0.13 design-time assembly.
++4. **Order.** Step 13 (the full suite) ran first, then steps 1-12, then the read-throughs against the files at
++   b92de26.
++
++Observations for David (not step rows, not raised as findings):
++
++- **O1. The prod approval comes before the what-if, and the what-if gates nothing.** In Azure DevOps, an
++  environment's checks are evaluated when the stage starts. So the prod approver approves before the prod what-if
++  has printed anything. The what-if step only prints: create follows it in the same job with no pause and no
++  `--exit-code`-style gate (`stage-template.yml` 41-75). The F5 acceptance asks for what-if before create and for
++  a prod approval, and both hold. But if you meant "approve after reading the prod what-if", this layout doesn't
++  do it. That would need a what-if-only stage before the prod deployment stage. I base this on my understanding
++  of Azure DevOps checks. I can't verify it offline.
++- **O2. The checker's NSG assertion is weaker than its comment.** The A2.3 reviewer's carried P2 (`A2.3/R1`):
++  `check-pipeline.py` 171 and 200-212 pass a second Allow rule, an extra source in the allow, or an Allow on port
++  `*`. The infrastructure at b92de26 is right (step 24 reads it by eye), but step 6 alone does not prove "1433 only
++  from the app subnet and the agent range".
++- **O3. Two placeholders differ in kind.** `sqlAdminGroupObjectId` (all zeros) is overridden at deploy time from the
++  variable group. `agentAddressPrefix` (`10.30.0.0/24`, the same in all three files) is **not** overridden: it must
++  be edited in each `.bicepparam` before the first real deployment, as its comment says.
++- **O4. The three environments share one address space.** Every `vnet-policies-<env>` is `10.20.0.0/16`
++  (`network.bicep` 78). One agent network therefore can't be peered to more than one of them. The one-pool-per-
++  environment design fits that, but a shared hub would not.
++- **O5. The runtime string is unconfirmed.** `linuxFxVersion: 'DOTNETCORE|10.0'` (`appservice.bicep` 40) is
++  inferred, not checked with `az webapp list-runtimes`. This is already tracked as A11 in `docs/readme-checklist.md`
++  26.
++
++## Sign-off
++
++| | |
++|---|---|
++| Tester | |
++| Date | |
++| Commit signed off | |
++| `dotnet test` result | |
++| Offline checks (`bicep build`, `build-params` ×3, `check-pipeline.py`) | |
++| Steps passed | |
++| Defects raised (finding ids) | |
++| Verdict | ☐ Reject (findings above)  ☐ Accept F5 |
++| Signature | |
+diff --git a/docs/trace/build/F4/activity.jsonl b/docs/trace/build/F4/activity.jsonl
+index d0039ca..964994d 100644
+--- a/docs/trace/build/F4/activity.jsonl
++++ b/docs/trace/build/F4/activity.jsonl
+@@ -893,3 +893,8 @@
+ {"v":1,"ts":"2026-10-19T06:34:41Z","plan":"build","node":"F4","attempt":1,"agent":"main","agent_id":null,"tool":"Write","tool_use_id":"toolu_014yVPnjvZdWU7Ws1zfTyfkq","file":"<outside-repo>","command":null}
+ {"v":1,"ts":"2026-10-19T06:34:47Z","plan":"build","node":"F4","attempt":1,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01P94uMCZ41oLmQXzmpAbGDj","file":null,"command":"git commit -q -F \"~/AppData/Local/Temp/claude/C--Users-<user>-Documents-Jobs-uInsure-Uinsure-Policies/3242ebda-c19f-4363-9a12-55d3f89bb9c9/scratchpad/f4-msg-done.txt\"","commit":{"sha":"33942f4a1ff7f17f09b396951560ce74733cf723","subject":"plan(build/F4): hitl → done","tdd":null}}
+ {"v":1,"ts":"2026-10-19T06:34:52Z","plan":"build","node":"F4","attempt":1,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01KwxB6sAB2dWmbKcCocLgxn","file":null,"command":"node .claude/scripts/render-trace.mjs render build F4 && node .claude/scripts/render-trace.mjs check build F4; git log --oneline -3; git status --short"}
++{"v":1,"ts":"2026-10-19T06:35:04Z","plan":"build","node":"F4","attempt":1,"agent":"git","agent_id":"a220fcf6ab8e091a3","tool":"Bash","tool_use_id":"toolu_01WKCQ9nprSzm6LwDdw4yvLD","file":null,"command":"cd \".\" && git status --porcelain && git add docs/trace/build/F4/ docs/trace/requirements-matrix.md && git status --porcelain && git commit -m \"chore(trace): F4 trail (sign-off)\" -m \"Final F4 trace tra"}
++{"v":1,"ts":"2026-10-19T06:35:12Z","plan":"build","node":"F4","attempt":1,"agent":"git","agent_id":"a220fcf6ab8e091a3","tool":"Bash","tool_use_id":"toolu_01RBFaDKbuqF5CEbFKvN3Wof","file":null,"command":"cd \".\" && git diff --cached --name-only && git commit -m \"chore(trace): F4 trail (sign-off)\" -m \"Final F4 trace trail and requirements matrix after David's QA sign-off.\n\nAgent: git\nPlan: build\nNode: F","commit":{"sha":"aba433d9fecafb38d68e0196d156897bbe980919","subject":"chore(trace): F4 trail (sign-off)","tdd":null}}
++{"v":1,"ts":"2026-10-19T06:37:49Z","plan":"build","node":"F4","attempt":1,"agent":"git","agent_id":"a220fcf6ab8e091a3","tool":"Bash","tool_use_id":"toolu_01LcmDbYxJNrv9uzz4rJw7eN","file":null,"command":"cd \".\" && git push -u origin feature/build/F4 && git rev-parse HEAD"}
++{"v":1,"ts":"2026-10-19T06:37:57Z","plan":"build","node":"F4","attempt":1,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_019RkKWNMnP86pAwwspoauhv","file":null,"command":"gh pr view 28 --json headRefOid,isDraft,state --jq '.headRefOid[0:7]+\" draft=\"+(.isDraft|tostring)+\" \"+.state'"}
++{"v":1,"ts":"2026-10-19T06:42:04Z","plan":"build","node":"F4","attempt":1,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01GpjGM7wjkJDnpN6FXWHBGc","file":null,"command":"gh pr view 28 --json state,mergeCommit --jq '.state+\" \"+.mergeCommit.oid'; date -u +%Y-%m-%dT%H:%M:%SZ"}
+diff --git a/docs/trace/build/F4/loop.jsonl b/docs/trace/build/F4/loop.jsonl
+index 3e629b3..eff2b28 100644
+--- a/docs/trace/build/F4/loop.jsonl
++++ b/docs/trace/build/F4/loop.jsonl
+@@ -49,3 +49,4 @@
+ {"v":1,"ts":"2026-10-19T06:12:49Z","plan":"build","node":"F4","attempt":1,"source":"orchestrator","event":"pr.comment(rebase,6260908595)","head":"ec566b71f48b0aae5bd0677cda7278f51138c934","detail":"PR #28 rebase comment"}
+ {"v":1,"ts":"2026-10-19T06:13:43Z","plan":"build","node":"F4","attempt":1,"source":"orchestrator","event":"gate.postman","cmd":"postman collection run tests/postman/Uinsure.Policies.postman_collection.json -e tests/postman/local.postman_environment.json -i \"F4 Renew\"","exit":0,"expect":"pass","ok":true,"head":"43f38b69c81bdaa2abbfecb978060d4a5c36d999","detail":"pass (the skill form gate.postman(pass) form is rejected by render-trace; harness queue); fresh dev DB; API on 5080 from the worktree; F4 Renew 54 requests / 53 assertions, 0 failed; API stopped"}
+ {"v":1,"ts":"2026-10-19T06:34:35Z","plan":"build","node":"F4","attempt":1,"source":"orchestrator","event":"signoff(4ea2ae8b298595681922e88836dfde3c7f92c31d)","head":"4ea2ae8b298595681922e88836dfde3c7f92c31d","detail":"David signed docs/qa/build-F4.md: 62/62 PASS at 43f38b6 (src/tests identical to b5ca22e, the PR and integrate code); verdict Accept F4"}
++{"v":1,"ts":"2026-10-19T06:42:37Z","plan":"build","node":"F4","attempt":1,"source":"orchestrator","event":"merged(67e3a4c1bc788edc1bbcfee5a00cafb47dea8434)","head":"67e3a4c1bc788edc1bbcfee5a00cafb47dea8434","detail":"David merged PR #28 in the GitHub UI (merge commit); gh pr view 28: MERGED"}
+diff --git a/infrastructure/main.bicep b/infrastructure/main.bicep
+new file mode 100644
+index 0000000..bef2405
+--- /dev/null
++++ b/infrastructure/main.bicep
+@@ -0,0 +1,102 @@
++targetScope = 'subscription'
++
++@description('Environment short name.')
++@allowed(['dev', 'test', 'prod'])
++param environmentName string
++
++@description('Azure region for every resource.')
++param location string = 'uksouth'
++
++@description('Workload name used in resource names.')
++@minLength(3)
++@maxLength(12)
++param workload string = 'policies'
++
++@description('App Service plan SKU name.')
++param appServiceSku string
++
++@description('SQL database SKU name.')
++param sqlSkuName string
++
++@description('SQL database SKU tier.')
++param sqlSkuTier string
++
++@description('Display name of the Entra group that administers the SQL server.')
++param sqlAdminGroupName string
++
++@description('Object id of the Entra group that administers the SQL server.')
++param sqlAdminGroupObjectId string
++
++@description('Address range of the self-hosted deployment agents, allowed to reach SQL on 1433.')
++param agentAddressPrefix string
++
++var suffix = '${workload}-${environmentName}'
++var tags = {
++  workload: workload
++  environment: environmentName
++}
++
++resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
++  name: 'rg-${suffix}'
++  location: location
++  tags: tags
++}
++
++module monitoring 'modules/monitoring.bicep' = {
++  scope: rg
++  name: 'monitoring'
++  params: {
++    suffix: suffix
++    location: location
++    tags: tags
++  }
++}
++
++module network 'modules/network.bicep' = {
++  scope: rg
++  name: 'network'
++  params: {
++    suffix: suffix
++    location: location
++    tags: tags
++    agentAddressPrefix: agentAddressPrefix
++  }
++}
++
++module sql 'modules/sql.bicep' = {
++  scope: rg
++  name: 'sql'
++  params: {
++    suffix: suffix
++    location: location
++    tags: tags
++    skuName: sqlSkuName
++    skuTier: sqlSkuTier
++    adminGroupName: sqlAdminGroupName
++    adminGroupObjectId: sqlAdminGroupObjectId
++    vnetId: network.outputs.vnetId
++    privateEndpointSubnetId: network.outputs.privateEndpointSubnetId
++  }
++}
++
++module app 'modules/appservice.bicep' = {
++  scope: rg
++  name: 'app'
++  params: {
++    suffix: suffix
++    location: location
++    tags: tags
++    skuName: appServiceSku
++    appInsightsConnectionString: monitoring.outputs.connectionString
++    sqlServerFqdn: sql.outputs.serverFqdn
++    sqlDatabaseName: sql.outputs.databaseName
++    appIntegrationSubnetId: network.outputs.appIntegrationSubnetId
++  }
++}
++
++output resourceGroupName string = rg.name
++output appName string = app.outputs.appName
++output appHostName string = app.outputs.hostName
++output sqlServerFqdn string = sql.outputs.serverFqdn
++output sqlDatabaseName string = sql.outputs.databaseName
++output identityClientId string = app.outputs.clientId
+diff --git a/infrastructure/modules/appservice.bicep b/infrastructure/modules/appservice.bicep
+new file mode 100644
+index 0000000..08e99d7
+--- /dev/null
++++ b/infrastructure/modules/appservice.bicep
+@@ -0,0 +1,76 @@
++param suffix string
++param location string
++param tags object
++param skuName string
++param appInsightsConnectionString string
++param sqlServerFqdn string
++param sqlDatabaseName string
++param appIntegrationSubnetId string
++
++// User-assigned so its clientId is known at deployment time: the pipeline creates the database user from it.
++resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
++  name: 'id-${suffix}'
++  location: location
++  tags: tags
++}
++
++resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
++  name: 'asp-${suffix}'
++  location: location
++  tags: tags
++  kind: 'linux'
++  sku: { name: skuName }
++  properties: { reserved: true }
++}
++
++resource app 'Microsoft.Web/sites@2023-12-01' = {
++  name: 'app-${suffix}'
++  location: location
++  tags: tags
++  kind: 'app,linux'
++  identity: {
++    type: 'UserAssigned'
++    userAssignedIdentities: { '${identity.id}': {} }
++  }
++  properties: {
++    serverFarmId: plan.id
++    httpsOnly: true
++    virtualNetworkSubnetId: appIntegrationSubnetId
++    siteConfig: {
++      linuxFxVersion: 'DOTNETCORE|10.0'
++      minTlsVersion: '1.2'
++      ftpsState: 'Disabled'
++      healthCheckPath: '/health/ready'
++      appSettings: [
++        { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
++        { name: 'Database__Provider', value: 'SqlServer' }
++        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
++      ]
++      // The app's user-assigned identity signs in to SQL by client id: no password in the string.
++      connectionStrings: [
++        {
++          name: 'Policies'
++          type: 'SQLAzure'
++          connectionString: 'Server=tcp:${sqlServerFqdn},1433;Database=${sqlDatabaseName};Authentication=Active Directory Managed Identity;User Id=${identity.properties.clientId};Encrypt=True;'
++        }
++      ]
++    }
++  }
++}
++
++// Nothing needs basic-auth publishing: the pipeline deploys under an Entra service connection.
++resource scmCredentialsPolicy 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
++  parent: app
++  name: 'scm'
++  properties: { allow: false }
++}
++
++resource ftpCredentialsPolicy 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
++  parent: app
++  name: 'ftp'
++  properties: { allow: false }
++}
++
++output appName string = app.name
++output hostName string = app.properties.defaultHostName
++output clientId string = identity.properties.clientId
+diff --git a/infrastructure/modules/monitoring.bicep b/infrastructure/modules/monitoring.bicep
+new file mode 100644
+index 0000000..c87ca17
+--- /dev/null
++++ b/infrastructure/modules/monitoring.bicep
+@@ -0,0 +1,27 @@
++param suffix string
++param location string
++param tags object
++
++resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
++  name: 'log-${suffix}'
++  location: location
++  tags: tags
++  properties: {
++    sku: { name: 'PerGB2018' }
++    retentionInDays: 30
++  }
++}
++
++resource insights 'Microsoft.Insights/components@2020-02-02' = {
++  name: 'appi-${suffix}'
++  location: location
++  tags: tags
++  kind: 'web'
++  properties: {
++    Application_Type: 'web'
++    WorkspaceResourceId: logs.id
++  }
++}
++
++@description('Supplied to the app as APPLICATIONINSIGHTS_CONNECTION_STRING. A connection string is an ingestion endpoint, not a credential.')
++output connectionString string = insights.properties.ConnectionString
+diff --git a/infrastructure/modules/network.bicep b/infrastructure/modules/network.bicep
+new file mode 100644
+index 0000000..fd73b47
+--- /dev/null
++++ b/infrastructure/modules/network.bicep
+@@ -0,0 +1,108 @@
++param suffix string
++param location string
++param tags object
++
++@description('Address range of the self-hosted deployment agents that run the migrations. Allowed to reach SQL on 1433.')
++param agentAddressPrefix string
++
++var appIntegrationPrefix = '10.20.1.0/24'
++var privateEndpointPrefix = '10.20.2.0/24'
++
++// The app integration subnet takes no inbound traffic: App Service makes outbound calls only.
++resource appIntegrationNsg 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
++  name: 'nsg-app-integration-${suffix}'
++  location: location
++  tags: tags
++  properties: {
++    securityRules: [
++      {
++        name: 'deny-all-inbound'
++        properties: {
++          priority: 4000
++          direction: 'Inbound'
++          access: 'Deny'
++          protocol: '*'
++          sourceAddressPrefix: '*'
++          sourcePortRange: '*'
++          destinationAddressPrefix: '*'
++          destinationPortRange: '*'
++        }
++      }
++    ]
++  }
++}
++
++// SQL is reached on 1433 from the app and the deployment agents only; everything else inbound is denied.
++resource privateEndpointNsg 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
++  name: 'nsg-private-endpoints-${suffix}'
++  location: location
++  tags: tags
++  properties: {
++    securityRules: [
++      {
++        name: 'allow-sql-from-app-and-agents'
++        properties: {
++          priority: 100
++          direction: 'Inbound'
++          access: 'Allow'
++          protocol: 'Tcp'
++          sourceAddressPrefixes: [appIntegrationPrefix, agentAddressPrefix]
++          sourcePortRange: '*'
++          destinationAddressPrefix: privateEndpointPrefix
++          destinationPortRange: '1433'
++        }
++      }
++      {
++        name: 'deny-all-inbound'
++        properties: {
++          priority: 4000
++          direction: 'Inbound'
++          access: 'Deny'
++          protocol: '*'
++          sourceAddressPrefix: '*'
++          sourcePortRange: '*'
++          destinationAddressPrefix: '*'
++          destinationPortRange: '*'
++        }
++      }
++    ]
++  }
++}
++
++// The app reaches SQL over this network only: SQL has no public endpoint.
++resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
++  name: 'vnet-${suffix}'
++  location: location
++  tags: tags
++  properties: {
++    addressSpace: { addressPrefixes: ['10.20.0.0/16'] }
++    subnets: [
++      {
++        name: 'snet-app-integration'
++        properties: {
++          addressPrefix: appIntegrationPrefix
++          networkSecurityGroup: { id: appIntegrationNsg.id }
++          delegations: [
++            {
++              name: 'appservice'
++              properties: { serviceName: 'Microsoft.Web/serverFarms' }
++            }
++          ]
++        }
++      }
++      {
++        name: 'snet-private-endpoints'
++        properties: {
++          addressPrefix: privateEndpointPrefix
++          // Makes the NSG apply to the private endpoint's traffic.
++          privateEndpointNetworkPolicies: 'Enabled'
++          networkSecurityGroup: { id: privateEndpointNsg.id }
++        }
++      }
++    ]
++  }
++}
++
++output vnetId string = vnet.id
++output appIntegrationSubnetId string = vnet.properties.subnets[0].id
++output privateEndpointSubnetId string = vnet.properties.subnets[1].id
+diff --git a/infrastructure/modules/sql.bicep b/infrastructure/modules/sql.bicep
+new file mode 100644
+index 0000000..b7992ad
+--- /dev/null
++++ b/infrastructure/modules/sql.bicep
+@@ -0,0 +1,91 @@
++param suffix string
++param location string
++param tags object
++param skuName string
++param skuTier string
++param adminGroupName string
++param adminGroupObjectId string
++param vnetId string
++param privateEndpointSubnetId string
++
++// Entra-only authentication: no administratorLogin or password exists, so there is no SQL secret.
++// No public endpoint and no Allow-Azure-services firewall rule: the server is reachable only through the private endpoint below.
++resource server 'Microsoft.Sql/servers@2023-08-01-preview' = {
++  name: 'sql-${suffix}'
++  location: location
++  tags: tags
++  properties: {
++    minimalTlsVersion: '1.2'
++    publicNetworkAccess: 'Disabled'
++    administrators: {
++      administratorType: 'ActiveDirectory'
++      principalType: 'Group'
++      login: adminGroupName
++      sid: adminGroupObjectId
++      tenantId: tenant().tenantId
++      azureADOnlyAuthentication: true
++    }
++  }
++}
++
++resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
++  parent: server
++  name: 'policies'
++  location: location
++  tags: tags
++  sku: {
++    name: skuName
++    tier: skuTier
++  }
++}
++
++resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
++  name: 'pe-sql-${suffix}'
++  location: location
++  tags: tags
++  properties: {
++    subnet: { id: privateEndpointSubnetId }
++    privateLinkServiceConnections: [
++      {
++        name: 'sql'
++        properties: {
++          privateLinkServiceId: server.id
++          groupIds: ['sqlServer']
++        }
++      }
++    ]
++  }
++}
++
++resource dnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
++  name: 'privatelink${environment().suffixes.sqlServerHostname}'
++  location: 'global'
++  tags: tags
++}
++
++resource dnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
++  parent: dnsZone
++  name: 'link-${suffix}'
++  location: 'global'
++  tags: tags
++  properties: {
++    registrationEnabled: false
++    virtualNetwork: { id: vnetId }
++  }
++}
++
++resource dnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = {
++  parent: privateEndpoint
++  name: 'default'
++  properties: {
++    privateDnsZoneConfigs: [
++      {
++        name: 'sql'
++        properties: { privateDnsZoneId: dnsZone.id }
++      }
++    ]
++  }
++}
++
++output serverFqdn string = server.properties.fullyQualifiedDomainName
++output databaseName string = database.name
+diff --git a/infrastructure/params/dev.bicepparam b/infrastructure/params/dev.bicepparam
+new file mode 100644
+index 0000000..f1dff4e
+--- /dev/null
++++ b/infrastructure/params/dev.bicepparam
+@@ -0,0 +1,12 @@
++using '../main.bicep'
++
++param environmentName = 'dev'
++param appServiceSku = 'B1'
++param sqlSkuName = 'Basic'
++param sqlSkuTier = 'Basic'
++param sqlAdminGroupName = 'sg-policies-sql-admins-dev'
++// Placeholder ids: the real values are not committed. The pipeline overrides them from the environment's variable group.
++param sqlAdminGroupObjectId = '00000000-0000-0000-0000-000000000000'
++// Not a secret, so committed for each environment: the address range of the policies-dev-vnet agents; the 1433 allow rule admits only this range.
++// Replace the placeholder with the real, narrow range (the agent subnet) before the first deployment; never 0.0.0.0/0 or a /8.
++param agentAddressPrefix = '10.30.0.0/24'
+\ No newline at end of file
+diff --git a/infrastructure/params/prod.bicepparam b/infrastructure/params/prod.bicepparam
+new file mode 100644
+index 0000000..701fb3e
+--- /dev/null
++++ b/infrastructure/params/prod.bicepparam
+@@ -0,0 +1,12 @@
++using '../main.bicep'
++
++param environmentName = 'prod'
++param appServiceSku = 'P1v3'
++param sqlSkuName = 'GP_S_Gen5_1'
++param sqlSkuTier = 'GeneralPurpose'
++param sqlAdminGroupName = 'sg-policies-sql-admins-prod'
++// Placeholder ids: the real values are not committed. The pipeline overrides them from the environment's variable group.
++param sqlAdminGroupObjectId = '00000000-0000-0000-0000-000000000000'
++// Not a secret, so committed for each environment: the address range of the policies-prod-vnet agents; the 1433 allow rule admits only this range.
++// Replace the placeholder with the real, narrow range (the agent subnet) before the first deployment; never 0.0.0.0/0 or a /8.
++param agentAddressPrefix = '10.30.0.0/24'
+\ No newline at end of file
+diff --git a/infrastructure/params/test.bicepparam b/infrastructure/params/test.bicepparam
+new file mode 100644
+index 0000000..df0b258
+--- /dev/null
++++ b/infrastructure/params/test.bicepparam
+@@ -0,0 +1,12 @@
++using '../main.bicep'
++
++param environmentName = 'test'
++param appServiceSku = 'B1'
++param sqlSkuName = 'Basic'
++param sqlSkuTier = 'Basic'
++param sqlAdminGroupName = 'sg-policies-sql-admins-test'
++// Placeholder ids: the real values are not committed. The pipeline overrides them from the environment's variable group.
++param sqlAdminGroupObjectId = '00000000-0000-0000-0000-000000000000'
++// Not a secret, so committed for each environment: the address range of the policies-test-vnet agents; the 1433 allow rule admits only this range.
++// Replace the placeholder with the real, narrow range (the agent subnet) before the first deployment; never 0.0.0.0/0 or a /8.
++param agentAddressPrefix = '10.30.0.0/24'
+\ No newline at end of file
+diff --git a/infrastructure/pipelines/azure-pipelines.yml b/infrastructure/pipelines/azure-pipelines.yml
+new file mode 100644
+index 0000000..fa78d24
+--- /dev/null
++++ b/infrastructure/pipelines/azure-pipelines.yml
+@@ -0,0 +1,80 @@
++# Evidence only: never connected to Azure DevOps, never run.
++# build/test -> dev -> test -> prod, all three deployments from one stage template.
++# Each environment is two stages: WhatIf_<env> (no environment, runs unapproved), then Deploy_<env>.
++# Prod waits for the approval configured on the 'policies-prod' Azure DevOps environment only, after WhatIf_prod.
++trigger:
++  branches:
++    include: [main]
++
++pr: none
++
++variables:
++  - name: buildConfiguration
++    value: Release
++  - name: dotnetSdkVersion
++    value: 10.0.x
++
++stages:
++  - stage: Build
++    displayName: Build and test
++    jobs:
++      - job: BuildTest
++        pool:
++          vmImage: ubuntu-latest
++        steps:
++          - task: UseDotNet@2
++            displayName: Install .NET SDK
++            inputs:
++              packageType: sdk
++              version: $(dotnetSdkVersion)
++
++          - script: dotnet build Uinsure.Policies.slnx --configuration $(buildConfiguration) -warnaserror
++            displayName: Build
++
++          - script: dotnet test --solution Uinsure.Policies.slnx --configuration $(buildConfiguration)
++            displayName: Test
++
++          - script: |
++              mkdir -p $(Build.ArtifactStagingDirectory)/drop
++              # Pinned to the Microsoft.EntityFrameworkCore.Design version in Directory.Packages.props.
++              dotnet tool install --global dotnet-ef --version 10.0.13
++              export PATH="$PATH:$HOME/.dotnet/tools"
++              dotnet ef migrations script --idempotent \
++                --project src/Uinsure.Policies.Persistence \
++                --startup-project src/Uinsure.Policies.Api \
++                --output $(Build.ArtifactStagingDirectory)/drop/migrations.sql
++            displayName: Generate idempotent migration script
++
++          - script: |
++              dotnet publish src/Uinsure.Policies.Api --configuration $(buildConfiguration) \
++                --output $(Build.ArtifactStagingDirectory)/publish
++              mkdir -p $(Build.ArtifactStagingDirectory)/drop
++              cd $(Build.ArtifactStagingDirectory)/publish
++              zip -r $(Build.ArtifactStagingDirectory)/drop/app.zip .
++              cp -r $(Build.SourcesDirectory)/infrastructure $(Build.ArtifactStagingDirectory)/drop/infrastructure
++            displayName: Package app and infrastructure
++
++          - publish: $(Build.ArtifactStagingDirectory)/drop
++            artifact: drop
++            displayName: Publish drop artifact
++
++  - template: stage-template.yml
++    parameters:
++      environmentName: dev
++      azureServiceConnection: sc-policies-dev
++      sqlServiceConnection: sc-policies-dev-sql
++      dependsOn: Build
++
++  - template: stage-template.yml
++    parameters:
++      environmentName: test
++      azureServiceConnection: sc-policies-test
++      sqlServiceConnection: sc-policies-test-sql
++      dependsOn: Deploy_dev
++
++  - template: stage-template.yml
++    parameters:
++      environmentName: prod
++      azureServiceConnection: sc-policies-prod
++      sqlServiceConnection: sc-policies-prod-sql
++      dependsOn: Deploy_test
+diff --git a/infrastructure/pipelines/check-pipeline.py b/infrastructure/pipelines/check-pipeline.py
+new file mode 100644
+index 0000000..c4f71ed
+--- /dev/null
++++ b/infrastructure/pipelines/check-pipeline.py
+@@ -0,0 +1,266 @@
++"""Offline check of the Azure DevOps pipeline YAML. Never contacts Azure or Azure DevOps.
++
++Run from the repo root:  python -I infrastructure/pipelines/check-pipeline.py
++Needs PyYAML and jsonschema. Exit 0 = pass, 1 = a check failed.
++
++1. Both files parse as YAML and match pipeline.schema.json.
++2. Rules the schema cannot express: one stage template used for dev, test and prod in order, what-if before
++   create, AzureCLI@2 inputs, prod approval environment, idempotent migrations, /health/ready smoke test,
++   App Insights setting supplied by Bicep, and no secret-looking literals.
++"""
++import json
++import re
++import sys
++from pathlib import Path
++
++import yaml
++from jsonschema import Draft202012Validator
++
++HERE = Path(__file__).resolve().parent
++errors = []
++
++
++def check(condition, message):
++    if not condition:
++        errors.append(message)
++
++
++def load(name):
++    return yaml.safe_load((HERE / name).read_text(encoding="utf-8"))
++
++
++schema = json.loads((HERE / "pipeline.schema.json").read_text(encoding="utf-8"))
++validator = Draft202012Validator(schema)
++pipeline = load("azure-pipelines.yml")
++template = load("stage-template.yml")
++
++for name, doc in (("azure-pipelines.yml", pipeline), ("stage-template.yml", template)):
++    for e in validator.iter_errors(doc):
++        errors.append(f"{name}: schema: {'/'.join(map(str, e.absolute_path))}: {e.message}")
++
++# One stage template, dev -> test -> prod.
++uses = [s for s in pipeline["stages"] if "template" in s]
++check([u["parameters"]["environmentName"] for u in uses] == ["dev", "test", "prod"], "template must be used for dev, test, prod in order")
++check(all(u["template"] == "stage-template.yml" for u in uses), "every deploy stage must use stage-template.yml")
++check([u["parameters"]["dependsOn"] for u in uses] == ["Build", "Deploy_dev", "Deploy_test"], "stages must chain Build -> dev -> test -> prod")
++check(any(s.get("stage") == "Build" for s in pipeline["stages"]), "missing Build stage")
++
++# Build stage: build, test, idempotent script.
++build_stage = next((s for s in pipeline["stages"] if s.get("stage") == "Build"), None)
++build_text = json.dumps(build_stage) if build_stage else ""
++for needle in ("dotnet build", "dotnet test", "migrations script --idempotent"):
++    check(needle in build_text, f"Build stage must run: {needle}")
++
++# Deploy steps.
++def job_steps(job):
++    return job.get("steps") or job.get("strategy", {}).get("runOnce", {}).get("deploy", {}).get("steps", [])
++
++
++def runs(step, needle):
++    return needle in step.get("inputs", {}).get("inlineScript", "")
++
++
++def stage_jobs(stage):
++    return stage.get("jobs") or []
++
++
++def as_list(value):
++    return [value] if isinstance(value, str) else list(value or [])
++
++
++# Stages and jobs are found by key, across every stage the template emits, never by position.
++tstages = template["stages"]
++all_jobs = [j for st in tstages for j in stage_jobs(st)]
++deploy_stages = [st for st in tstages if any("deployment" in j and "environment" in j for j in stage_jobs(st))]
++check(len(deploy_stages) == 1, "QA: exactly one stage must hold the deployment job on an environment")
++deploy_stage = deploy_stages[0] if deploy_stages else {}
++deploy_jobs = [j for j in stage_jobs(deploy_stage) if "deployment" in j]
++check(len(deploy_jobs) == 1, "QA: the deploying stage must hold exactly one deployment job")
++deploy = deploy_jobs[0] if deploy_jobs else {}
++steps = job_steps(deploy)
++az = [s for s in steps if s.get("task") == "AzureCLI@2"]
++check(len(az) >= 3, "deploy needs AzureCLI@2 steps")
++for s in az:
++    inputs = s["inputs"]
++    for key in ("azureSubscription", "scriptType", "scriptLocation", "inlineScript"):
++        check(key in inputs, f"AzureCLI@2 '{s.get('displayName')}' missing input {key}")
++create = next((i for i, s in enumerate(steps) if runs(s, "deployment sub create")), None)
++check(create is not None, "the deployment job must run deployment sub create")
++
++# QA O1: Azure DevOps evaluates an environment's checks when a STAGE starts. The what-if must therefore run in its
++# own stage with no environment, and the stage holding the deployment job (the only one on policies-<env>) must
++# depend on it with no condition, so the approval is asked after the what-if has printed.
++def stage_runs_whatif(stage):
++    return any(runs(s, "az deployment sub what-if") for j in stage_jobs(stage) for s in job_steps(j))
++
++
++whatif_stages = [st for st in tstages if stage_runs_whatif(st)]
++check(len(whatif_stages) == 1, "QA: exactly one stage must run az deployment sub what-if")
++whatif_stage = whatif_stages[0] if whatif_stages else {}
++check(not any("environment" in j for j in stage_jobs(whatif_stage)), "QA: the what-if stage must declare no environment on any job (no approval gate)")
++check(not any("deployment" in j for j in stage_jobs(whatif_stage)), "QA: the what-if stage must contain no deployment job")
++check(not any(any("environment" in j for j in stage_jobs(st)) and stage_runs_whatif(st) for st in tstages),
++      "QA: no what-if may run in any stage that declares an environment")
++wi_stage_name = whatif_stage.get("stage")
++check(wi_stage_name is not None and whatif_stage is not deploy_stage, "QA: the what-if and the deployment job must be in different stages")
++check(wi_stage_name is not None and wi_stage_name in as_list(deploy_stage.get("dependsOn")),
++      "QA: the deploying stage must list the what-if stage in its stage-level dependsOn")
++check("condition" not in deploy_stage, "QA: the deploying stage must have no condition (it must not run after a failed what-if)")
++check(bool(whatif_stage) and bool(deploy_stage) and tstages.index(whatif_stage) < tstages.index(deploy_stage),
++      "QA: the what-if stage must come before the deploying stage in the template")
++text = (HERE / "stage-template.yml").read_text(encoding="utf-8")
++check("environment: policies-${{ parameters.environmentName }}" in text, "deployment must target environment policies-<env> (prod approval lives there)")
++check("/health/ready" in steps[-1].get("script", ""), "last step must curl /health/ready")
++check("curl" in steps[-1].get("script", "") and "--fail" in steps[-1].get("script", ""), "smoke test must be curl --fail")
++check("migrations.sql" in text, "migrations.sql must be applied")
++check("ActiveDirectoryAzCli" in text, "SQL access must use Entra authentication")
++
++# Secrets and the App Insights setting.
++combined = text + (HERE / "azure-pipelines.yml").read_text(encoding="utf-8")
++check(not re.search(r"(?i)password\s*[=:]|pwd=|accountkey|sharedaccesskey|instrumentationkey=", combined), "secret-looking literal found")
++bicep = (HERE.parent / "modules" / "appservice.bicep").read_text(encoding="utf-8")
++check("APPLICATIONINSIGHTS_CONNECTION_STRING" in bicep, "Bicep must set APPLICATIONINSIGHTS_CONNECTION_STRING")
++check("Active Directory Managed Identity" in bicep, "Bicep must use a managed identity connection string")
++sql = (HERE.parent / "modules" / "sql.bicep").read_text(encoding="utf-8")
++check("azureADOnlyAuthentication: true" in sql and "administratorLoginPassword" not in sql, "SQL must be Entra-only with no password")
++
++# Review A1 (I1-I8). Added red; each assertion fails on the infrastructure as reviewed.
++ROOT = HERE.parent
++main_bicep = (ROOT / "main.bicep").read_text(encoding="utf-8")
++pipeline_text = (HERE / "azure-pipelines.yml").read_text(encoding="utf-8")
++
++
++def strip_comments(s):
++    return "\n".join(line for line in s.splitlines() if not line.lstrip().startswith(("#", "//")))
++
++
++template_code = strip_comments(text)
++
++# I1: user-assigned identity; the database user is created by SID from its clientId, never FROM EXTERNAL PROVIDER.
++check("UserAssigned" in bicep, "I1: the app must have a user-assigned identity (Bicep exposes its clientId)")
++check(re.search(r"output\s+\w*client\w*\s+string", bicep, re.I) is not None, "I1: appservice.bicep must output the identity clientId")
++check(re.search(r"(?is)CREATE USER.*WITH SID\s*=.*TYPE\s*=\s*E\b", template_code) is not None, "I1: grant step must CREATE USER ... WITH SID = ..., TYPE = E from the identity clientId")
++check("FROM EXTERNAL PROVIDER" not in (template_code + strip_comments(pipeline_text) + strip_comments(sql)), "I1: FROM EXTERNAL PROVIDER must not appear (needs a Graph-privileged server identity)")
++
++# I2/I7: dotnet-ef pinned, equal to the EF Core Design package version.
++packages = (HERE.parents[1] / "Directory.Packages.props").read_text(encoding="utf-8")
++design = re.search(r'Include="Microsoft\.EntityFrameworkCore\.Design"\s+Version="([^"]+)"', packages)
++installs = re.findall(r"dotnet tool install[^\n]*dotnet-ef[^\n]*", pipeline_text)
++check(bool(installs), "I2: Build stage must install dotnet-ef")
++for line in installs:
++    pinned = re.search(r"--version\s+(\S+)", line)
++    check(pinned is not None, f"I2: dotnet-ef install is unversioned: {line.strip()}")
++    check(pinned is not None and design is not None and pinned.group(1) == design.group(1),
++          f"I2/I7: dotnet-ef version must equal Microsoft.EntityFrameworkCore.Design {design.group(1) if design else '?'}")
++
++# I3: no dead outputs.
++module_names = dict(re.findall(r"^module\s+(\w+)\s+'modules/(\w+)\.bicep'", main_bicep, re.M))
++for sym, file in module_names.items():
++    mod_text = (ROOT / "modules" / f"{file}.bicep").read_text(encoding="utf-8")
++    for out in re.findall(r"^output\s+(\w+)\s", mod_text, re.M):
++        check(f"{sym}.outputs.{out}" in main_bicep, f"I3: module output {file}.{out} is never referenced by main.bicep as {sym}.outputs.{out}")
++for out in re.findall(r"^output\s+(\w+)\s", main_bicep, re.M):
++    check(f".{out}.value" in text, f"I3: main.bicep output {out} is not consumed by the pipeline")
++
++# I4: the tenant comes from the deployment context.
++check(not re.search(r"^param\s+tenantId\b", main_bicep, re.M), "I4: main.bicep must not take a tenantId parameter")
++check("tenantId=" not in combined, "I4: the pipeline must not pass tenantId=")
++
++# I5: SQL is private; the pipeline's SQL steps run from inside the network.
++check("publicNetworkAccess: 'Disabled'" in sql, "I5: SQL publicNetworkAccess must be 'Disabled'")
++check("0.0.0.0" not in sql, "I5: no 0.0.0.0 (Allow Azure services) firewall rule")
++check("Microsoft.Network/privateEndpoints" in sql and ("privatelink.database.windows.net" in sql or "'privatelink${environment().suffixes.sqlServerHostname}'" in sql), "I5: SQL needs a private endpoint and a privatelink.database.windows.net private DNS zone")
++check("virtualNetworkSubnetId" in bicep, "I5: the app needs VNet integration (virtualNetworkSubnetId)")
++
++
++def sql_jobs(doc):
++    for job in (j for st in doc["stages"] for j in stage_jobs(st)):
++        step_list = job_steps(job)
++        if any("sqlcmd" in json.dumps(s) for s in step_list):
++            yield job
++
++
++found = list(sql_jobs(template))
++check(bool(found) and all("vmImage" not in (j.get("pool") or {}) for j in found), "I5: SQL steps must run in a job whose pool is not a Microsoft-hosted vmImage")
++
++# I6: no basic-auth publishing credentials.
++policy_blocks = re.findall(r"resource \w+ '[^']*basicPublishingCredentialsPolicies@[^']*' = \{(.*?)\n\}", bicep, re.S)
++for kind in ("scm", "ftp"):
++    check(any(re.search(rf"name:\s*'{kind}'", blk) and re.search(r"allow:\s*false", blk) for blk in policy_blocks),
++          f"I6: site must declare basicPublishingCredentialsPolicies '{kind}' with allow: false")
++
++# I8: a separate, least-privilege SQL service connection, and the bootstrap is documented.
++sql_steps = [s for s in steps if s.get("displayName") in ("Apply migrations", "Grant the app's managed identity database access")] + \
++    [s for j in found for s in job_steps(j) if "sqlcmd" in json.dumps(s)]
++arm_ref = "${{ parameters.azureServiceConnection }}"
++check(bool(sql_steps) and all(s.get("inputs", {}).get("azureSubscription") not in (None, arm_ref) for s in sql_steps),
++      "I8: migration and grant steps must use a SQL service connection variable, not the ARM deployment one")
++lower = text.lower()
++check("db_owner" in lower and "database-scoped" in lower and "not a member of the server admin group" in lower,
++      "I8: template must state the SQL principal is a database-scoped user (db_owner), not a member of the server admin group")
++check("bootstrap" in lower, "I8: template must describe the one-off bootstrap an admin runs")
++
++# Re-review A2 (R2, R3, S1). Added red.
++# R2: service connections resolve at compile time, so every azureSubscription is a template parameter, never $(...).
++all_steps = [s for j in all_jobs for s in job_steps(j)]
++subs = [s["inputs"]["azureSubscription"] for s in all_steps if "azureSubscription" in s.get("inputs", {})]
++check(bool(subs) and all(re.fullmatch(r"\$\{\{\s*parameters\.\w+\s*\}\}", str(v)) for v in subs),
++      "A2/R2: every azureSubscription must be a template parameter expression, not a runtime $(...) macro: " + ", ".join(map(str, subs)))
++check("$(sqlServiceConnection)" not in text and "sqlServiceConnection" in pipeline_text.replace("$(sqlServiceConnection)", ""),
++      "A2/R2: azure-pipelines.yml must pass the SQL service connection as a template parameter for each environment")
++
++# R3: the deployment job's pool is a named self-hosted pool, policies-<env>-vnet.
++deploy_pool = deploy.get("pool")
++check(isinstance(deploy_pool, dict) and re.fullmatch(r"policies-\$\{\{\s*parameters\.environmentName\s*\}\}-vnet", str(deploy_pool.get("name", ""))) is not None,
++      "A2/R3: the deployment job's pool must have name policies-<env>-vnet")
++
++# S1: NSGs on both subnets; SQL NSG allows 1433 only from the app subnet and an agent range, denies the rest.
++net = strip_comments((ROOT / "modules" / "network.bicep").read_text(encoding="utf-8"))
++check("Microsoft.Network/networkSecurityGroups" in net, "A2/S1: network.bicep must declare a network security group")
++check(len(re.findall(r"networkSecurityGroup\s*:", net)) >= 2, "A2/S1: each subnet must be associated with a network security group")
++check(re.search(r"privateEndpointNetworkPolicies:\s*'Enabled'", net) is not None, "A2/S1: the private-endpoint subnet needs privateEndpointNetworkPolicies 'Enabled'")
++check(re.search(r"(?i)param\s+\w*agent\w*\s+string", net) is not None, "A2/S1: network.bicep needs an agent address-range parameter")
++
++
++# A2.2/R1: the rules are read from the NSG actually associated with the private-endpoint subnet.
++def resource_block(src, symbol):
++    m = re.search(rf"resource {re.escape(symbol)} '[^']*' = \{{(.*?)\n\}}", src, re.S)
++    return m.group(1) if m else None
++
++
++def rules_of(block):
++    return [chunk for chunk in re.split(r"\n\s*name:\s*'", block)[1:] if "priority:" in chunk]
++
++
++def field(rule, key):
++    m = re.search(rf"\b{key}:\s*(\[[^\]]*\]|[^\n]+)", rule)
++    return m.group(1).strip().strip("'") if m else None
++
++
++subnet = re.search(r"name:\s*'snet-private-endpoints'(.*?)\n\s{6}\}", net, re.S)
++nsg_ref = re.search(r"networkSecurityGroup:\s*\{\s*id:\s*(\w+)\.id\s*\}", subnet.group(1)) if subnet else None
++check(nsg_ref is not None, "A2.2/R1: the private-endpoint subnet must reference its NSG (networkSecurityGroup: { id: <nsg>.id })")
++sql_nsg = resource_block(net, nsg_ref.group(1)) if nsg_ref else None
++check(sql_nsg is not None, "A2.2/R1: the NSG referenced by snet-private-endpoints must be declared in network.bicep")
++sql_rules = rules_of(sql_nsg) if sql_nsg else []
++allows = [r for r in sql_rules if field(r, "direction") == "Inbound" and field(r, "access") == "Allow"
++          and field(r, "protocol") == "Tcp" and field(r, "destinationPortRange") == "1433"]
++check(len(allows) >= 1, "A2/S1: the SQL NSG (on snet-private-endpoints) must allow inbound Tcp 1433")
++check(any(re.search(r"appIntegrationPrefix|10\.20\.1\.0/24", field(r, "sourceAddressPrefixes") or "")
++          and "agentAddressPrefix" in (field(r, "sourceAddressPrefixes") or "") for r in allows),
++      "A2/S1: the SQL NSG's 1433 allow must take its sources from the app-integration prefix and agentAddressPrefix")
++denies = [r for r in sql_rules if field(r, "direction") == "Inbound" and field(r, "access") == "Deny"
++          and field(r, "sourceAddressPrefix") == "*" and field(r, "destinationPortRange") == "*"]
++check(len(denies) >= 1, "A2/S1: the SQL NSG (on snet-private-endpoints) must deny all other inbound traffic")
++allow_prios = [int(field(r, "priority")) for r in allows]
++deny_prios = [int(field(r, "priority")) for r in denies]
++check(bool(allow_prios) and bool(deny_prios) and min(deny_prios) > max(allow_prios),
++      "A2/S1: the SQL NSG's deny-all must have a higher priority number than the 1433 allow")
++# A2/R4 (comment wording about the leaked pipeline token) cannot be tested; the fix dispatch rewords it.
++
++if errors:
++    print("pipeline check FAILED")
++    for e in errors:
++        print(" -", e)
++    sys.exit(1)
++print("pipeline check passed")
+diff --git a/infrastructure/pipelines/pipeline.schema.json b/infrastructure/pipelines/pipeline.schema.json
+new file mode 100644
+index 0000000..47bc220
+--- /dev/null
++++ b/infrastructure/pipelines/pipeline.schema.json
+@@ -0,0 +1,144 @@
++{
++  "$schema": "https://json-schema.org/draft/2020-12/schema",
++  "title": "Azure Pipelines subset used by this repo (hand-written, offline)",
++  "description": "Covers the keys azure-pipelines.yml and stage-template.yml use. It is not the full Microsoft schema.",
++  "type": "object",
++  "properties": {
++    "trigger": { "type": "object" },
++    "pr": {},
++    "variables": { "type": "array", "items": { "$ref": "#/$defs/variable" } },
++    "parameters": { "type": "array", "items": { "$ref": "#/$defs/parameter" } },
++    "stages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stageOrTemplate" } }
++  },
++  "required": ["stages"],
++  "additionalProperties": false,
++  "$defs": {
++    "variable": {
++      "type": "object",
++      "oneOf": [
++        { "required": ["name", "value"], "additionalProperties": false, "properties": { "name": { "type": "string" }, "value": { "type": ["string", "number"] } } },
++        { "required": ["group"], "additionalProperties": false, "properties": { "group": { "type": "string" } } }
++      ]
++    },
++    "parameter": {
++      "type": "object",
++      "required": ["name", "type"],
++      "properties": {
++        "name": { "type": "string" },
++        "type": { "enum": ["string", "number", "boolean", "object", "step", "stepList", "job", "jobList", "deployment", "deploymentList", "stage", "stageList"] },
++        "default": {},
++        "values": { "type": "array" }
++      },
++      "additionalProperties": false
++    },
++    "stageOrTemplate": {
++      "type": "object",
++      "oneOf": [
++        {
++          "required": ["stage", "jobs"],
++          "properties": {
++            "stage": { "type": "string" },
++            "displayName": { "type": "string" },
++            "dependsOn": { "type": ["string", "array"] },
++            "jobs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/job" } }
++          },
++          "additionalProperties": false
++        },
++        {
++          "required": ["template"],
++          "properties": {
++            "template": { "type": "string" },
++            "parameters": { "type": "object" }
++          },
++          "additionalProperties": false
++        }
++      ]
++    },
++    "pool": {
++      "type": "object",
++      "oneOf": [
++        { "required": ["vmImage"], "properties": { "vmImage": { "type": "string" } }, "additionalProperties": false },
++        { "required": ["name"], "properties": { "name": { "type": "string" } }, "additionalProperties": false }
++      ]
++    },
++    "job": {
++      "type": "object",
++      "oneOf": [
++        {
++          "required": ["job", "steps"],
++          "properties": {
++            "job": { "type": "string" },
++            "displayName": { "type": "string" },
++            "dependsOn": { "type": ["string", "array"] },
++            "pool": { "$ref": "#/$defs/pool" },
++            "variables": { "type": "array", "items": { "$ref": "#/$defs/variable" } },
++            "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } }
++          },
++          "additionalProperties": false
++        },
++        {
++          "required": ["deployment", "environment", "strategy"],
++          "properties": {
++            "deployment": { "type": "string" },
++            "displayName": { "type": "string" },
++            "dependsOn": { "type": ["string", "array"] },
++            "pool": { "$ref": "#/$defs/pool" },
++            "environment": { "type": "string" },
++            "variables": { "type": "array", "items": { "$ref": "#/$defs/variable" } },
++            "strategy": {
++              "type": "object",
++              "required": ["runOnce"],
++              "properties": {
++                "runOnce": {
++                  "type": "object",
++                  "required": ["deploy"],
++                  "properties": {
++                    "deploy": {
++                      "type": "object",
++                      "required": ["steps"],
++                      "properties": { "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } } },
++                      "additionalProperties": false
++                    }
++                  },
++                  "additionalProperties": false
++                }
++              },
++              "additionalProperties": false
++            }
++          },
++          "additionalProperties": false
++        }
++      ]
++    },
++    "step": {
++      "type": "object",
++      "oneOf": [
++        {
++          "required": ["script"],
++          "properties": { "script": { "type": "string" }, "displayName": { "type": "string" }, "name": { "type": "string" } },
++          "additionalProperties": false
++        },
++        {
++          "required": ["publish", "artifact"],
++          "properties": { "publish": { "type": "string" }, "artifact": { "type": "string" }, "displayName": { "type": "string" } },
++          "additionalProperties": false
++        },
++        {
++          "required": ["download", "artifact"],
++          "properties": { "download": { "enum": ["current"] }, "artifact": { "type": "string" }, "displayName": { "type": "string" } },
++          "additionalProperties": false
++        },
++        {
++          "required": ["task"],
++          "properties": {
++            "task": { "type": "string", "pattern": "^[A-Za-z]+@[0-9]+$" },
++            "displayName": { "type": "string" },
++            "name": { "type": "string" },
++            "inputs": { "type": "object" }
++          },
++          "additionalProperties": false
++        }
++      ]
++    }
++  }
++}
+diff --git a/infrastructure/pipelines/stage-template.yml b/infrastructure/pipelines/stage-template.yml
+new file mode 100644
+index 0000000..6b13437
+--- /dev/null
++++ b/infrastructure/pipelines/stage-template.yml
+@@ -0,0 +1,158 @@
++parameters:
++  - name: environmentName
++    type: string
++  - name: azureServiceConnection
++    type: string
++  - name: sqlServiceConnection
++    type: string
++  - name: dependsOn
++    type: string
++  - name: location
++    type: string
++    default: uksouth
++
++stages:
++  # Azure DevOps evaluates an environment's checks when a stage starts. The what-if therefore has its own stage, with
++  # no environment, so it runs and prints before the approval on Deploy_<env> is asked for.
++  # The approval check must live on the policies-<env> environment only. Never put one on the ARM service connection
++  # or the policies-<env> variable group that this stage uses, or this stage would pause first.
++  # Accepted residual risk: this unapproved stage uses the same subscription-scope ARM connection as the deployment
++  # (a separate what-if connection was considered and rejected). The policies-<env> variable group must stay
++  # secret-free, because it is also read before approval.
++  - stage: WhatIf_${{ parameters.environmentName }}
++    displayName: What-if ${{ parameters.environmentName }}
++    dependsOn: ${{ parameters.dependsOn }}
++    jobs:
++      - job: WhatIf
++        displayName: What-if ${{ parameters.environmentName }}
++        pool:
++          vmImage: ubuntu-latest
++        variables:
++          - group: policies-${{ parameters.environmentName }}
++        steps:
++          - download: current
++            artifact: drop
++          - task: AzureCLI@2
++            displayName: What-if
++            inputs:
++              azureSubscription: ${{ parameters.azureServiceConnection }}
++              scriptType: bash
++              scriptLocation: inlineScript
++              inlineScript: |
++                az deployment sub what-if \
++                  --name policies-${{ parameters.environmentName }}-$(Build.BuildId) \
++                  --location ${{ parameters.location }} \
++                  --template-file $(Pipeline.Workspace)/drop/infrastructure/main.bicep \
++                  --parameters $(Pipeline.Workspace)/drop/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
++                  --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)
++
++  - stage: Deploy_${{ parameters.environmentName }}
++    displayName: Deploy ${{ parameters.environmentName }}
++    dependsOn: WhatIf_${{ parameters.environmentName }}
++    jobs:
++      - deployment: Deploy
++        displayName: Deploy to ${{ parameters.environmentName }}
++        # SQL has no public endpoint, so the whole job runs on a self-hosted pool whose agents sit in a network
++        # that reaches the private endpoint and resolves privatelink.database.windows.net (peered to, or the
++        # same as, the VNet that infrastructure/modules/network.bicep creates), with the agents' address range inside
++        # agentAddressPrefix: the NSG allows 1433 to the SQL subnet only from that range. One pool per environment.
++        # The agent needs az, jq, go-sqlcmd (`sqlcmd`) and curl.
++        pool:
++          name: policies-${{ parameters.environmentName }}-vnet
++        # The only environment in this template, and the only place an approval check may live; only policies-prod has one.
++        environment: policies-${{ parameters.environmentName }}
++        variables:
++          # Per-environment values live in a variable group, not in the repo:
++          #   sqlAdminGroupObjectId  object id of the Entra group that is the server's Entra-only admin
++          - group: policies-${{ parameters.environmentName }}
++          - name: drop
++            value: $(Pipeline.Workspace)/drop
++        strategy:
++          runOnce:
++            deploy:
++              steps:
++                # The ARM service connection (${{ parameters.azureServiceConnection }}) deploys resources only.
++                - task: AzureCLI@2
++                  name: infra
++                  displayName: Deploy infrastructure
++                  inputs:
++                    azureSubscription: ${{ parameters.azureServiceConnection }}
++                    scriptType: bash
++                    scriptLocation: inlineScript
++                    inlineScript: |
++                      outputs=$(az deployment sub create \
++                        --name policies-${{ parameters.environmentName }}-$(Build.BuildId) \
++                        --location ${{ parameters.location }} \
++                        --template-file $(drop)/infrastructure/main.bicep \
++                        --parameters $(drop)/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
++                        --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId) \
++                        --query properties.outputs --output json)
++                      echo "##vso[task.setvariable variable=resourceGroupName]$(echo "$outputs" | jq -r .resourceGroupName.value)"
++                      echo "##vso[task.setvariable variable=appName]$(echo "$outputs" | jq -r .appName.value)"
++                      echo "##vso[task.setvariable variable=appHostName]$(echo "$outputs" | jq -r .appHostName.value)"
++                      echo "##vso[task.setvariable variable=sqlServerFqdn]$(echo "$outputs" | jq -r .sqlServerFqdn.value)"
++                      echo "##vso[task.setvariable variable=sqlDatabaseName]$(echo "$outputs" | jq -r .sqlDatabaseName.value)"
++                      echo "##vso[task.setvariable variable=identityClientId]$(echo "$outputs" | jq -r .identityClientId.value)"
++
++                # The two SQL steps use a separate SQL service connection (the sqlServiceConnection parameter), not
++                # the ARM one. Its principal is a database-scoped user with db_owner on the policies database, and it
++                # is not a member of the server admin group, so its token cannot administer the server.
++                # Accepted residual risk: the ARM connection holds subscription-scope rights, so a leaked ARM token
++                # could still rewrite the SQL server's Entra admin through ARM. A subscription-scope deployment needs
++                # those rights. The server admin group is used by people, not by the pipeline.
++                # On an environment's first run the migrations step fails until an admin has run the one-off
++                # bootstrap below.
++                # One-off bootstrap, run by a member of that admin group once per environment after the first
++                # infrastructure deployment, connected to the policies database (not master):
++                #   CREATE USER [<SQL service connection principal name>] FROM EXTERNAL PROVIDER;
++                #   ALTER ROLE db_owner ADD MEMBER [<SQL service connection principal name>];
++                # An admin can use FROM EXTERNAL PROVIDER because the admin's own sign-in resolves the name.
++                # The pipeline never does: the app's user is created from a SID below, which needs no directory lookup.
++                # The agents' network must be peered to (or inside) the VNet, and their address range inside agentAddressPrefix (the 1433 allow rule in network.bicep).
++
++                # Idempotent: the script from `dotnet ef migrations script --idempotent` skips applied migrations.
++                - task: AzureCLI@2
++                  displayName: Apply migrations
++                  inputs:
++                    azureSubscription: ${{ parameters.sqlServiceConnection }}
++                    scriptType: bash
++                    scriptLocation: inlineScript
++                    inlineScript: |
++                      sqlcmd -S "$(sqlServerFqdn)" -d "$(sqlDatabaseName)" \
++                        --authentication-method ActiveDirectoryAzCli \
++                        -b -i $(drop)/migrations.sql
++
++                # The app signs in with a user-assigned identity. Its database user is created from a SID built
++                # from the identity's client id (a GUID, byte-swapped to SQL Server's uniqueidentifier order),
++                # so Azure SQL needs no Microsoft Graph lookup and no Directory Readers role.
++                - task: AzureCLI@2
++                  displayName: Grant the app's managed identity database access
++                  inputs:
++                    azureSubscription: ${{ parameters.sqlServiceConnection }}
++                    scriptType: bash
++                    scriptLocation: inlineScript
++                    inlineScript: |
++                      g=$(echo "$(identityClientId)" | tr -d '-' | tr 'a-f' 'A-F')
++                      sid="0x${g:6:2}${g:4:2}${g:2:2}${g:0:2}${g:10:2}${g:8:2}${g:14:2}${g:12:2}${g:16:16}"
++                      sqlcmd -S "$(sqlServerFqdn)" -d "$(sqlDatabaseName)" \
++                        --authentication-method ActiveDirectoryAzCli -b \
++                        -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '$(appName)') CREATE USER [$(appName)] WITH SID = $sid, TYPE = E; ALTER ROLE db_datareader ADD MEMBER [$(appName)]; ALTER ROLE db_datawriter ADD MEMBER [$(appName)];"
++
++                - task: AzureCLI@2
++                  displayName: Deploy app
++                  inputs:
++                    azureSubscription: ${{ parameters.azureServiceConnection }}
++                    scriptType: bash
++                    scriptLocation: inlineScript
++                    inlineScript: |
++                      az webapp deploy \
++                        --resource-group "$(resourceGroupName)" \
++                        --name "$(appName)" \
++                        --src-path $(drop)/app.zip \
++                        --type zip
++
++                - script: |
++                    curl --fail --silent --show-error \
++                      --retry 10 --retry-delay 15 --retry-all-errors \
++                      https://$(appHostName)/health/ready
++                  displayName: Smoke test /health/ready

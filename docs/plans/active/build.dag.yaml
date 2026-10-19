@@ -312,11 +312,11 @@ nodes:
     rules: []
     cuttable: true
     budget: 3h
-    status: pending
-    attempt: 0
-    branch: null
-    worktree: null
-    pr: null
+    status: done
+    attempt: 3
+    branch: feature/build/F5
+    worktree: .claude/worktrees/build-F5
+    pr: 34
     qa: docs/qa/build-F5.md
     trace: docs/trace/build/F5/
     acceptance:
@@ -325,14 +325,14 @@ nodes:
       - "APPLICATIONINSIGHTS_CONNECTION_STRING supplied as an app setting; managed identity to Entra-only SQL; no secrets"
       - "az never run; nothing deployed"
     tasks:
-      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "Bicep modules, three param files and the pipeline YAML; bicep build and build-params for dev, test and prod; pipeline schema check", status: pending}
-      - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "bicep build and build-params exit 0 for all three environments; pipeline schema check; build and tests still green", status: pending}
-      - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
-      - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F5.md", status: pending}
-      - {id: t5, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
-      - {id: t6, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md and README; chore(trace) commit; completeness check passes", status: pending}
-      - {id: t7, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
-      - {id: t8, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: sign-off from walkthrough.md and the QA script", status: pending}
+      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "Bicep modules, three param files and the pipeline YAML; bicep build and build-params for dev, test and prod; pipeline schema check", status: done}
+      - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "bicep build and build-params exit 0 for all three environments; pipeline schema check; build and tests still green", status: done}
+      - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: done}
+      - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F5.md", status: done}
+      - {id: t5, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: done}
+      - {id: t6, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md and README; chore(trace) commit; completeness check passes", status: done}
+      - {id: t7, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: done}
+      - {id: t8, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: sign-off from walkthrough.md and the QA script", status: done}
       - {id: t9, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
   - id: F6
     title: README
@@ -352,7 +352,7 @@ nodes:
     acceptance:
       - "Every item in docs/readme-checklist.md is ticked and links to the README section that satisfies it; F5's items say 'cut' if F5 was cut"
     tasks:
-      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "README.md covering every docs/readme-checklist.md item, each ticked with a link to its section; states that the rate limits are per instance and that validation error keys are camelCase (an unknown query key ?REFERENCE is reported as reference); known limits: no cap on claims per policy (David), and no application log line for successful or 4xx outcomes", status: pending}
+      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "README.md covering every docs/readme-checklist.md item, each ticked with a link to its section; states that the rate limits are per instance and that validation error keys are camelCase (an unknown query key ?REFERENCE is reported as reference); known limits: no cap on claims per policy (David), and no application log line for successful or 4xx outcomes; F4 behaviours for David's review: E6 detail texts differ from the contract examples (RENEW-1/2, RENEW-6, COULD-3), a multi-violation 422 has no top-level rule extensions, a null paymentMethod counts as none, enum names are case-insensitive; design note: Policy.Renew relies on every auto-renewing term being paid (F4 security)", status: pending}
       - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "Every checklist item ticked and linked; links resolve; build and tests still green", status: pending}
       - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
       - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F6.md", status: pending}

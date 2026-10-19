@@ -1,0 +1,54 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:18:23Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "a32fe38ed50454aec",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 2,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "c4032dfa3603398fde7ec2773807cd8e270c1172",
+    "diff_fingerprint": "97a849f72c083ccf58033718eff31cc2be5b4b49",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.finding-red",
+      "gate.green",
+      "gate.bicep",
+      "gate.pipeline-schema",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.vulnerable"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "Previous finding S1 (A2: no NSGs) is RESOLVED at c4032df. network.bicep declares two NSGs and attaches both to their subnets. The private-endpoint subnet sets privateEndpointNetworkPolicies 'Enabled', so the NSG applies to the endpoint's traffic. The rule is allow-sql-from-app-and-agents at priority 100: Tcp, source [appIntegrationPrefix, agentAddressPrefix], destination the endpoint subnet, port 1433 only. It is followed by deny-all-inbound at 4000, which overrides the default AllowVnetInBound at 65000. The app-integration subnet has deny-all-inbound only, which is correct because App Service VNet integration is outbound-only and no inbound path is needed.",
+      "NSG rules judged for what they introduce: no new weakness found. (1) The deny sits at 4000, well below the allow, so rule order is correct. (2) Only 1433 is allowed. A private endpoint to Azure SQL uses the Proxy connection mode on 1433, so no 11000-11999 range is needed, and none is opened. (3) The source prefixes are specific CIDRs, not '*' or a service tag. (4) Outbound is left at the defaults. The app's outbound goes to SQL and App Insights, and an outbound allow-list on the integration subnet would be extra hardening, not a defect. (5) Peered agent traffic keeps its source IP, so agentAddressPrefix matches it. (6) The committed placeholder 10.30.0.0/24 does not overlap 10.20.0.0/16 and fails closed: an unset value blocks the agents, it does not open SQL. The param-file comments say to set it before the first deployment.",
+      "Hygiene observation, not a finding: agentAddressPrefix is a bare string with no validation. An operator who set it to '0.0.0.0/0' or '10.0.0.0/8' would widen the 1433 allow rule. SQL stays Entra-only with public access disabled, and the value comes from a reviewed param file, so the risk is low. A @minLength or a documented expectation of a narrow /24-ish range would be a reasonable README line. It is not worth a code change.",
+      "R2 change (SQL service connection as a compile-time template parameter): sc-policies-<env>-sql are connection names, not credentials. The two SQL steps still use ${{ parameters.sqlServiceConnection }} and not the ARM connection, so the least-privilege split from A2 is intact. The Deploy app and infrastructure steps use the ARM connection only. The pool is policies-<env>-vnet.",
+      "R4 comment rewording is accurate: it states that the ARM connection holds subscription-scope rights, so a leaked ARM token could rewrite the SQL Entra admin through ARM, that this is accepted residual risk, and that the first run fails until the one-off bootstrap has been run. It overstates nothing, and it tells the reader where the trust boundary sits.",
+      "Unchanged since A2 and re-checked: SQL publicNetworkAccess Disabled, no 0.0.0.0 rule, Entra-only authentication with no password, a private endpoint with a privatelink DNS zone, basic-auth publishing disabled for scm and ftp, dotnet-ef pinned to 10.0.13 (equals the EF Core Design version), tenant from tenant(). The -Q string interpolates only $(appName) and a hex SID, both derived from deployment outputs, so it is not attacker-controlled. No secrets, local paths or personal emails in infrastructure/. The param files hold all-zero placeholder GUIDs.",
+      "Out-of-scope items recorded as n/a. API1:2023: no auth or tenancy. API2:2023: auth is out of scope; the infrastructure identity design is sound as reviewed in A2. API5:2023: no roles. API7:2023: no outbound URL fetching, and the diff touches no src/. API10:2023: no upstream APIs.",
+      "API3, API4, API6, API8 (application side) and API9 are marked covered because the diff since A2 changes only infrastructure/** (network.bicep, main.bicep, the three param files, stage-template.yml, azure-pipelines.yml, check-pipeline.py). It touches no DTOs, request limits, refund flows, error handling or routes. gate.scope shows 0 paths outside the allowed set.",
+      "NET extras: no .cs in the diff, so raw SQL, decimal money and logging have nothing to inspect. gate.vulnerable at c4032df: 8 projects, none vulnerable. No new packages.",
+      "Still open from A1 and A2, outside the repo and unchanged by this diff: the README (F6) should state that the policies-<env>-vnet pools, the SQL service connections, the database-scoped bootstrap and the agent network peering are prerequisites outside the repo, and that the agent hosts are privileged. It should also say how httpsOnly and App Service's forwarded headers fit the API's RFC1918-only forwarded-header trust.",
+      "Evidence base: a static read of the packet diff and the gates. gate.bicep at c4032df exits 0 with zero warnings, so the NSG resources and the privateEndpointNetworkPolicies value compile. gate.pipeline-schema passes, and the S1 and R2 assertions went from red at 538b490 to green. I did not run az."
+    ]
+  }
+}

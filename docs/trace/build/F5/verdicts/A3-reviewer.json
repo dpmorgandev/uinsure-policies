@@ -1,0 +1,70 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:58:03Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 3,
+  "agent": "reviewer",
+  "agent_id": "a6161878512bded29",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 3,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "a14af3fa1e6572bd2c81e5a8af96cd7240a9c7e4",
+    "diff_fingerprint": "83670f1ffde43fb65d4f69acb74d8cd14994f05b",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.qa@925fe90",
+      "gate.finding-red@6fe2b8d",
+      "gate.green@c2af74d",
+      "gate.finding-red@5defb7f",
+      "gate.green@a14af3f",
+      "gate.bicep@a14af3f",
+      "gate.pipeline-schema@a14af3f",
+      "gate.build@a14af3f",
+      "gate.test@a14af3f",
+      "gate.scope@a14af3f",
+      "gate.stubs@a14af3f",
+      "gate.run@a14af3f",
+      "gate.vulnerable@a14af3f"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "F5 pipeline checker: AzureCLI@2 inputs",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/check-pipeline.py",
+        "line": 83,
+        "what": "The required-inputs check loops over the deployment job's AzureCLI@2 steps only (az, line 81), so the what-if stage's AzureCLI@2 step is never checked for scriptType, scriptLocation or inlineScript.",
+        "why": "The docstring (line 8) promises an 'AzureCLI@2 inputs' check. Before c2af74d the what-if step sat in the deployment job and was covered. Since it moved out, only A2/R2 (line 205, azureSubscription only) reaches it. The gap dates from c2af74d (scratch copy infra-mut5 line 65 has the same deploy-only scope), so 5defb7f did not weaken anything, but the coverage loss is still there. Non-blocking. Routed to the builder because the tester cannot write infrastructure/**.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "code-quality: redundant assertions (inv-002 rec 2)",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/check-pipeline.py",
+        "line": 109,
+        "what": "Line 109 asserts the what-if stage's YAML position, which Azure DevOps ignores when dependsOn is explicit. Lines 102 and 105 follow from lines 98+100 and 78+101.",
+        "why": "Accepted inv-002 recommendation 2 says to drop the redundant ordering check. The old c2af74d lines 85-86 are gone, but line 109 adds a new ordering check that proves nothing at runtime: the order comes from line 106 (stage dependsOn) and line 108 (no condition). Line 102 is implied once line 98 (exactly one what-if stage) and line 100 (no environment in it) pass. Line 105 is implied by line 101 (no deployment job in the what-if stage) and line 78 (one in the deploying stage). None of them is wrong or weaker, and they give named messages on the M1 mutant, but each extra assertion is something David has to explain. Non-blocking.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "F5 is an evidence node with no rule IDs, so rules_covered and rules_missing are both empty, as in A2.4. The verdict is PASS: no P0 or P1 findings.",
+      "A2.4 R1: RESOLVED. stage-template.yml now emits WhatIf_<env> (lines 22-47) and Deploy_<env> (lines 49-158). WhatIf_<env> has one regular job on a hosted pool, with no environment and no deployment job, and depends on the parameters.dependsOn stage. Deploy_<env> lists only WhatIf_<env> in dependsOn (line 51), has no condition, and is the only stage that uses environment policies-<env> (line 63). Prod now runs Deploy_test, then WhatIf_prod with no approval, then Deploy_prod, where the policies-prod approval is asked when the stage starts. The false comment is fixed: lines 15-21 state the stage-level check model, warn against approval checks on the ARM connection or the variable group, and record the accepted shared-connection risk and the secret-free variable group, matching inv-002's rejected rec 3. azure-pipelines.yml changed only in its header comments (lines 3-4), so its dependsOn values (Build, Deploy_dev, Deploy_test) now feed the what-if stages as intended. Certainty: this relies on the documented rule that checks are evaluated per stage. I can't confirm it against a live Azure DevOps.",
+      "A2.4 R2: RESOLVED. The checker now asserts stage structure: exactly one what-if stage (line 98); no environment (line 100) and no deployment job (line 101) in it; the deploying stage lists it in dependsOn (line 106) and has no condition (line 108). Stages and jobs are found by key, never by position: lines 72-79, and sql_jobs (line 177) and all_steps (line 205) now span every stage. The three remaining [0] subscripts (lines 76, 79, 99) each follow a filter and have an empty-dict fallback. The stage schema no longer allows condition: c2af74d had it at schema line 43, and HEAD's lines 39-45 do not. Jobs and steps still have additionalProperties false. gate.pipeline-schema@a14af3f records mutant M1 (the c2af74d single-stage template) failing all 6 stage checks, and M2 (condition: always() on Deploy_<env>) failing in both the schema and the checker.",
+      "Weakening check for 5defb7f and a14af3f: NONE FOUND. Comparing the c2af74d checker (orchestrator scratch copy infra-mut5, lines 74-86) with HEAD, each removed job-level assertion has a replacement at least as strong. Old line 77 (one regular what-if job) is now lines 98 and 101. Old line 78 (no environment on the what-if job) is now line 100, at stage level. Old line 79 (no what-if in the deployment job) is now line 102. Old line 80 (the deployment job is the only job with an environment) is now lines 74-78, plus the schema, which allows environment only on deployment jobs. Old line 84 (job dependsOn) is now line 106 (stage dependsOn). The redundant old lines 85-86 were dropped. One immaterial narrowing: old line 79 matched the substring 'what-if', and line 102 matches 'az deployment sub what-if'. Every earlier assertion is still present: I1-I8, A2/R2, A2/R3, A2/S1 and A2.2/R1, and I5, I8 and A2/R2 now cover all stages. In the activity log, 5defb7f staged only check-pipeline.py (line 535). The green builder made no edits to the checker; its edits at lines 541-545 touch only stage-template.yml, pipeline.schema.json and azure-pipelines.yml, and those were all it staged (line 552).",
+      "TDD order: red 5defb7f precedes green a14af3f. gate.finding-red@5defb7f shows exit 1 with 6 stage-level failures on the c2af74d layout, and gate.green@a14af3f shows them passing. Both commits carry the Agent, Plan, Node, Rule and TDD trailers. a14af3f also carries Fixes-Finding: A2.4/I1 and A2.4/I2.",
+      "Rest of the node at a14af3f: gate.bicep shows main.bicep and dev, test and prod build with exit 0 and zero warnings. gate.build shows 0 warnings. gate.test shows 637/637, including RuleCoverageTests. gate.stubs finds no NotImplementedException in src/. gate.scope shows 18 paths, none outside the allowed set. src/ and tests/ are untouched, and the diff adds no banned time or rounding API. The Bicep modules are unchanged since A2.3 PASS.",
+      "Fails closed, not a finding: if no deployment job is found, line 113 (steps[-1]) raises IndexError instead of a named message. The exit code is still non-zero.",
+      "A2.4 R3 (QA script line references) is not re-raised. docs/qa/build-F5.md still cites the pre-split lines and commit at this head, and the QA re-run that follows this review closes it, per the brief and the accepted inv-002 rec 4.",
+      "Carried from A2.3, not re-raised: P2 R1 (the S1 NSG check doesn't prove 'only'), per David's ruling."
+    ]
+  }
+}

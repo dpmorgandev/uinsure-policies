@@ -1,0 +1,76 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:42:25Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "a1bf9b3f8af87c7b3",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 2,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "c2af74d3ca52985af3b10f62e470bda3ba8febb5",
+    "diff_fingerprint": "a99b990d335c1e67141c3999b8ff95ed6c7bc5e0",
+    "verdict": "FAIL",
+    "gate_refs": [
+      "gate.qa@925fe90",
+      "gate.finding-red@6fe2b8d",
+      "gate.green@c2af74d",
+      "gate.bicep@c2af74d",
+      "gate.pipeline-schema@c2af74d",
+      "gate.build@c2af74d",
+      "gate.test@c2af74d",
+      "gate.scope@c2af74d",
+      "gate.stubs@c2af74d",
+      "gate.run@c2af74d",
+      "gate.vulnerable@c2af74d"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "F5 AC2 (QA O1: approve prod after reading its what-if)",
+        "severity": "P1",
+        "file": "infrastructure/pipelines/stage-template.yml",
+        "line": 22,
+        "what": "WhatIf is a separate job but in the same stage (Deploy_<env>) as the policies-<env> deployment job, so the prod approval is still asked before the what-if runs. QA defect not resolved.",
+        "why": "Azure DevOps evaluates checks on protected resources per stage. The Approvals and checks docs say that before a stage can begin, all checks on all resources used in that stage must pass. The tester's own O1 (docs/qa/build-F5.md, observation O1) says the same and names the fix: a what-if-only stage before the prod deployment stage. c2af74d moved the what-if into its own job (lines 22-43) inside the stage that consumes environment policies-${{ parameters.environmentName }} (line 56). Deploy_prod therefore pauses for the policies-prod approval before WhatIf starts, which is the defect David ruled fix-now in gate.qa@925fe90. The comment at lines 19-21 ('it runs before any approval is asked for') is false under that model. Certainty: this rests on the documented stage-level check evaluation. I can't verify it against a live Azure DevOps, and nothing in the repo or receipts shows job-level evaluation. The job-level ordering itself is sound: Deploy dependsOn WhatIf; the what-if step downloads the drop and uses the variable group and the ARM connection as a compile-time parameter. It just doesn't come before the approval.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "anti-oracle: QA what-if checker assertions",
+        "severity": "P1",
+        "file": "infrastructure/pipelines/check-pipeline.py",
+        "line": 76,
+        "what": "The red checker encodes job-level separation in one stage, so it passes on the R1 layout and can't detect the QA defect. Lines 85-86 repeat earlier checks.",
+        "why": "Lines 74-84 require one regular job running the what-if, no environment on it, no what-if in the deployment job, and dependsOn from the deployment job. They inspect only template['stages'][0]['jobs'] (line 62). Nothing asserts that the what-if runs in a stage that consumes no environment and that the deploying stage depends on it, which is the property the approval timing needs (see R1). The comment at lines 74-75 ('so the approval on policies-prod is given after the what-if exists') claims more than the checks prove. gate.finding-red@6fe2b8d shows the 4 red lines failing for the job-level reasons only. Lines 85-86: the first conjunct is implied by the line-76 filter, and the other two repeat line 72 and line 84. So the 'what-if must come before deployment sub create' assertion adds nothing, though it's not weaker. Routed to builder because the tester can't write infrastructure/** (gate.finding-red@f2065e7).",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "QA script currency",
+        "severity": "P2",
+        "file": "docs/qa/build-F5.md",
+        "line": 206,
+        "what": "Since c2af74d, the QA script's line references and observation O1 describe a layout that no longer exists, and its commit under test is still b92de26.",
+        "why": "Step 17 cites stage-template.yml 41-53/55-75 as 'Step 1 What-if, Step 2 Deploy infrastructure' in one job. The what-if is now a separate job at lines 22-43, and create is at 76-82. Step 10 expects `az` at lines 48/63/128, but HEAD has 38/76/141. Step 18 cites the deployment job at line 19 and the environment at 29, but HEAD has 45 and 56. O1 still says create follows the what-if 'in the same job'. A re-run against HEAD would point David at the wrong lines. The fix for R1 will move them again, so the re-run should follow it.",
+        "route_to": "tester"
+      }
+    ],
+    "notes": [
+      "F5 is an evidence node with no rule IDs, so rules_covered and rules_missing are both empty. The verdict is FAIL on R1 and R2 (both P1).",
+      "QA defect status: NOT RESOLVED (R1). The what-if now runs before the Deploy job, but it's still inside the stage that the policies-prod environment approval gates. Under stage-level check evaluation, the approver still approves before any prod what-if output exists.",
+      "Checker weakening (6fe2b8d, c2af74d): NONE FOUND, with one caveat. The fix commit edited only stage-template.yml and pipeline.schema.json, per activity 440-444 and `git add` at activity 451. The checker changed only in the red commit, a single builder Edit at activity 432. gate.finding-red@6fe2b8d records the removed lines as the jobs[0] lookup and the in-job what-if<create index check. At HEAD, the deployment job is found by key (line 63, which fails closed via StopIteration if missing). The ordering is re-expressed as what-if outside the deployment job plus dependsOn (lines 76-84). For job-level order that is at least as strong. All the earlier assertions are present unchanged at HEAD: I1-I8, A2/R2, A2/R3, S1 and A2.2/R1. Caveat: I can't run git show, so the old text rests on the gate receipt plus HEAD.",
+      "Schema change in c2af74d: the regular-job branch of pipeline.schema.json gains dependsOn, pool and variables, and a `download: current` step is added. Job and step objects still have additionalProperties false with no `condition` or `continueOnError`. That rejects a Deploy with condition: always(), or a what-if step with continueOnError, either of which would bypass the dependsOn. This is a good closure.",
+      "TDD order: 6fe2b8d (red, checker only) precedes c2af74d (green, template and schema). gate.finding-red@6fe2b8d shows exit 1 on 4 lines, and gate.green@c2af74d shows them passing, plus a mutant without dependsOn that fails. Both commits carry the Agent, Plan, Node, Rule and TDD trailers. c2af74d has no Fixes-Finding trailer. This is the already-carried G9 harness item, so I'm not raising it again.",
+      "Whole node at HEAD otherwise unchanged from the A2.3 PASS. gate.bicep@c2af74d shows main.bicep and build-params dev, test and prod exit 0 with zero warnings. gate.build@c2af74d shows 0 warnings. gate.test@c2af74d shows 637/637 including RuleCoverageTests. gate.stubs@c2af74d finds no NotImplementedException. gate.scope@c2af74d shows 17 paths with 0 outside the allowed set. src/ and tests/ are untouched, and no banned time or rounding API is in the diff.",
+      "Carried from A2.3, not re-raised: P2 R1 (the S1 NSG checker doesn't prove 'only'), per David's ruling. The QA script's O2 records it."
+    ]
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T06:55:32Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 1,
+  "agent": "security",
+  "agent_id": "ab9944cadf22c98eb",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 1,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "2888bdbb21b9bb6cb9e376e878d4278776a136cc",
+    "diff_fingerprint": "e28047f95e547a30f91150af7b242990fc009839",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.write",
+      "gate.bicep",
+      "gate.pipeline-schema",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.vulnerable"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API8:2023",
+        "severity": "P2",
+        "file": "infrastructure/modules/sql.bicep",
+        "line": 17,
+        "what": "SQL server has publicNetworkAccess Enabled plus the AllowAzureServices 0.0.0.0 rule, so any Azure-hosted caller can reach port 1433.",
+        "why": "Network exposure hardening. Entra-only auth and TLS 1.2 limit the risk, so it is not exploitable on its own. A private endpoint or the app's outbound IPs would shrink the surface. The 'evidence only, never deployed' scope makes this non-blocking.",
+        "route_to": "builder"
+      },
+      {
+        "id": "S2",
+        "rule_id": "API8:2023",
+        "severity": "P2",
+        "file": "infrastructure/modules/appservice.bicep",
+        "line": 18,
+        "what": "Basic-auth publishing credentials for SCM/Kudu (and FTP) are not disabled; only ftpsState is Disabled.",
+        "why": "Least privilege and misconfiguration. The pipeline deploys with az webapp deploy through the service connection and doesn't need basic auth. Add basicPublishingCredentialsPolicies for scm and ftp with allow=false.",
+        "route_to": "builder"
+      },
+      {
+        "id": "S3",
+        "rule_id": "API8:2023",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/stage-template.yml",
+        "line": 68,
+        "what": "The deployment service principal is a member of the SQL admin group and runs migrations and user grants as admin, in every environment including prod.",
+        "why": "Least privilege. The app's own identity is correctly limited to db_datareader and db_datawriter, so it holds no DDL rights. The pipeline identity is a standing SQL admin, and the design should record that as an accepted trade-off.",
+        "route_to": "builder"
+      },
+      {
+        "id": "S4",
+        "rule_id": "NET",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/azure-pipelines.yml",
+        "line": 38,
+        "what": "dotnet-ef is installed as a global tool with no version pin, and the agent image is ubuntu-latest, so a floating tool version runs in the build that produces the prod migration script.",
+        "why": "Pipeline supply-chain hygiene. Pin the tool version (--version, or a tool manifest) so the packages are reproducible and approved.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "n/a API1:2023: out of scope, no auth or tenancy. This diff adds no API surface.",
+      "n/a API2:2023: out of scope, auth is not in scope for the API. Infrastructure identity (managed identity, Entra-only SQL) was reviewed separately and passes.",
+      "n/a API5:2023: out of scope, no roles.",
+      "n/a API7:2023: out of scope, no outbound URL fetching. The diff touches no src/ files, so there is no HttpClient to confirm.",
+      "n/a API10:2023: out of scope, no upstream APIs.",
+      "API3, API4, API6 and API9 are marked covered because the diff is infrastructure/** only. It changes no DTOs, rate limits, refund flows or routes, so these checks are vacuously met.",
+      "Secrets: none found. The SQL admin is Entra-only (azureADOnlyAuthentication true, no administratorLogin or password). The app connection string uses 'Authentication=Active Directory Managed Identity' with no credentials. The App Insights connection string is an ingestion endpoint, not a credential. The three param files hold all-zero placeholder GUIDs and the real values come from a variable group. A grep of infrastructure/ for Password=, AccountKey, SharedAccessKey, sig=, tokens, local paths and emails found nothing.",
+      "Identity, TLS and exposure items that are met: system-assigned identity on the app; SQL minimalTlsVersion 1.2; app httpsOnly true, minTlsVersion 1.2, ftpsState Disabled; ASPNETCORE_ENVIRONMENT=Production, which keeps OpenAPI and Scalar off; health check path set.",
+      "Pipeline: pr is none, so PR builds can't reach service connections. Prod approval lives on the 'policies-prod' Azure DevOps environment, outside the repo, and the checker only verifies the environment name. The what-if runs before create. The only variable group is policies-<env>, and the pipeline sets no secret values. No third-party tasks beyond Microsoft UseDotNet@2 and AzureCLI@2.",
+      "Dynamic input: the inline sqlcmd -Q interpolates $(appName), a Bicep deployment output derived from the fixed name 'app-policies-<env>'. It is not attacker-controlled and the user is created idempotently.",
+      "API8 deployment nuance, not a diff defect: httpsOnly on App Service redirects HTTP at the platform front end, so the app's 400 /problems/https-required path is never reached. App Service Linux may also set ASPNETCORE_FORWARDEDHEADERS_ENABLED on its own, which the API4 rate-limit design says never to rely on. Check the README or deployment notes for that interaction. Neither point is introduced by this diff.",
+      "Not present, as hardening candidates only: SQL auditing and Defender for SQL, Log Analytics and SQL diagnostic settings, and a private network path.",
+      "Not security, but flagged for the reviewer: az deployment --parameters accepts a .bicepparam file combined with inline key=value overrides only on newer az CLI versions. The gates never ran az, so this is untested.",
+      "NET extras: no .cs in the diff, so raw SQL, decimal money, logging and package checks have nothing to inspect. gate.vulnerable reports 8 projects with no vulnerable packages. The Python checker needs PyYAML and jsonschema, which it doesn't pin or declare anywhere in the repo. That is dev tooling only, not shipped."
+    ]
+  }
+}

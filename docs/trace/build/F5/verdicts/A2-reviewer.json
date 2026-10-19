@@ -1,0 +1,93 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:11:25Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "ab7ad7d8d0161ebe1",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 2,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "4012f0e53d8079d47a6fcd91b15e629d50c56844",
+    "diff_fingerprint": "d124d5d1c3ee984ceea3fdfe2214478a13d25244",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.finding-red@f2065e7",
+      "gate.green@4012f0e",
+      "gate.bicep@4012f0e",
+      "gate.pipeline-schema@4012f0e",
+      "gate.build@4012f0e",
+      "gate.test@4012f0e",
+      "gate.scope@4012f0e",
+      "gate.stubs@4012f0e",
+      "gate.run@4012f0e",
+      "gate.vulnerable@4012f0e"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "requirements-trace: fix commits carry Fixes-Finding",
+        "severity": "P2",
+        "file": "docs/trace/build/F5/packet/trailers.txt",
+        "line": 52,
+        "what": "fix commits 2c0b4e7 and 4012f0e carry no Fixes-Finding trailer, so no trailer links the A1 fixes to I1-I8",
+        "why": "The requirements-trace skill says every fix(...) commit carries Fixes-Finding. The commit-msg hook accepts the round form A1/I1 (lines 27-29), so G9 did not block this. 2c0b4e7 should name A1/I1 to A1/I8. 4012f0e fixes a gate observation, not a finding, so its fix( prefix has no finding to cite. Because the trailer is missing, the trail links a fix to its finding only through the commit body text.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "F5-acceptance: AzureCLI@2 deploy; managed identity to Entra-only SQL",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/stage-template.yml",
+        "line": 91,
+        "what": "The SQL steps set azureSubscription: $(sqlServiceConnection) from a job-level variable group; service connections must resolve when the pipeline compiles, so this may fail resource authorization",
+        "why": "Azure DevOps authorizes service connections before the run, and a macro variable that resolves at runtime is a known cause of 'service connection could not be found'. I can't confirm from here whether a job-level variable group resolves in time, and it was never run (az and DevOps were never used). The ARM connection already uses a compile-time template parameter (azureServiceConnection). A second template parameter would remove the risk, and the checker's I8 assertion would still pass. Please have the investigator verify this before David has to defend it.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "anti-oracle: I5 checker assertion",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/check-pipeline.py",
+        "line": 138,
+        "what": "The I5 pool check only requires that 'vmImage' is absent, so a deployment job with its pool deleted (the default Microsoft-hosted pool) still passes",
+        "why": "The assertion is meant to prove that the SQL steps run inside the network. All it rejects is an explicit vmImage key. Asserting that pool.name is present (for example, the policies-<env>-vnet pattern) would stop a mutant without a pool from passing. The infrastructure at HEAD is correct (pool.name is set). The gap is the oracle's strength.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R4",
+        "rule_id": "F5-acceptance: no secrets / least privilege (I8 trade-off text)",
+        "severity": "P2",
+        "file": "infrastructure/pipelines/stage-template.yml",
+        "line": 77,
+        "what": "The comment says 'a leaked pipeline token cannot administer the server', but the ARM service connection in the same job can rewrite the server's Entra admin through ARM",
+        "why": "A subscription-scope deployment needs Contributor-level rights, and with them it can write Microsoft.Sql/servers administrators. The split does keep the SQL connection to database scope, which is a real gain. But the sentence as written claims more than that, and an Azure reviewer will challenge it. Scope the claim to the SQL service connection's token, or name the ARM path as an accepted residual risk. Code-quality rule: comments must be explainable and true.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "F5 has no rule ids, so rules_covered and rules_missing are both empty. The verdict is PASS: R1-R4 are P2 only.",
+      "A1 R1 / I1 (P1): RESOLVED. The app has a user-assigned identity, and appservice.bicep outputs its clientId through main.bicep to the pipeline. The grant step uses CREATE USER ... WITH SID = <sid>, TYPE = E, and no executable code contains FROM EXTERNAL PROVIDER. I checked the SID derivation: the first three GUID groups are byte-reversed and the last 8 bytes are kept in order, which is SQL Server's uniqueidentifier order. The connection string uses Active Directory Managed Identity with User Id = clientId.",
+      "A1 R2 / I2 and S4 / I7: RESOLVED for the pipeline. dotnet-ef has --version 10.0.13, which equals Microsoft.EntityFrameworkCore.Design 10.0.13 at Directory.Packages.props:12, and the checker compares the two. The local pre-push tool-manifest carry-over (9.0.9) stays open. It lives outside gate.scope and is still on the harness queue.",
+      "A1 R3 / I3: RESOLVED. principalId is gone. Main.bicep reads every module output, and the pipeline reads every main.bicep output (.X.value). The checker now enforces both.",
+      "A1 R4 / I4: RESOLVED. sql.bicep uses tenant().tenantId, and the parameter, its three placeholders and both pipeline overrides are removed.",
+      "A1 S1 / I5: RESOLVED by hardening. publicNetworkAccess is Disabled and there is no 0.0.0.0 rule. SQL now has a private endpoint, a privatelink zone built from environment().suffixes.sqlServerHostname, and a VNet link. The app has VNet integration, and the deploy job runs on a self-hosted pool for each environment (see R3 on the checker's strength).",
+      "A1 S2 / I6: RESOLVED. The scm and ftp basicPublishingCredentialsPolicies are declared with allow false.",
+      "A1 S3 / I8: RESOLVED as a recorded design. A separate SQL service connection is a database-scoped db_owner user, not a server admin, and the one-off bootstrap is documented where the steps are defined (see R4 on the wording).",
+      "Checker weakening between f2065e7 and HEAD: none found. I could not diff f2065e7 directly because I run no commands, so this rests on activity.jsonl, the gate receipts and the HEAD text. 2c0b4e7 did not edit check-pipeline.py (activity lines 149-181). It did extend pipeline.schema.json with the pool {name} form that the self-hosted pool needs, and additionalProperties stays false. 4012f0e edited check-pipeline.py in three ways. I5 now also accepts 'privatelink${environment().suffixes.sqlServerHostname}', which resolves to privatelink.database.windows.net in AzureCloud. I6 now checks per block (name plus allow false), which is stricter. A regex escape was fixed. gate.pipeline-schema at 4012f0e shows the mutants (scm allow: true, a wrong privatelink zone, dotnet-ef 9.0.9) still fail with I6, I5 and I2/I7 named.",
+      "The red commit f2065e7 removed the system-assigned identity assertion inside the red itself, and the I1 checks replace it (gate.finding-red). This follows from the I1 route; it is not a weakening after red.",
+      "TDD order: red f2065e7, then green 2c0b4e7 and 4012f0e. gate.finding-red shows exit 1 with 19 failing lines before the fix. The builder wrote the red because the guard bars the tester from infrastructure/**. That is recorded as a harness gap, not a finding.",
+      "Acceptance at HEAD: subscription-scope hand-written Bicep; bicep build and build-params for dev, test and prod exit 0 with zero warnings (gate.bicep); Build, then dev, test and prod from one stage template; AzureCLI@2 runs what-if before sub create; prod approval on the policies-prod environment; idempotent migration script applied with sqlcmd -b; curl --fail /health/ready smoke test; offline schema check with a mutation proof; APPLICATIONINSIGHTS_CONNECTION_STRING as an app setting; managed identity to Entra-only SQL; no secrets. az was never run.",
+      "First-run ordering, for David: the bootstrap happens after the first infrastructure deployment, so on an environment's first run the Apply migrations step fails until an admin runs the bootstrap. The template implies this but does not say it.",
+      "The database user is named after the app (app-policies-<env>), while the identity is id-policies-<env>. With WITH SID, TYPE = E, the name is only a label, but David may be asked why the two differ.",
+      "gate.stubs shows no NotImplementedException in src/. src/ and tests/ are unchanged in this diff, and gate.test passes 637/637."
+    ]
+  }
+}

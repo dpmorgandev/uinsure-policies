@@ -1,0 +1,170 @@
+5441aeea80a3cb1524c1ec748859791424a20592 chore(trace): F4 trail tail (merged)
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+662ed36c6d95cf71e605ee07a5d6983f17edf79c docs(context): f4-done-merged
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d4c1b8a2232344386a3a95990a5046484b6cd525 plan(build/F5): pending → in_progress
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+2470c4c775c1c28c129ca4a9020bf02b0bcf89e0 plan(build/F5): tasks amended: F4 carry-overs
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7131a01d9f0bfb0565b56e52c0e7dc68ac2996c8 docs(F5): Bicep modules, param files and Azure DevOps pipeline evidence
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+2888bdbb21b9bb6cb9e376e878d4278776a136cc plan(build/F5): t1, t2 pending → done
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5e0ec1d674e1ab7e2841eb693dba79de502d4c69 plan(build/F5): attempt 1 → 2
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f2065e707727ae164d879bef851947e169d03f17 test(F5): red: checker assertions for review A1 (I1-I8)
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: red
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+2c0b4e7ef1cbaaf0c207c887efbc9d3c19f5277f fix(F5): review A1 findings I1-I8 in the infrastructure
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+4012f0e53d8079d47a6fcd91b15e629d50c56844 fix(F5): clear bicep warnings BCP225 and no-hardcoded-env-urls
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+538b490ba446dbcd7d99a88dedfc751c937d33e9 test(F5): red: checker assertions for re-review A2 (R2, R3, S1)
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: red
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+c4032dfa3603398fde7ec2773807cd8e270c1172 fix(F5): A2 re-review R2, R4, S1 in the infrastructure
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+781815ab17b447ba97d9d595a7d713fd240174bc test(F5): checker ties the SQL NSG rules to its subnet (A2.2 R1)
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: red
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+88ff4bbd208644c94173bcf0c92de6c45ba010a3 fix(F5): comments match the NSG mechanism (A2.2 R2, R3)
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+b92de26bb5c9f0de91e256049a9e2f0daf967721 plan(build/F5): t3 pending → done
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+925fe90609250c693412a731f3fbb3d2443771a2 docs(F5): QA script
+Agent: tester
+Plan: build
+Node: F5
+Rule: none
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+6fe2b8dcc677d30a7837976080c606aa86469f1b test(F5): red: what-if runs in its own job before the approval-gated deployment (QA)
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: red
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+c2af74d3ca52985af3b10f62e470bda3ba8febb5 fix(F5): what-if runs in its own job before the approval-gated deployment (QA)
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+a72bdf362904d2b29f057a97fd83c7e39c81c908 plan(build/F5): in_progress → investigating
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+bac560af4033be7a6cf3de223f79fa50671907ac docs(inv-002): F5 what-if still precedes the prod approval
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d0292abbb7a8bbf42dfe045a3a49e7ae6953d129 docs(inv-002): recommendations decided
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+53dc6abf365ab98c90516057b6b64a2c0bee1514 plan(build/F5): investigating → in_progress
+Agent: main
+Plan: build
+Node: F5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5defb7f3501e0e3e223b1690a0b01996621fbc60 test(F5): red: what-if in its own stage before the approval-gated stage (inv-002)
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: red
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+a14af3fa1e6572bd2c81e5a8af96cd7240a9c7e4 fix(F5): what-if in its own stage before the approval-gated stage
+Agent: builder
+Plan: build
+Node: F5
+Rule: none
+TDD: green
+Fixes-Finding: A2.4/I1
+Fixes-Finding: A2.4/I2
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+

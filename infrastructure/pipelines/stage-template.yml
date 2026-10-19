@@ -1,0 +1,158 @@
+parameters:
+  - name: environmentName
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: sqlServiceConnection
+    type: string
+  - name: dependsOn
+    type: string
+  - name: location
+    type: string
+    default: uksouth
+
+stages:
+  # Azure DevOps evaluates an environment's checks when a stage starts. The what-if therefore has its own stage, with
+  # no environment, so it runs and prints before the approval on Deploy_<env> is asked for.
+  # The approval check must live on the policies-<env> environment only. Never put one on the ARM service connection
+  # or the policies-<env> variable group that this stage uses, or this stage would pause first.
+  # Accepted residual risk: this unapproved stage uses the same subscription-scope ARM connection as the deployment
+  # (a separate what-if connection was considered and rejected). The policies-<env> variable group must stay
+  # secret-free, because it is also read before approval.
+  - stage: WhatIf_${{ parameters.environmentName }}
+    displayName: What-if ${{ parameters.environmentName }}
+    dependsOn: ${{ parameters.dependsOn }}
+    jobs:
+      - job: WhatIf
+        displayName: What-if ${{ parameters.environmentName }}
+        pool:
+          vmImage: ubuntu-latest
+        variables:
+          - group: policies-${{ parameters.environmentName }}
+        steps:
+          - download: current
+            artifact: drop
+          - task: AzureCLI@2
+            displayName: What-if
+            inputs:
+              azureSubscription: ${{ parameters.azureServiceConnection }}
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az deployment sub what-if \
+                  --name policies-${{ parameters.environmentName }}-$(Build.BuildId) \
+                  --location ${{ parameters.location }} \
+                  --template-file $(Pipeline.Workspace)/drop/infrastructure/main.bicep \
+                  --parameters $(Pipeline.Workspace)/drop/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
+                  --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)
+
+  - stage: Deploy_${{ parameters.environmentName }}
+    displayName: Deploy ${{ parameters.environmentName }}
+    dependsOn: WhatIf_${{ parameters.environmentName }}
+    jobs:
+      - deployment: Deploy
+        displayName: Deploy to ${{ parameters.environmentName }}
+        # SQL has no public endpoint, so the whole job runs on a self-hosted pool whose agents sit in a network
+        # that reaches the private endpoint and resolves privatelink.database.windows.net (peered to, or the
+        # same as, the VNet that infrastructure/modules/network.bicep creates), with the agents' address range inside
+        # agentAddressPrefix: the NSG allows 1433 to the SQL subnet only from that range. One pool per environment.
+        # The agent needs az, jq, go-sqlcmd (`sqlcmd`) and curl.
+        pool:
+          name: policies-${{ parameters.environmentName }}-vnet
+        # The only environment in this template, and the only place an approval check may live; only policies-prod has one.
+        environment: policies-${{ parameters.environmentName }}
+        variables:
+          # Per-environment values live in a variable group, not in the repo:
+          #   sqlAdminGroupObjectId  object id of the Entra group that is the server's Entra-only admin
+          - group: policies-${{ parameters.environmentName }}
+          - name: drop
+            value: $(Pipeline.Workspace)/drop
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                # The ARM service connection (${{ parameters.azureServiceConnection }}) deploys resources only.
+                - task: AzureCLI@2
+                  name: infra
+                  displayName: Deploy infrastructure
+                  inputs:
+                    azureSubscription: ${{ parameters.azureServiceConnection }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      outputs=$(az deployment sub create \
+                        --name policies-${{ parameters.environmentName }}-$(Build.BuildId) \
+                        --location ${{ parameters.location }} \
+                        --template-file $(drop)/infrastructure/main.bicep \
+                        --parameters $(drop)/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
+                        --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId) \
+                        --query properties.outputs --output json)
+                      echo "##vso[task.setvariable variable=resourceGroupName]$(echo "$outputs" | jq -r .resourceGroupName.value)"
+                      echo "##vso[task.setvariable variable=appName]$(echo "$outputs" | jq -r .appName.value)"
+                      echo "##vso[task.setvariable variable=appHostName]$(echo "$outputs" | jq -r .appHostName.value)"
+                      echo "##vso[task.setvariable variable=sqlServerFqdn]$(echo "$outputs" | jq -r .sqlServerFqdn.value)"
+                      echo "##vso[task.setvariable variable=sqlDatabaseName]$(echo "$outputs" | jq -r .sqlDatabaseName.value)"
+                      echo "##vso[task.setvariable variable=identityClientId]$(echo "$outputs" | jq -r .identityClientId.value)"
+
+                # The two SQL steps use a separate SQL service connection (the sqlServiceConnection parameter), not
+                # the ARM one. Its principal is a database-scoped user with db_owner on the policies database, and it
+                # is not a member of the server admin group, so its token cannot administer the server.
+                # Accepted residual risk: the ARM connection holds subscription-scope rights, so a leaked ARM token
+                # could still rewrite the SQL server's Entra admin through ARM. A subscription-scope deployment needs
+                # those rights. The server admin group is used by people, not by the pipeline.
+                # On an environment's first run the migrations step fails until an admin has run the one-off
+                # bootstrap below.
+                # One-off bootstrap, run by a member of that admin group once per environment after the first
+                # infrastructure deployment, connected to the policies database (not master):
+                #   CREATE USER [<SQL service connection principal name>] FROM EXTERNAL PROVIDER;
+                #   ALTER ROLE db_owner ADD MEMBER [<SQL service connection principal name>];
+                # An admin can use FROM EXTERNAL PROVIDER because the admin's own sign-in resolves the name.
+                # The pipeline never does: the app's user is created from a SID below, which needs no directory lookup.
+                # The agents' network must be peered to (or inside) the VNet, and their address range inside agentAddressPrefix (the 1433 allow rule in network.bicep).
+
+                # Idempotent: the script from `dotnet ef migrations script --idempotent` skips applied migrations.
+                - task: AzureCLI@2
+                  displayName: Apply migrations
+                  inputs:
+                    azureSubscription: ${{ parameters.sqlServiceConnection }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      sqlcmd -S "$(sqlServerFqdn)" -d "$(sqlDatabaseName)" \
+                        --authentication-method ActiveDirectoryAzCli \
+                        -b -i $(drop)/migrations.sql
+
+                # The app signs in with a user-assigned identity. Its database user is created from a SID built
+                # from the identity's client id (a GUID, byte-swapped to SQL Server's uniqueidentifier order),
+                # so Azure SQL needs no Microsoft Graph lookup and no Directory Readers role.
+                - task: AzureCLI@2
+                  displayName: Grant the app's managed identity database access
+                  inputs:
+                    azureSubscription: ${{ parameters.sqlServiceConnection }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      g=$(echo "$(identityClientId)" | tr -d '-' | tr 'a-f' 'A-F')
+                      sid="0x${g:6:2}${g:4:2}${g:2:2}${g:0:2}${g:10:2}${g:8:2}${g:14:2}${g:12:2}${g:16:16}"
+                      sqlcmd -S "$(sqlServerFqdn)" -d "$(sqlDatabaseName)" \
+                        --authentication-method ActiveDirectoryAzCli -b \
+                        -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '$(appName)') CREATE USER [$(appName)] WITH SID = $sid, TYPE = E; ALTER ROLE db_datareader ADD MEMBER [$(appName)]; ALTER ROLE db_datawriter ADD MEMBER [$(appName)];"
+
+                - task: AzureCLI@2
+                  displayName: Deploy app
+                  inputs:
+                    azureSubscription: ${{ parameters.azureServiceConnection }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az webapp deploy \
+                        --resource-group "$(resourceGroupName)" \
+                        --name "$(appName)" \
+                        --src-path $(drop)/app.zip \
+                        --type zip
+
+                - script: |
+                    curl --fail --silent --show-error \
+                      --retry 10 --retry-delay 15 --retry-all-errors \
+                      https://$(appHostName)/health/ready
+                  displayName: Smoke test /health/ready

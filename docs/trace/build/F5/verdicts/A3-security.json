@@ -1,0 +1,54 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T07:56:14Z",
+  "plan": "build",
+  "node": "F5",
+  "attempt": 3,
+  "agent": "security",
+  "agent_id": "ae440e0cde5134998",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F5",
+    "attempt": 3,
+    "base_sha": "67e3a4c1bc788edc1bbcfee5a00cafb47dea8434",
+    "head_sha": "a14af3fa1e6572bd2c81e5a8af96cd7240a9c7e4",
+    "diff_fingerprint": "83670f1ffde43fb65d4f69acb74d8cd14994f05b",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.write",
+      "gate.bicep",
+      "gate.pipeline-schema",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.vulnerable",
+      "gate.qa",
+      "gate.finding-red",
+      "gate.green"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "Out items recorded as n/a: API1 (no auth or tenancy; the reference is the only key), API2 (auth out of scope), API5 (no roles), API7 (no outbound URL fetching; the diff has no src/ changes and no HttpClient), API10 (no upstream APIs).",
+      "Round scope: the change since A2.4 splits the stage template into WhatIf_<env> (hosted ubuntu-latest, no environment) and Deploy_<env> (dependsOn WhatIf_<env>, no condition, self-hosted vnet pool, the only stage on policies-<env>). check-pipeline.py now asserts the stage structure. I read stage-template.yml and azure-pipelines.yml at HEAD. I did not diff the earlier checker.",
+      "Approval bypass: Deploy_<env> carries no stage condition, so the default succeeded() applies. A failed or skipped WhatIf_<env> skips Deploy_<env>. For prod, WhatIf_prod dependsOn Deploy_test, so a failure upstream skips it, then Deploy_prod. The gate.pipeline-schema receipt says mutant M2 (condition: always() on Deploy_<env>) fails the checker. The approval check is not in the repo. The template comment and QA step 32 state it must sit on the policies-<env> environment only.",
+      "S1 from A2.4 (the unapproved stage uses the subscription-scope ARM connection) is not re-raised. David rejected a separate what-if connection (inv-002 recommendation 3). The template records it as an accepted residual risk (stage-template.yml lines 19-21). It stays a P2 hardening note, not a finding. Limits on it: the pipeline triggers only on main with pr: none, and the stage runs az deployment sub what-if, which creates no deployment. It reads the drop artifact built in the same run, so the approver sees what Deploy applies.",
+      "What the layout adds: WhatIf_<env> reads the policies-<env> variable group before approval. That group holds only sqlAdminGroupObjectId, an Entra group object id and not a secret. Line 21 of the template states it must stay secret-free, which closes the A2.4 note. WhatIf_<env> uses no SQL service connection and no self-hosted pool, so it cannot reach the private SQL endpoint or the db_owner principal. Those stay in the approved Deploy stage.",
+      "The comment at stage-template.yml lines 17-18 warns that an approval check on the ARM service connection or the variable group would gate WhatIf_<env> and bring the QA defect back. That is a documented configuration constraint, not a code defect. It can't be checked offline.",
+      "API8: no secrets, connection strings with credentials or @secure parameters in infrastructure/. The grep hits are comments stating an absence plus the checker's own secret-scan regex. SQL is Entra-only, the app uses a managed identity with no password, and SQL has no public endpoint. App Insights is passed as an app setting, and its connection string is an ingestion endpoint, not a credential.",
+      "NET extras: no .cs in the diff, so raw SQL, money and logging are unchanged. No FromSqlRaw or ExecuteSqlRaw. gate.vulnerable at a14af3f reports 8 projects, none vulnerable. The inline sqlcmd interpolates $(appName) from Bicep outputs, which are pipeline-controlled and not user input.",
+      "API3, API4, API6 and API9 are unaffected (no src/ changes) and are recorded as met by the unchanged baseline from the earlier PASS rounds."
+    ]
+  }
+}
