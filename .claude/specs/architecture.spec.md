@@ -170,6 +170,10 @@ Plus, for all options, **BannedApiAnalyzers** for call-level rules (`DateTime.No
   - OQ3: central package management via `Directory.Packages.props`: yes (C1, C8).
   - New rule SELL-7 (amount > 0, else 422) is enforced in `Policy.Sell`.
   - Accepted as proposed: `RuleViolation` has an optional `Extensions` member, and `PersistenceConflictException` is defined in Services.
+- [x] **Amendment (David, 2026-10-19, F3 review): the quote and claim results carry what the API needs.** F3's review found three seams that made the controller read twice or repeat a rule: the quote read UK today twice per request (quotedOn could disagree with the CANCEL-3 check at midnight), the Api re-implemented `Policy.Cancel`'s decision for the quote (top-level rule, no £0 refund), and the claim response re-read the policy after the save and took its last claim. The names stay as below; the return types grow:
+  - `Policy.QuoteCancellation` returns `CancellationQuote` (date, top-level rule, total, per-term calculations, quoted refunds), the one decision `Cancel` also applies.
+  - `PolicyService.QuoteCancellation` returns `CancellationQuoteResult(CancellationQuote, QuotedOn)`, with the one UK today; `PolicyService.RecordClaim` returns `RecordedClaim(Claim, Number, HasClaims)`, read before the save.
+  - `PolicyDetails` stays `(Policy, CurrentTerm, Status)`.
 
 ## Contract
 
@@ -283,11 +287,14 @@ public sealed class Policy
     public static Result<Policy> Sell(PolicyReference reference, PolicyType type, DateOnly start, decimal amount,
         bool autoRenew, IReadOnlyList<Policyholder> holders, Property property, PaymentMethod method,
         string paymentReference, DateOnly today);                      // SELL-2..7 (SELL-7: amount > 0)
-    public Result<IReadOnlyList<RefundCalculation>> QuoteCancellation(DateOnly? on, DateOnly today); // COULD-1
+    public Result<CancellationQuote> QuoteCancellation(DateOnly? on, DateOnly today); // COULD-1; the decision Cancel applies
     public Result<Cancellation> Cancel(DateOnly? on, DateOnly today, Func<string> refundReference);  // CANCEL-1..7, COULD-2
     public Result<Term> Renew(decimal amount, PaymentMethod? method, DateOnly today, Func<string> paymentReference); // RENEW-1..6, COULD-3, RENEW-3b
     public Result<Claim> RecordClaim(DateOnly claimDate, string? description, DateOnly today);         // COULD-2a..c
 }
+public sealed record CancellationQuote(DateOnly CancellationDate, string RuleApplied, decimal TotalRefund,
+    IReadOnlyList<RefundCalculation> Terms, IReadOnlyList<QuotedRefund> Refunds);   // amendment 2026-10-19
+public sealed record QuotedRefund(PaymentMethod Method, decimal Amount, string PaymentReference);
 
 // Services
 public interface IPolicyRepository
@@ -300,6 +307,8 @@ public enum ConflictReason { Concurrency, DuplicateReference }
 public sealed class PersistenceConflictException(ConflictReason reason) : Exception;
 public static class UkCalendar { public static DateOnly Today(TimeProvider clock); } // GetUtcNow() → Europe/London
 public sealed record PolicyDetails(Policy Policy, Term CurrentTerm, PolicyStatus Status);
+public sealed record CancellationQuoteResult(CancellationQuote Quote, DateOnly QuotedOn);    // amendment 2026-10-19
+public sealed record RecordedClaim(Claim Claim, int Number, bool HasClaims);               // amendment 2026-10-19
 public interface IReferenceGenerator { string Payment(); string Refund(); }  // implemented by ReferenceGenerator
 public interface IPolicyService { /* the six methods below; the controller depends on this */ }
 public sealed class PolicyService(IPolicyRepository repository, IReferenceGenerator references, TimeProvider clock) : IPolicyService
@@ -307,9 +316,9 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
     Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct);
     Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct);
     Task<Result<Cancellation>> Cancel(PolicyReference reference, DateOnly? on, CancellationToken ct);
-    Task<Result<IReadOnlyList<RefundCalculation>>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct);
+    Task<Result<CancellationQuoteResult>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct);
     Task<Result<Term>> Renew(PolicyReference reference, decimal amount, PaymentMethod? method, CancellationToken ct);
-    Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
+    Task<Result<RecordedClaim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
 }
 ```
 

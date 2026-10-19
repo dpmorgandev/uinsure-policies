@@ -59,11 +59,16 @@ public sealed class Policy
     public static Result<Policy> Sell(PolicyReference reference, PolicyType type, DateOnly start, decimal amount,
         bool autoRenew, IReadOnlyList<Policyholder> holders, Property property, PaymentMethod method,
         string paymentReference, DateOnly today);                      // SELL-2..7 (SELL-7: amount > 0)
-    public Result<IReadOnlyList<RefundCalculation>> QuoteCancellation(DateOnly? on, DateOnly today); // COULD-1
+    public Result<CancellationQuote> QuoteCancellation(DateOnly? on, DateOnly today); // COULD-1; the decision Cancel applies
     public Result<Cancellation> Cancel(DateOnly? on, DateOnly today, Func<string> refundReference);  // CANCEL-1..7, COULD-2
     public Result<Term> Renew(decimal amount, PaymentMethod? method, DateOnly today, Func<string> paymentReference); // RENEW-1..6, COULD-3, RENEW-3b
     public Result<Claim> RecordClaim(DateOnly claimDate, string? description, DateOnly today);         // COULD-2a..c
 }
+// The whole cancellation decision, shared by QuoteCancellation and Cancel (F3): top-level rule = the current
+// term's, and a refund only for a paid term with Amount > 0 (no £0 refund). Cancel adds the refund references.
+public sealed record CancellationQuote(DateOnly CancellationDate, string RuleApplied, decimal TotalRefund,
+    IReadOnlyList<RefundCalculation> Terms, IReadOnlyList<QuotedRefund> Refunds);
+public sealed record QuotedRefund(PaymentMethod Method, decimal Amount, string PaymentReference);
 
 // Services
 public interface IPolicyRepository
@@ -76,6 +81,8 @@ public enum ConflictReason { Concurrency, DuplicateReference }
 public sealed class PersistenceConflictException(ConflictReason reason) : Exception;
 public static class UkCalendar { public static DateOnly Today(TimeProvider clock); } // GetUtcNow() → Europe/London
 public sealed record PolicyDetails(Policy Policy, Term CurrentTerm, PolicyStatus Status);
+public sealed record CancellationQuoteResult(CancellationQuote Quote, DateOnly QuotedOn);    // QuotedOn = the one UK today
+public sealed record RecordedClaim(Claim Claim, int Number, bool HasClaims);               // read before the save, no re-read
 public interface IReferenceGenerator { string Payment(); string Refund(); }  // implemented by ReferenceGenerator
 public interface IPolicyService { /* the methods below; PoliciesController depends on this */ }
 public sealed class PolicyService(IPolicyRepository repository, IReferenceGenerator references, TimeProvider clock) : IPolicyService
@@ -83,9 +90,9 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
     Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct);
     Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct);
     Task<Result<Cancellation>> Cancel(PolicyReference reference, DateOnly? on, CancellationToken ct);
-    Task<Result<IReadOnlyList<RefundCalculation>>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct);
+    Task<Result<CancellationQuoteResult>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct);
     Task<Result<Term>> Renew(PolicyReference reference, decimal amount, PaymentMethod? method, CancellationToken ct);
-    Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
+    Task<Result<RecordedClaim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
 }
 ```
 
