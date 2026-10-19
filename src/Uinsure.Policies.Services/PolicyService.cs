@@ -70,6 +70,8 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
 
     public Task<Result<IReadOnlyList<RefundCalculation>>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct) => throw new NotImplementedException();
 
+    public Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct) => throw new NotImplementedException();
+
     private static PolicyDetails Details(Policy policy, DateOnly today) =>
         new(policy, policy.CurrentTerm(today), policy.StatusOn(today));
 
