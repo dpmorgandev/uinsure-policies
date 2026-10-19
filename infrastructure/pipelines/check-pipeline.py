@@ -46,7 +46,8 @@ check([u["parameters"]["dependsOn"] for u in uses] == ["Build", "Deploy_dev", "D
 check(any(s.get("stage") == "Build" for s in pipeline["stages"]), "missing Build stage")
 
 # Build stage: build, test, idempotent script.
-build_text = json.dumps(pipeline["stages"][0])
+build_stage = next((s for s in pipeline["stages"] if s.get("stage") == "Build"), None)
+build_text = json.dumps(build_stage) if build_stage else ""
 for needle in ("dotnet build", "dotnet test", "migrations script --idempotent"):
     check(needle in build_text, f"Build stage must run: {needle}")
 
@@ -59,8 +60,23 @@ def runs(step, needle):
     return needle in step.get("inputs", {}).get("inlineScript", "")
 
 
-jobs = template["stages"][0]["jobs"]
-deploy = next(j for j in jobs if "deployment" in j)
+def stage_jobs(stage):
+    return stage.get("jobs") or []
+
+
+def as_list(value):
+    return [value] if isinstance(value, str) else list(value or [])
+
+
+# Stages and jobs are found by key, across every stage the template emits, never by position.
+tstages = template["stages"]
+all_jobs = [j for st in tstages for j in stage_jobs(st)]
+deploy_stages = [st for st in tstages if any("deployment" in j and "environment" in j for j in stage_jobs(st))]
+check(len(deploy_stages) == 1, "QA: exactly one stage must hold the deployment job on an environment")
+deploy_stage = deploy_stages[0] if deploy_stages else {}
+deploy_jobs = [j for j in stage_jobs(deploy_stage) if "deployment" in j]
+check(len(deploy_jobs) == 1, "QA: the deploying stage must hold exactly one deployment job")
+deploy = deploy_jobs[0] if deploy_jobs else {}
 steps = job_steps(deploy)
 az = [s for s in steps if s.get("task") == "AzureCLI@2"]
 check(len(az) >= 3, "deploy needs AzureCLI@2 steps")
@@ -71,19 +87,27 @@ for s in az:
 create = next((i for i, s in enumerate(steps) if runs(s, "deployment sub create")), None)
 check(create is not None, "the deployment job must run deployment sub create")
 
-# QA: the what-if runs in its own regular job BEFORE the approval-gated deployment job, so the approval on
-# policies-prod is given after the what-if exists. "what-if before create" is proven across the two jobs.
-whatif_jobs = [j for j in jobs if "deployment" not in j and any(runs(s, "az deployment sub what-if") for s in job_steps(j))]
-check(len(whatif_jobs) == 1, "QA: the stage template needs one regular job (not a deployment job) that runs az deployment sub what-if")
-check(not any("environment" in j for j in whatif_jobs), "QA: the what-if job must not declare an environment (no approval gate)")
-check(not any(runs(s, "what-if") for s in steps), "QA: no what-if may run inside the approval-gated deployment job")
-check([j["deployment"] for j in jobs if "environment" in j] == [deploy["deployment"]], "QA: the deployment job must be the only job with an environment")
-wi_name = whatif_jobs[0].get("job") if whatif_jobs else None
-depends = deploy.get("dependsOn")
-depends = [depends] if isinstance(depends, str) else (depends or [])
-check(wi_name is not None and wi_name in depends, "QA: the deployment job must declare dependsOn on the what-if job")
-check(any("what-if" in (s.get("displayName") or "").lower() or runs(s, "what-if") for j in whatif_jobs for s in job_steps(j)) and create is not None
-      and wi_name in depends, "what-if must come before deployment sub create (what-if job, then the deployment job that depends on it)")
+# QA O1: Azure DevOps evaluates an environment's checks when a STAGE starts. The what-if must therefore run in its
+# own stage with no environment, and the stage holding the deployment job (the only one on policies-<env>) must
+# depend on it with no condition, so the approval is asked after the what-if has printed.
+def stage_runs_whatif(stage):
+    return any(runs(s, "az deployment sub what-if") for j in stage_jobs(stage) for s in job_steps(j))
+
+
+whatif_stages = [st for st in tstages if stage_runs_whatif(st)]
+check(len(whatif_stages) == 1, "QA: exactly one stage must run az deployment sub what-if")
+whatif_stage = whatif_stages[0] if whatif_stages else {}
+check(not any("environment" in j for j in stage_jobs(whatif_stage)), "QA: the what-if stage must declare no environment on any job (no approval gate)")
+check(not any("deployment" in j for j in stage_jobs(whatif_stage)), "QA: the what-if stage must contain no deployment job")
+check(not any(any("environment" in j for j in stage_jobs(st)) and stage_runs_whatif(st) for st in tstages),
+      "QA: no what-if may run in any stage that declares an environment")
+wi_stage_name = whatif_stage.get("stage")
+check(wi_stage_name is not None and whatif_stage is not deploy_stage, "QA: the what-if and the deployment job must be in different stages")
+check(wi_stage_name is not None and wi_stage_name in as_list(deploy_stage.get("dependsOn")),
+      "QA: the deploying stage must list the what-if stage in its stage-level dependsOn")
+check("condition" not in deploy_stage, "QA: the deploying stage must have no condition (it must not run after a failed what-if)")
+check(bool(whatif_stage) and bool(deploy_stage) and tstages.index(whatif_stage) < tstages.index(deploy_stage),
+      "QA: the what-if stage must come before the deploying stage in the template")
 text = (HERE / "stage-template.yml").read_text(encoding="utf-8")
 check("environment: policies-${{ parameters.environmentName }}" in text, "deployment must target environment policies-<env> (prod approval lives there)")
 check("/health/ready" in steps[-1].get("script", ""), "last step must curl /health/ready")
@@ -150,8 +174,8 @@ check("virtualNetworkSubnetId" in bicep, "I5: the app needs VNet integration (vi
 
 
 def sql_jobs(doc):
-    for job in doc["stages"][0]["jobs"]:
-        step_list = job.get("steps") or job.get("strategy", {}).get("runOnce", {}).get("deploy", {}).get("steps", [])
+    for job in (j for st in doc["stages"] for j in stage_jobs(st)):
+        step_list = job_steps(job)
         if any("sqlcmd" in json.dumps(s) for s in step_list):
             yield job
 
@@ -167,7 +191,7 @@ for kind in ("scm", "ftp"):
 
 # I8: a separate, least-privilege SQL service connection, and the bootstrap is documented.
 sql_steps = [s for s in steps if s.get("displayName") in ("Apply migrations", "Grant the app's managed identity database access")] + \
-    [s for j in found for s in (j.get("steps") or j.get("strategy", {}).get("runOnce", {}).get("deploy", {}).get("steps", [])) if "sqlcmd" in json.dumps(s)]
+    [s for j in found for s in job_steps(j) if "sqlcmd" in json.dumps(s)]
 arm_ref = "${{ parameters.azureServiceConnection }}"
 check(bool(sql_steps) and all(s.get("inputs", {}).get("azureSubscription") not in (None, arm_ref) for s in sql_steps),
       "I8: migration and grant steps must use a SQL service connection variable, not the ARM deployment one")
@@ -178,7 +202,7 @@ check("bootstrap" in lower, "I8: template must describe the one-off bootstrap an
 
 # Re-review A2 (R2, R3, S1). Added red.
 # R2: service connections resolve at compile time, so every azureSubscription is a template parameter, never $(...).
-all_steps = [s for j in template["stages"][0]["jobs"] for s in (j.get("steps") or j.get("strategy", {}).get("runOnce", {}).get("deploy", {}).get("steps", []))]
+all_steps = [s for j in all_jobs for s in job_steps(j)]
 subs = [s["inputs"]["azureSubscription"] for s in all_steps if "azureSubscription" in s.get("inputs", {})]
 check(bool(subs) and all(re.fullmatch(r"\$\{\{\s*parameters\.\w+\s*\}\}", str(v)) for v in subs),
       "A2/R2: every azureSubscription must be a template parameter expression, not a runtime $(...) macro: " + ", ".join(map(str, subs)))
