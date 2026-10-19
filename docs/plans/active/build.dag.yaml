@@ -312,10 +312,10 @@ nodes:
     rules: []
     cuttable: true
     budget: 3h
-    status: pending
-    attempt: 0
-    branch: null
-    worktree: null
+    status: in_progress
+    attempt: 1
+    branch: feature/build/F5
+    worktree: .claude/worktrees/build-F5
     pr: null
     qa: docs/qa/build-F5.md
     trace: docs/trace/build/F5/
