@@ -327,7 +327,7 @@ nodes:
     tasks:
       - {id: t1, role: builder, step: write, layer: null, rules: [], title: "Bicep modules, three param files and the pipeline YAML; bicep build and build-params for dev, test and prod; pipeline schema check", status: done}
       - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "bicep build and build-params exit 0 for all three environments; pipeline schema check; build and tests still green", status: done}
-      - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+      - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: done}
       - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F5.md", status: pending}
       - {id: t5, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
       - {id: t6, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md and README; chore(trace) commit; completeness check passes", status: pending}
