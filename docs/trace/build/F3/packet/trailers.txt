@@ -1,0 +1,509 @@
+9a6b00a62f93f3d9351c620d176fb1b627c73acd chore(trace): F2 trail tail (merged)
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+a6e3eb2037005574596ba939e69030a0e45fdf90 docs(context): f2-done-merged
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b5a2c43296e86175377b3d3c9fac083f86e37a08 plan(build/F3): pending → in_progress
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e57497ff2f251ff58b760d9c5ac6cfc40977207c plan(build/F3): tasks amended: F2 carry-overs
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+40458b1b432b62b6e66a00c154c8415dd8e9e6ee test(CANCEL-1a): red: cancelling before the start refunds in full, read back as Cancelled
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-1a
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5d985504fa9ca87487809683587716e7aa710c9a test(CANCEL-1b): red: cooling-off from the start date to start + 14 refunds in full
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-1b
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+76e3fa77b4bc6b30bb2c4636552032465d251941 test(CANCEL-1c): red: after cooling-off the refund is pro-rata over the term's actual days
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-1c
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5135f97b11c807ec82ab5a0e43f12b94ff5be7ad test(CANCEL-2): red: a refund goes to the method of the payment it reverses and names it
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+8d4c520ce0747130f2ed390ceb09615446f8790e test(CANCEL-3): red: the cancellation date defaults to UK today and is never in the past
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-3
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f6418c790011937877777edc268e521ae07339b0 test(CANCEL-4): red: cancelling or quoting a cancelled policy is 409 with the original date
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-4
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+a9ac6d01015a570df9fcfe036e43b0531d65cf0e test(CANCEL-6): red: a refund of exactly half a penny rounds away from zero
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-6
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+307344078e774668f16813d562ccf58b65111b82 test(CANCEL-7): red: a cancellation date after the latest term's end is 422
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-7
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+33a7050a2a5b7005344b9996dbe662644b7dd135 test(COULD-1): red: the cancellation quote is the cancel calculation, read only
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3ba045052b6865050efef0b9d77f1dee3ce43fac test(COULD-2): red: a claim is recorded, sets hasClaims, and means a 0.00 refund
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+9b7acdd8b4191134073ec96756d3e175de675864 test(COULD-2a): red: a claim dated after UK today is 422
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2a
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+300437e0384756167087c457683d9ac88fdaa0eb test(COULD-2b): red: a claim dated outside every term's cover is 422
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2b
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+da71e3c0301ce53744eb229418860064c3d70e64 test(COULD-2c): red: a claim on a cancelled policy is 409 with the cancellation date
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2c
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+921aaa416ec2b726a7437d3e0c90f0f5d5dd262f test(F3): red: a cancellation or claim that loses a race is 409 concurrency
+Agent: tester
+Plan: build
+Node: F3
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c372fd0adb048213e33293326c4f1d4a228532e1 test(F3): red: Postman F3 Cancel folder, the real-time rows
+Agent: tester
+Plan: build
+Node: F3
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+18969c35ed17357473284d7c9ff22f4e1a332d0b plan(build/F3): t1 pending → done
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3f388b8e27f49be96535d376d1f81ec90fa1a8d7 feat(F3): stub controller
+Agent: builder
+Plan: build
+Node: F3
+Rule: none
+TDD: stub
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+cf1051dad50a4a676f698d6322743ce5d1f65fd1 plan(build/F3): attempt 1 → 2
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+305478dd25b76b8f5f22441375ab44de28c33b36 test(COULD-2): red: fix A1/I2
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2
+TDD: red
+Fixes-Finding: A1/I2
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b5a0d299d02ae4c01b35c4b026c215b58f2da7e7 fix(COULD-2): put RecordClaimRequest constraints on constructor parameters
+Agent: builder
+Plan: build
+Node: F3
+Rule: COULD-2
+TDD: stub
+Fixes-Finding: A1/I1
+Fixes-Finding: A1/I2
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+41d5e6ae8e6367ee3b97ea78940c7034f71302b9 plan(build/F3): in_progress → paused_acceptance
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+bfd98f00fa128d65f21d96e346ca0e1eae740df6 plan(build/F3): paused_acceptance → in_progress
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+2daab240d8d9a0abe52d22644f9e6ff17faac613 test(CANCEL-1a): red: domain, a cancellation before the start refunds in full
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-1a
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7e1a7faf509ec734e8f320243a21f2e611f99086 test(CANCEL-1b): red: domain, cooling-off from the start date to start + 14 refunds in full
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-1b
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5bedf6951e3108fc5abe100beda00abd5a0dfbac test(CANCEL-1c): red: domain, after cooling-off the refund is pro-rata over the term's actual days
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-1c
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e9d96b5fb93864ecf111403168be2f205c6b213c test(CANCEL-6): red: domain, money rounds once to 2 dp, half away from zero
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-6
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+084709e9c9bbbf1812d8b85341742802246f83cf test(CANCEL-2): red: domain, each refund goes to the method of the payment it reverses
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+14ef6ed98571b1f3df227435ad23515708a533c6 test(CANCEL-3): red: domain, the cancellation date defaults to today and is never in the past
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-3
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+745aff6c018323dcc55651e258f9dd70f88de847 test(CANCEL-7): red: domain, a cancellation date after the latest term's end is 422
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-7
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3f53648f6dc5b2ea6f4e64b8e6ecf8d9c1e5deae test(CANCEL-4): red: domain, cancelling a cancelled policy is a 409 with the original date
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-4
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+05cb9f1d3c43997f3f26b48dec617079ed345b7a test(GET-1): red: domain, Cancelled overrides the derived status
+Agent: tester
+Plan: build
+Node: F3
+Rule: GET-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+584c3447f6f804f49cd86badbaae9889633f3485 test(COULD-2): red: domain, a claim is recorded, sets HasClaims, and means a 0 refund
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ff82d291bdf65978e506bf269d3992e756ad0d01 test(COULD-2a): red: domain, a claim dated after today is 422
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2a
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+a12e922a66106c3c6deda9a11b1bedfe8e7ddc52 test(COULD-2b): red: domain, a claim dated outside every term's cover is 422
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2b
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3b80d9ff2ced3b7364c3cee4a44b52ffa3e25d50 test(COULD-2c): red: domain, a claim on a cancelled policy is 409 with the cancellation date
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2c
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f32d0cd62cdb5cc1c95c6bf5bc45f9ba09a8b879 test(COULD-1): red: domain, the cancellation quote is the cancel calculation, read only
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f0a3b6e1277ee7e625bdd8232724a288b03e97b0 plan(build/F3): t4 pending → done
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d833a8882e5b748371df4bff2d00ab65e2d04dee feat(CANCEL-1c): green: domain cancel, quote, refund calculator, claims, Money.Round
+Agent: builder
+Plan: build
+Node: F3
+Rule: CANCEL-1c
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+a2b2b136d7eb4b04b4cdc3cc6a40fa766287c426 plan(build/F3): t5 pending → done
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c9048e6a2c6b19531e6fdaa397bc167627ffdac2 test(CANCEL-3): red: services, the cancellation date defaults to UK today and is never before it
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-3
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+03ea9cb35219ffb9d097ef77ebd3dddc08bf40bf test(COULD-1): red: services, the quote computes the cancel calculation without saving
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f3a2bcee99fc6060003b7d040c86e69bb153769f test(COULD-2a): red: services, the claim date is checked against UK today
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2a
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+52152d919a9f96820bead3df0128acdab374bd96 test(CANCEL-2): red: services, refund references come from IReferenceGenerator.Refund and have the REF- form
+Agent: tester
+Plan: build
+Node: F3
+Rule: CANCEL-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+1b6a9da5d325e8e0a48128e6e7ba725b2c98f92e plan(build/F3): t6 pending → done
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c6ba7977b71fb335f3e792caabb12c91a00fcb35 feat(CANCEL-3): green: services cancel, quote and claim with UK today
+Agent: builder
+Plan: build
+Node: F3
+Rule: CANCEL-3
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+7fb0067a6d0b42813bb810a2e5635a6860118691 plan(build/F3): t7 pending → done
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+4f144b1ce778d0b14c340ef9d98798f62655078d feat(CANCEL-2): green: persistence refund, claim and cancellation records, migration
+Agent: builder
+Plan: build
+Node: F3
+Rule: CANCEL-2
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+ac5f5843ee35e1fe07b3febce17e96498e29ac1a plan(build/F3): t8 pending → done
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d0ac9c72ab939377998f89c69efa09272b2a007f feat(CANCEL-4): green: api cancel, quote and claim endpoints, real refund, claim and cancellation mapping
+Agent: builder
+Plan: build
+Node: F3
+Rule: CANCEL-4
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+58fd2eaa5d96624c36414b1ffc03a34f60b42f2d plan(build/F3): t9 pending → done
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+74df848168769900223ae926a96ddbc53472937b refactor(CANCEL-2): make stale comments true of the code
+Agent: builder
+Plan: build
+Node: F3
+Rule: CANCEL-2
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+3fa2c3d887b4c3b89b248676f3599d75be2e7592 plan(build/F3): t10, t11 pending → done
+Agent: main
+Plan: build
+Node: F3
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+26a2850da93fbde7ebee6ff40cf72a5b348934ba test(COULD-2): red: fix A2/R4
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+5d63126b3a458d207e11807461bf796d8cee9732 test(COULD-1): red: fix A2/R1
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+54277ca50f8f428202c6652926cfb251edc03dac test(COULD-2): red: fix A2/R3
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+42c3db0061bb32cb4f90da304751a85ed6549f03 fix(COULD-1): green: one UK today per quote; domain owns the quote decision
+Agent: builder
+Plan: build
+Node: F3
+Rule: COULD-1
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+4cde9034a84e52fe25993ba3fe82c8fdb25c297e test(COULD-1): red: retarget quote tests to Policy.Quote and IPolicyService.Quote
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+9b39991662ea4e84e2949c0e438102123020e78c test(COULD-2): red: retarget claim tests to IPolicyService.RecordNumberedClaim
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3b5b58ba9f6628117560e9ac4f1d027bbd9818eb refactor(COULD-2): drop test-only wrappers; claim response HasClaims from the policy
+Agent: builder
+Plan: build
+Node: F3
+Rule: COULD-2
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+5d6f45254afbea1251c14c4f9ce9fd36dfa34522 refactor(COULD-1): rename to QuoteCancellation and RecordClaim, keep forwarders
+Agent: builder
+Plan: build
+Node: F3
+Rule: COULD-1
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+32eaab4be195867da2b4b19a409052df03c56266 test(COULD-1): red: retarget quote tests to Policy.QuoteCancellation and IPolicyService.QuoteCancellation
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-1
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+db895da5e9ccf7122e574eab6c0769823260683e test(COULD-2): red: retarget claim tests to IPolicyService.RecordClaim
+Agent: tester
+Plan: build
+Node: F3
+Rule: COULD-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+a59fb6cf351006cb8995a385e3ca170931ff3c13 refactor(COULD-1): remove forwarders and unused using
+Agent: builder
+Plan: build
+Node: F3
+Rule: COULD-1
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+

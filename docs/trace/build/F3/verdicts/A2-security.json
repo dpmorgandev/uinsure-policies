@@ -1,0 +1,74 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T01:50:15Z",
+  "plan": "build",
+  "node": "F3",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "a1d644d047fcf1e53",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F3",
+    "attempt": 2,
+    "base_sha": "ad7b6b096e2dba88f3a3c71d860b557b789f5247",
+    "head_sha": "ba184127fd5065e5f24a473b503bafb2f69d4040",
+    "diff_fingerprint": "e4e55e83dbe9b5430a3e29aea9442adece2de41d",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.vulnerable",
+      "gate.run",
+      "gate.green"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET:sql",
+      "NET:money",
+      "NET:packages",
+      "NET:secrets",
+      "NET:logging"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API6:2023",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Controllers/PoliciesController.cs",
+        "line": 382,
+        "what": "RecordClaim re-reads the policy after saving and answers with the last claim, so a concurrent claim could be returned as this caller's claim.",
+        "why": "Hygiene, not an integrity break. The Version token (PolicyRepository.SaveChanges) rejects a concurrent write on the same policy with 409, and the claim is stored correctly. Only the 201 body's claim number could point at another request's claim in a narrow window. Not blocking.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "API1:2023 n/a: no auth or tenancy; the policy reference is the only key (Out of scope).",
+      "API2:2023 n/a: authentication is out of scope.",
+      "API5:2023 n/a: no roles. POST /claims would be an admin function in real life (Out of scope).",
+      "API7:2023 n/a: no outbound fetching. Grep for HttpClient and WebRequest over src/ found nothing.",
+      "API10:2023 n/a: no upstream APIs; pricing is client-supplied.",
+      "API3: CancelPolicyRequest holds only an optional CancellationDate, and RecordClaimRequest holds only ClaimDate and Description. Both are separate from the domain and EF types. The client cannot set HasClaims, refund or payment references, Cancellation, EndDate or Version. No Version or Id appears in Contracts/. Claim references are derived as CLM-{policy}-{n}, so no internal key leaks.",
+      "API4: Description has MaxLength(500) on the DTO constructor parameter and HasMaxLength(500) on the column, and the migration shows nvarchar(500). Refund and payment references are capped at 40 (a REF- reference is 36 characters), and RuleApplied at 20. Both new POSTs carry the [EnableRateLimiting(\"writes\")] attribute. The 64 KB body limit, global limiter and forwarded-headers setup were not touched in this diff. No list endpoint was added.",
+      "API6 double-cancel: Policy.ValidateCancellationDate returns a Conflict (CANCEL-4) when Cancellation is set, for both Cancel and QuoteCancellation. The Cancellation row has a unique index on PolicyId, and SaveChanges bumps PolicyRecord.Version whenever a claim or cancellation is added. PolicyConfiguration marks Version with IsConcurrencyToken, and DbUpdateConcurrencyException becomes PersistenceConflictException and then 409 /problems/concurrency. So a concurrent double-cancel, or a cancel racing a claim, gets 409.",
+      "API6 refund integrity: RefundCalculator computes Amount = term.Amount * unusedDays / termDays, with usedDays clamped to [0, termDays], so it is never above term.Amount or negative. A refund is created only for a term with a payment and an amount above 0, and it reverses that payment's method and reference. A claim gives 0 (COULD-2). An unpaid term gives 0. Money.Round is the only rounding call. The one caveat is that SELL-6 sets payment.Amount equal to term.Amount. A later renew node must keep that equality, or this node's refund-at-most-paid property needs a direct check.",
+      "API6 quote: PolicyService.QuoteCancellation never calls SaveChanges and the quote path mutates no domain state. The controller's Get plus Quote adds no writes.",
+      "API8: UnexpectedExceptionHandler is unchanged. Its 409 and 400 bodies are fixed strings with no exception message or stack trace. The new problem titles are static. There is no UseDeveloperExceptionPage, and no connection string or secret is in the diff. A scan of the Postman collection for password, secret, token and Server= found nothing.",
+      "API9: The three new routes, POST /policies/{reference}/cancellation, GET /policies/{reference}/cancellation-quote and POST /policies/{reference}/claims, are the E3 to E5 routes. gate.stubs found no NotImplementedException in src/. gate.run shows a real cancel (201, refund 803.40, REF- and PAY- references), a second cancel returning 409, and a read-back of Cancelled.",
+      "NET:sql: no FromSqlRaw, ExecuteSqlRaw or SqlQueryRaw. Everything is EF LINQ.",
+      "NET:money: every amount is decimal, with HasPrecision(18,2) on the new columns. No double or float appears in src/.",
+      "NET:packages: no csproj or package change in the diff. gate.vulnerable reports 8 projects, none vulnerable.",
+      "NET:logging: the new log lines carry only method, path and reason. The path holds the policy reference and no names, dates of birth, postcodes or request bodies.",
+      "Time: no DateTime.Now, UtcNow or Today in src/. The service uses UkCalendar.Today(clock).",
+      "Evidence: I did not run the code. These conclusions come from the diff and the current source files."
+    ]
+  }
+}
