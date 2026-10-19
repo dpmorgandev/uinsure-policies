@@ -163,6 +163,50 @@ public sealed class RenewWindowTests : IClassFixture<PoliciesApiFactory>
         PolicyStateAssert.ReadsBackUnchanged(await client.ReadBack(reference), sold, reference, End, "Expired");
     }
 
+    // One request, one UK today (finding A1/R1). The clock moves an hour forward on every read, from
+    // 2027-10-28T22:30Z (23:30 BST, UK 2027-10-28, the end date); a second read would be 23:30Z (00:30 BST,
+    // UK 2027-10-29). Read once, the renewal is accepted on the end date (RENEW-2) and the 201 body answers on
+    // that same date: term 1 (2026-10-29 to 2027-10-28) is still the term in force, so the policy is Active
+    // with currentTermNumber 1. Read twice, the body is built on 2027-10-29 and names term 2 as current,
+    // although the window check saw 2027-10-28. The read-back is on 2027-10-28 too, at noon.
+    [Fact]
+    [Trait("Rule", "RENEW-2")]
+    public async Task Renewal_read_across_UK_midnight_is_checked_and_answered_on_one_UK_today()
+    {
+        const string reference = "RENEW2-ONE-TODAY";
+        var sold = Sale(reference, 413.58m, "Card");
+        using var client = _factory.CreateClient();
+        var sale = await client.SellAndReadBack(sold, reference);
+        var onTheEndDate = new ExpectedRenewedPolicy(reference, "Active", 1, [
+            new ExpectedPolicyTerm(Start, End, "413.58", "Card"),
+            new ExpectedPolicyTerm(RenewedStart, RenewedEnd, "438.27", "Card"),
+        ]);
+
+        HttpResponseMessage response;
+        _factory.Clock.SetUtcNow(new DateTimeOffset(2027, 10, 28, 22, 30, 0, TimeSpan.Zero));
+        _factory.Clock.AutoAdvanceAmount = TimeSpan.FromHours(1);
+        try
+        {
+            response = await client.PostRenewal(reference, new RenewalRequestBuilder().WithAmount(438.27m).Build());
+        }
+        finally
+        {
+            _factory.Clock.AutoAdvanceAmount = TimeSpan.Zero;
+        }
+
+        IReadOnlyList<string?> paymentReferences;
+        using (response)
+        {
+            var renewed = await RenewalActions.RenewedBody(response, reference);
+            paymentReferences = RenewedPolicyAssert.ReadsBack(renewed, sold, onTheEndDate, [sale.PaymentReference()]);
+        }
+
+        _factory.Clock.AdjustTime(new DateTimeOffset(2027, 10, 28, 12, 0, 0, TimeSpan.Zero));
+        using var read = await client.GetPolicy(reference);
+        Assert.Equal(System.Net.HttpStatusCode.OK, read.StatusCode);
+        _ = RenewedPolicyAssert.ReadsBack(await read.ReadJson(), sold, onTheEndDate, paymentReferences);
+    }
+
     private static JsonObject Sale(string reference, decimal amount, string paymentMethod) =>
         new SellPolicyRequestBuilder(reference).WithStartDate(Start).WithAmount(amount).WithPaymentMethod(paymentMethod).Build();
 
