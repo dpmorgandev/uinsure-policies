@@ -8,7 +8,7 @@ with TDD, one feature at a time. Every rule, its ID and the interpretation taken
 
 ## How to run it
 
-**Prerequisites:** the .NET 10 SDK (`global.json` pins 10.0.100 and rolls forward within the feature band).
+**Prerequisites:** the .NET 10 SDK (`global.json` pins 10.0.100 and rolls forward to the latest installed 10.0 feature band, so any newer 10.0 SDK is accepted).
 The Postman CLI is only needed for the Postman collection.
 
 **Run the API** (SQLite, schema created at start-up, nothing to configure):
@@ -57,14 +57,14 @@ Where the brief was unclear I took a sensible view. The full list, one row per r
 - **Cancelling:** the date is optional and defaults to today, past dates are refused (CANCEL-3), and it must be
   on or before the end of cover (CANCEL-7). Cancelling twice is a `409` (CANCEL-4).
 - **A renewal adds a term** to the same policy, starting the day after the current end (RENEW-4,
-  [Renew](docs/requirements.md#renew-should-2)). The window is the 30 days up to the end date, inclusive.
+  [Renew](docs/requirements.md#renew-should-2)). The window runs from 30 days before the latest term's end date to the end date, both inclusive (31 calendar days). For a term ending 16 October 2027, that is 16 September to 16 October 2027.
 - **Renewing with auto-renew off creates an unpaid term**, and sending a payment method with it is a `422`
   (RENEW-3b). A cancelled policy cannot be renewed (`409`, RENEW-6).
 - **A claim means a £0 refund** (COULD-2, [Could-haves](docs/requirements.md#could-haves-all-in-scope)). Claims
   are recorded with `POST /policies/{reference}/claims`.
 - **No £0 Refund record is created.** The cancellation response still lists every term with `refundAmount` 0.00.
 - **Status is derived** from today (Pending, Active, Expired, Cancelled) and never stored.
-- **Errors:** `400` for shape, `404` unknown reference, `409` state conflicts, `422` for every numbered rule,
+- **Errors:** `400` for shape, `404` unknown reference, `409` state conflicts, `422` for the business rules (every numbered rule that is not a `404` or `409`),
   with all broken rules listed together. Unknown JSON fields and query parameters are a `400`.
 - **No authentication** (out of scope). `Location` on renewals and claims points at the policy.
 

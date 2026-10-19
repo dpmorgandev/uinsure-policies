@@ -55,7 +55,7 @@ Every problem is RFC 9457 problem details with `type` (`/problems/{rule-id}`, lo
 | `400` | Shape: `errors` map, no `ruleId`. Checked first |
 | `404` | GET-1: unknown reference |
 | `409` | State conflicts (SELL-1, CANCEL-4, RENEW-6, COULD-2c) and a database concurrency conflict. Returned alone |
-| `422` | Every numbered rule. All broken rules are collected in `violations[]`; `ruleId` is the first of them |
+| `422` | The business rules: every numbered rule that is not a `404` or `409`. All broken rules are collected in `violations[]`; `ruleId` is the first of them |
 | `429` | Rate limit, with `Retry-After` |
 | `500` | A generic `detail` and a `traceId`. The exception goes to the logs only, never a stack trace in the body |
 
@@ -108,8 +108,12 @@ the migrations themselves. The pre-push idempotent migration script
 There is no CI for the code (see [infrastructure/README.md](../infrastructure/README.md)). The gate
 is the hooks in `.githooks/`:
 
-- `pre-commit`: a privacy scan of staged files, then `dotnet build -warnaserror`.
-- `pre-push`: a Release build, the full test suite, the idempotent migration script, and the harness self-test.
+- `pre-commit`: refuses a commit on `main` once the `main-locked` marker exists, then a privacy scan of staged
+  files, then `dotnet build -warnaserror`.
+- `commit-msg`: on `feature/*` and `bug/*` branches, checks the `Agent`, `Plan` and `Node` trailers (and `Rule` and
+  `TDD` on tester and builder commits), and that `Plan` and `Node` match the branch.
+- `pre-push`: refuses a push to `main` once it is locked, then a Release build, the full test suite, the
+  idempotent migration script, and the harness self-test.
 
 ## Branching and merging
 
