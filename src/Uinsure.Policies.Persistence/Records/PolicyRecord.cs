@@ -16,4 +16,6 @@ internal sealed class PolicyRecord
     public required List<PolicyholderRecord> Policyholders { get; set; }
     public required PropertyRecord Property { get; set; }
     public required List<TermRecord> Terms { get; set; }
+    public required List<ClaimRecord> Claims { get; set; }
+    public CancellationRecord? Cancellation { get; set; }
 }

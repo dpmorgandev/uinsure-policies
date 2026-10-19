@@ -29,6 +29,49 @@ namespace Uinsure.Policies.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Cancellation",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    CancellationDate = table.Column<DateOnly>(type: "date", nullable: false),
+                    RuleApplied = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    TotalRefund = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    PolicyId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Cancellation", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Cancellation_Policies_PolicyId",
+                        column: x => x.PolicyId,
+                        principalTable: "Policies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Claim",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ClaimDate = table.Column<DateOnly>(type: "date", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    PolicyId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Claim", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Claim_Policies_PolicyId",
+                        column: x => x.PolicyId,
+                        principalTable: "Policies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Policyholder",
                 columns: table => new
                 {
@@ -96,6 +139,53 @@ namespace Uinsure.Policies.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Refund",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Reference = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
+                    Method = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    PaymentReference = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
+                    CancellationId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Refund", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Refund_Cancellation_CancellationId",
+                        column: x => x.CancellationId,
+                        principalTable: "Cancellation",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefundCalculation",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    RuleApplied = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    TermDays = table.Column<int>(type: "int", nullable: false),
+                    UsedDays = table.Column<int>(type: "int", nullable: false),
+                    UnusedDays = table.Column<int>(type: "int", nullable: false),
+                    CancellationId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefundCalculation", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefundCalculation_Cancellation_CancellationId",
+                        column: x => x.CancellationId,
+                        principalTable: "Cancellation",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Payment",
                 columns: table => new
                 {
@@ -115,6 +205,17 @@ namespace Uinsure.Policies.Persistence.Migrations
                         principalTable: "Term",
                         principalColumn: "Id");
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Cancellation_PolicyId",
+                table: "Cancellation",
+                column: "PolicyId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Claim_PolicyId",
+                table: "Claim",
+                column: "PolicyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Payment_TermId",
@@ -141,6 +242,16 @@ namespace Uinsure.Policies.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Refund_CancellationId",
+                table: "Refund",
+                column: "CancellationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefundCalculation_CancellationId",
+                table: "RefundCalculation",
+                column: "CancellationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Term_PolicyId",
                 table: "Term",
                 column: "PolicyId");
@@ -149,6 +260,9 @@ namespace Uinsure.Policies.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "Claim");
+
             migrationBuilder.DropTable(
                 name: "Payment");
 
@@ -159,7 +273,16 @@ namespace Uinsure.Policies.Persistence.Migrations
                 name: "Property");
 
             migrationBuilder.DropTable(
+                name: "Refund");
+
+            migrationBuilder.DropTable(
+                name: "RefundCalculation");
+
+            migrationBuilder.DropTable(
                 name: "Term");
+
+            migrationBuilder.DropTable(
+                name: "Cancellation");
 
             migrationBuilder.DropTable(
                 name: "Policies");

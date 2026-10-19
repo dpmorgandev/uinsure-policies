@@ -21,8 +21,10 @@ internal sealed class PolicyConfiguration : IEntityTypeConfiguration<PolicyRecor
         builder.HasMany(p => p.Policyholders).WithOne().HasForeignKey("PolicyId").IsRequired();
         builder.HasOne(p => p.Property).WithOne().HasForeignKey<PropertyRecord>("PolicyId").IsRequired();
         builder.HasMany(p => p.Terms).WithOne().HasForeignKey("PolicyId").IsRequired();
+        builder.HasMany(p => p.Claims).WithOne().HasForeignKey("PolicyId").IsRequired();
+        builder.HasOne(p => p.Cancellation).WithOne().HasForeignKey<CancellationRecord>("PolicyId").IsRequired();
 
-        // The aggregate is always loaded whole. The two collections are included, in order, by PolicyRepository.
+        // The aggregate is always loaded whole. The collections are included, in order, by PolicyRepository.
         builder.Navigation(p => p.Property).AutoInclude();
     }
 }

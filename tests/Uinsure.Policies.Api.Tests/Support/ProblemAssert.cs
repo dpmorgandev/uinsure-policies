@@ -9,9 +9,9 @@ internal static class ProblemAssert
 {
     // A 422 with exactly one violation: the rule's own type, title and ruleId at the top level, and its
     // detail repeated as the single violations[] entry. Returns the body for the extension assertions.
-    public static async Task<JsonElement> SingleRuleViolation(HttpResponseMessage response, string ruleId, string title)
+    public static async Task<JsonElement> SingleRuleViolation(HttpResponseMessage response, string ruleId, string title, string instance = "/policies")
     {
-        var problem = await RuleProblem(response, HttpStatusCode.UnprocessableEntity, ruleId, title);
+        var problem = await RuleProblem(response, HttpStatusCode.UnprocessableEntity, ruleId, title, instance);
 
         var violation = Assert.Single(problem.GetProperty("violations").EnumerateArray());
         Assert.Equal(ruleId, violation.GetProperty("ruleId").GetString());
@@ -19,10 +19,23 @@ internal static class ProblemAssert
         return problem;
     }
 
-    // A 409 state conflict: short-circuits before the 422 rules, so it carries no violations[].
-    public static async Task<JsonElement> Conflict(HttpResponseMessage response, string ruleId, string title)
+    // A 422 with several violations: the first rule (in rule-ID order) names the problem, the detail counts the
+    // rules, and violations[] lists exactly the expected rules in that order, each with a detail of its own.
+    public static async Task<JsonElement> MultipleRuleViolations(HttpResponseMessage response, string title, string instance, params string[] ruleIds)
     {
-        var problem = await RuleProblem(response, HttpStatusCode.Conflict, ruleId, title);
+        var problem = await RuleProblem(response, HttpStatusCode.UnprocessableEntity, ruleIds[0], title, instance);
+
+        Assert.Equal($"{ruleIds.Length} rules failed.", problem.GetProperty("detail").GetString());
+        var violations = problem.GetProperty("violations").EnumerateArray().ToArray();
+        Assert.Equal(ruleIds, violations.Select(violation => violation.GetProperty("ruleId").GetString()).ToArray());
+        Assert.All(violations, violation => Assert.False(string.IsNullOrWhiteSpace(violation.GetProperty("detail").GetString())));
+        return problem;
+    }
+
+    // A 409 state conflict: short-circuits before the 422 rules, so it carries no violations[].
+    public static async Task<JsonElement> Conflict(HttpResponseMessage response, string ruleId, string title, string instance = "/policies")
+    {
+        var problem = await RuleProblem(response, HttpStatusCode.Conflict, ruleId, title, instance);
 
         Assert.False(problem.TryGetProperty("violations", out _));
         return problem;

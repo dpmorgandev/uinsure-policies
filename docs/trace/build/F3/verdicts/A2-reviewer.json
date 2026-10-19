@@ -1,0 +1,109 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T01:54:47Z",
+  "plan": "build",
+  "node": "F3",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "ade9d509828963cf4",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F3",
+    "attempt": 2,
+    "base_sha": "ad7b6b096e2dba88f3a3c71d860b557b789f5247",
+    "head_sha": "ba184127fd5065e5f24a473b503bafb2f69d4040",
+    "diff_fingerprint": "e4e55e83dbe9b5430a3e29aea9442adece2de41d",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red@55b2b1aa28496641a99a62fefbff160eaa910e2d",
+      "gate.stub@fc8dc035bf684ce60651629990168416f4163563",
+      "gate.finding-red@61229e777c015028b6515fe1797829c8ddea90ed",
+      "gate.stub@3126e868a081e3e85fe7f8a3d260d9097409a694",
+      "gate.red@49a2e869949c7542fe5bc2cb799710d5f17c1211",
+      "gate.green@aa9073f5bfcee597ee2d85069894b23e314b3f45",
+      "gate.red@45563a7e55d64dd1ac8569f974212670594742cb",
+      "gate.green@e958936f937b46c21f6ff332e70ccb386b98fb56",
+      "gate.green@aec9d5807e35c50df1a7d6dbf2ab245f138bbaea",
+      "gate.green@e6d1ecd5c1ce930dc17133e3582254ce7e9718eb",
+      "gate.run@e6d1ecd5c1ce930dc17133e3582254ce7e9718eb",
+      "gate.refactor@a5761c8c7bcb116b22eee32f6b6a9a18827e63c4",
+      "gate.build@a5761c8c7bcb116b22eee32f6b6a9a18827e63c4",
+      "gate.test@a5761c8c7bcb116b22eee32f6b6a9a18827e63c4",
+      "gate.scope@a5761c8c7bcb116b22eee32f6b6a9a18827e63c4",
+      "gate.stubs@a5761c8c7bcb116b22eee32f6b6a9a18827e63c4",
+      "gate.run@a5761c8c7bcb116b22eee32f6b6a9a18827e63c4",
+      "gate.vulnerable@a5761c8c7bcb116b22eee32f6b6a9a18827e63c4"
+    ],
+    "rules_covered": [
+      "CANCEL-1a",
+      "CANCEL-1b",
+      "CANCEL-1c",
+      "CANCEL-2",
+      "CANCEL-3",
+      "CANCEL-4",
+      "CANCEL-6",
+      "CANCEL-7",
+      "COULD-1",
+      "COULD-2",
+      "COULD-2a",
+      "COULD-2b",
+      "COULD-2c"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "COULD-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Controllers/PoliciesController.cs",
+        "line": 65,
+        "what": "Quote action calls service.Get then service.QuoteCancellation: two loads and two UK-today reads per request; quotedOn and the CANCEL-3 check can disagree across midnight.",
+        "why": "api.md Conventions: 'Today is UkCalendar.Today(TimeProvider), Europe/London, computed once per request.' quotedOn comes from Get's today (PolicyDetails.Today, a member added beyond the binding signatures.md PolicyDetails(Policy, CurrentTerm, Status)), while the default date and the CANCEL-3 past-date check use a second today read inside QuoteCancellation. PolicyServiceQuoteTests.Quote_reads_the_clock_once proves one read per service call, not per request.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "COULD-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs",
+        "line": 60,
+        "what": "PolicyMappings.ToQuote re-implements Policy.Cancel rules in the Api: top-level rule from CurrentTerm and refunds only for a paid term above 0 (no £0 refund).",
+        "why": "code-quality: 'Rules live in the domain. Controllers map HTTP to the service and back.' COULD-1: 'A read-only version of the cancel calculation'. The refund-eligibility rule (requirements 'No £0 refunds' / CANCEL-2) and the top-level ruleApplied choice now exist both in Policy.Cancel (Policy.cs) and in this mapping. They agree today (CancellationQuoteTests.Quote_and_a_later_cancel_for_the_same_date_agree), but a change to one won't reach the other.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "COULD-2",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Controllers/PoliciesController.cs",
+        "line": 89,
+        "what": "RecordClaim action re-reads the policy after saving and treats the last claim as the new one; a concurrent claim in between is returned instead, and stored.Value is unchecked.",
+        "why": "The service already returns the recorded Claim, but the action does a second load (and a second UK-today read) to find the claim number from Claims.Count. Another claim saved between the two calls would make E5 return that claim's reference, date and description (api.md E5 ClaimResponse). If the re-read fails, stored.Value throws and the request becomes a 500 instead of a ProblemDetails.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R4",
+        "rule_id": "COULD-2",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Domain/Policies/Policy.cs",
+        "line": 76,
+        "what": "Policy.Restore gained optional claims/cancellation defaults that only test builders use; signatures.md makes both required and the one src caller passes both.",
+        "why": "signatures.md (binding): Restore(..., IReadOnlyList<Claim> claims, Cancellation? cancellation). The only src caller (PolicyRecordMapper.cs:18) passes both. The '= null' defaults serve only Domain/Services/Api test builders that omit them. code-quality slop list: speculative generality, and a production signature bent for tests.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "A1 is closed: RecordClaimRequest has [Required] and [MaxLength(500)] on its constructor parameters; ContractRecordTests went red at 61229e7 and green at the stub fix 3126e86; at the second gate.stub the 12 tests that passed were all _with_400 shape rows.",
+      "Order holds from trailers.txt: all Api red commits (31b323b..55b2b1a) precede the stub fc8dc03; the A1 red 61229e7 (Fixes-Finding A1/I2) precedes the fix 3126e86 (TDD: stub, Fixes-Finding A1/I1, A1/I2); domain red 8122ed9..49a2e86 precede green aa9073f; services red b0c03be..45563a7 precede green e958936; persistence aec9d58 and api e6d1ecd green follow; the refactor a5761c8 is last.",
+      "No test removed: rule-trait counts at HEAD match the red gates exactly. Api: 1a 3, 1b 3, 1c 8, 2 4, 3 14, 4 3, 6 4, 7 5, COULD-1 15, 2 13, 2a 4, 2b 6, 2c 2. Domain (CANCEL-2's 3-case Theory counted): 2, 4, 9, 8, 7, 3, 8, 7, 7, 10, 3, 7, 2. Services: CANCEL-3 10, COULD-1 5, COULD-2a 5, CANCEL-2 3. I run no commands, so I couldn't diff each test file at its red commit against HEAD; 'no assertion weakened' rests on the counts plus HEAD assertions using hand-worked literals.",
+      "Stub-proof: every success row goes through PolicyStateAssert.ReadsBack (HasTheContractShape + SoldPolicyAssert.ReadsBackAsSold + exact refunds/claims/cancellation) and CancellationAssert (money compared as raw JSON text). Each test sets its own amount and dates, and refunds and day counts are literals; I re-checked the arithmetic of all of them. Builder defaults (2026-11-26 cancel; 2026-10-17 claim with its own text; 527.18 / 2026-11-08 sale) don't equal the api.md examples.",
+      "Boundaries covered at Api and Domain level: 1a day before the start; 1b on the start and at start+14; 1c at start+15 and on 365- and 366-day terms; CANCEL-6 exact half-penny on both cancel and quote; CANCEL-3 yesterday vs today plus BST/UTC; CANCEL-7 end vs end+1; COULD-2a today vs tomorrow plus BST; COULD-2b start-1 / start / end / end+1; 409s for CANCEL-4 and COULD-2c are returned before the 422 rules; multi-violation 422s for CANCEL-3+7 and COULD-2a+2b.",
+      "Money: the only Math.Round in src is in Money.cs (Money.Round, RS0030 pragma); RefundCalculator calls Money.Round once per term; totals are sums of already-rounded amounts. No banned time API and no NotImplementedException in src (also gate.stubs).",
+      "No canned response members remain: PolicyMappings fills refunds from Cancellation.Refunds, claims from Policy.Claims, the cancellation summary from Policy.Cancellation, and hasClaims from Policy.HasClaims, all loaded by PolicyRepository. The claim reference is derived as CLM-{reference}-{n} from the claims' stored key order; it isn't stored.",
+      "Each green commit carries a single Rule trailer (CANCEL-1c, CANCEL-3, CANCEL-2, CANCEL-4) for its layer. Per-rule green is evidenced by the gate.green receipts, not the trailers.",
+      "The gate receipts were recorded at a5761c8. HEAD ba18412 changes only docs/plans, which the diff fingerprint excludes."
+    ]
+  }
+}

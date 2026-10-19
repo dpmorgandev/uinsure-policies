@@ -3,6 +3,7 @@ using Xunit;
 namespace Uinsure.Policies.Services.Tests;
 
 // SELL-6: the generated payment reference has the contract's "PAY-…" form and is unique per call.
+// CANCEL-2: the generated refund reference has the contract's "REF-…" form and is unique per call.
 // Called through IReferenceGenerator, the only way in (finding A1/I4).
 public sealed class ReferenceGeneratorTests
 {
@@ -23,5 +24,22 @@ public sealed class ReferenceGeneratorTests
     public void Two_payment_references_differ()
     {
         Assert.NotEqual(_generator.Payment(), _generator.Payment());
+    }
+
+    [Fact]
+    [Trait("Rule", "CANCEL-2")]
+    public void Refund_reference_starts_with_REF_and_has_a_generated_part()
+    {
+        var reference = _generator.Refund();
+
+        Assert.StartsWith("REF-", reference, StringComparison.Ordinal);
+        Assert.True(reference.Length > "REF-".Length, "Expected a generated part after 'REF-'.");
+    }
+
+    [Fact]
+    [Trait("Rule", "CANCEL-2")]
+    public void Two_refund_references_differ()
+    {
+        Assert.NotEqual(_generator.Refund(), _generator.Refund());
     }
 }

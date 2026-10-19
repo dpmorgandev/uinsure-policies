@@ -1,0 +1,80 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T02:36:44Z",
+  "plan": "build",
+  "node": "F3",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "a3a9de1fae530de40",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F3",
+    "attempt": 2,
+    "base_sha": "066dff37d7a7a0e03c8ba909a3f1cff792419ff9",
+    "head_sha": "a59fb6cf351006cb8995a385e3ca170931ff3c13",
+    "diff_fingerprint": "7339e38c6097ad34bb89f4268b73c2eea948e713",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red@55b2b1aa28496641a99a62fefbff160eaa910e2d",
+      "gate.stub@fc8dc035bf684ce60651629990168416f4163563",
+      "gate.finding-red@61229e777c015028b6515fe1797829c8ddea90ed",
+      "gate.stub@3126e868a081e3e85fe7f8a3d260d9097409a694",
+      "gate.red@49a2e869949c7542fe5bc2cb799710d5f17c1211",
+      "gate.green@aa9073f5bfcee597ee2d85069894b23e314b3f45",
+      "gate.red@45563a7e55d64dd1ac8569f974212670594742cb",
+      "gate.green@e958936f937b46c21f6ff332e70ccb386b98fb56",
+      "gate.green@aec9d5807e35c50df1a7d6dbf2ab245f138bbaea",
+      "gate.green@e6d1ecd5c1ce930dc17133e3582254ce7e9718eb",
+      "gate.refactor@a5761c8c7bcb116b22eee32f6b6a9a18827e63c4",
+      "gate.finding-red@30c7338b8c164140fc966e386d75e6ff6d4b7283",
+      "gate.green@f5ce3e7f1672d65018c72176f68b6ee46c61b09b",
+      "gate.refactor@219b4f4f0d021f138a3e851e4b2c1a09ed54cc27",
+      "gate.build@219b4f4f0d021f138a3e851e4b2c1a09ed54cc27",
+      "gate.test@219b4f4f0d021f138a3e851e4b2c1a09ed54cc27",
+      "gate.scope@219b4f4f0d021f138a3e851e4b2c1a09ed54cc27",
+      "gate.stubs@219b4f4f0d021f138a3e851e4b2c1a09ed54cc27",
+      "gate.run@219b4f4f0d021f138a3e851e4b2c1a09ed54cc27",
+      "gate.vulnerable@219b4f4f0d021f138a3e851e4b2c1a09ed54cc27",
+      "gate.test@a59fb6cf351006cb8995a385e3ca170931ff3c13"
+    ],
+    "rules_covered": [
+      "CANCEL-1a",
+      "CANCEL-1b",
+      "CANCEL-1c",
+      "CANCEL-2",
+      "CANCEL-3",
+      "CANCEL-4",
+      "CANCEL-6",
+      "CANCEL-7",
+      "COULD-1",
+      "COULD-2",
+      "COULD-2a",
+      "COULD-2b",
+      "COULD-2c"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "COULD-1",
+        "severity": "P2",
+        "file": "tests/Uinsure.Policies.Services.Tests/PolicyServiceQuoteTests.cs",
+        "line": 12,
+        "what": "The header comment (lines 12-13) still names PolicyService.Quote and policy.Quote. The rename retargeted the calls to QuoteCancellation but left this comment stale.",
+        "why": "code-quality slop list: a comment must be true of the code it explains. These two names no longer exist anywhere in src/ or tests/; a grep finds only this comment. The A2.2 R1 rename should have updated it.",
+        "route_to": "tester"
+      }
+    ],
+    "notes": [
+      "A2.2/R1 resolved. The code now matches signatures.md as amended by harness PR #18 on origin/main 066dff3: Policy.QuoteCancellation(DateOnly?, DateOnly) -> Result<CancellationQuote>, Policy.RecordClaim(...) -> Result<Claim>, IPolicyService.QuoteCancellation -> Result<CancellationQuoteResult>, IPolicyService.RecordClaim -> Result<RecordedClaim>. CancellationQuote, QuotedRefund, CancellationQuoteResult and RecordedClaim have exactly the record shapes in signatures.md. 'Numbered' no longer appears in src/ or tests/.",
+      "A2.2/R2 resolved. src/Uinsure.Policies.Services/IPolicyService.cs at HEAD has only the Domain.Common, Domain.Policies and Services.Commands usings, and all three are used. The Domain.Rules using is gone.",
+      "The forwarders are gone. Policy.cs in the diff has only QuoteCancellation, Cancel and RecordClaim, plus the private ValidateCancellationDate and Calculate. PolicyService has Cancel, QuoteCancellation and RecordClaim, and nothing forwards to them.",
+      "Rebase. The only receipt at a59fb6c is gate.test (build -warnaserror and 528/528), which says the code is identical to 219b4f4. Build, scope, stubs, run and vulnerable at 219b4f4 are all ok. My own grep at HEAD finds no NotImplementedException in src/ and no banned time API. The only Math.Round is in Money.cs, under the RS0030 pragma.",
+      "Trail. 32eaab4 and db895da carry TDD: red, but they only retarget tests after the 5d6f452 rename, the same pattern as 1bdb18f and c407f0c in the last verdict. gate.refactor@219b4f4 says 'rename only' with 528/528, so no test was removed or weakened. Red precedes stub precedes green for every node rule, as in the A2.2 verdict.",
+      "Whole node at HEAD. Every node rule has an Api trait and a unit trait. Success rows go through the shared PolicyStateAssert.ReadsBack / OneTermCancellation full read-back with literal derived values: for example, CANCEL-1c gives 504.07, 452.00 and 546.00 over 365 and 366 days. Status codes match api.md: 409 for CANCEL-4 and COULD-2c, each returned alone; 422 for CANCEL-3, CANCEL-7, COULD-2a and COULD-2b, collected; 201 for E3 and E5; 200 for E4 with quotedOn.",
+      "Security's verdict was not read, per my role."
+    ]
+  }
+}

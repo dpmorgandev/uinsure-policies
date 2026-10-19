@@ -74,7 +74,8 @@ internal static class PolicyResponseAssert
         }
     }
 
-    private static void HasMembers(JsonElement element, string[] expected, string what)
+    // Exactly these members, no more and no fewer. Shared with the F3 asserts (CancellationAssert, PolicyStateAssert).
+    internal static void HasMembers(JsonElement element, string[] expected, string what)
     {
         Assert.Equal(JsonValueKind.Object, element.ValueKind);
         var actual = element.EnumerateObject().Select(member => member.Name).Order(StringComparer.Ordinal).ToArray();

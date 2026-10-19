@@ -9,4 +9,10 @@ public interface IPolicyService
     Task<Result<PolicyDetails>> Sell(SellPolicy command, CancellationToken ct);
 
     Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct);
+
+    Task<Result<Cancellation>> Cancel(PolicyReference reference, DateOnly? on, CancellationToken ct);
+
+    Task<Result<CancellationQuoteResult>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct);
+
+    Task<Result<RecordedClaim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
 }

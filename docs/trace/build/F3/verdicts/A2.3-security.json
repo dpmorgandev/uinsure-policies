@@ -1,0 +1,67 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T02:35:32Z",
+  "plan": "build",
+  "node": "F3",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "ae58a22d29b938aff",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F3",
+    "attempt": 2,
+    "base_sha": "066dff37d7a7a0e03c8ba909a3f1cff792419ff9",
+    "head_sha": "a59fb6cf351006cb8995a385e3ca170931ff3c13",
+    "diff_fingerprint": "7339e38c6097ad34bb89f4268b73c2eea948e713",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.vulnerable",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API4:2023",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Domain/Policies/Policy.cs",
+        "line": 588,
+        "what": "RecordClaim has no cap on claims per policy; each POST appends a claim and GET /policies/{ref} returns them all.",
+        "why": "API4 asks for bounded collections. Growth is limited only by the per-IP 'writes' rate limit and the 500-char description cap, so this is hardening, not exploitable now. Non-blocking.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "n/a API1:2023 - Out: no auth or tenancy; the reference is the only key.",
+      "n/a API2:2023 - Out: authentication is out of scope.",
+      "n/a API5:2023 - Out: no roles. POST /claims would be an admin function in real life.",
+      "n/a API7:2023 - Out: no outbound fetching; grep for HttpClient and WebRequest in src/ found no matches.",
+      "n/a API10:2023 - Out: no upstream APIs.",
+      "API3: CancelPolicyRequest carries only a nullable CancellationDate. RecordClaimRequest carries only ClaimDate and Description, both as DTOs with no EF or Domain types bound. Clients cannot set HasClaims, Cancellation, refund or payment references, EndDate or Version. Responses (CancellationResponse, CancellationQuoteResponse, RecordClaimResponse, PolicyResponse) expose no Version or internal Id. The claim reference is derived as CLM-{policy}-{n}.",
+      "API4: Description is capped at 500 on both the DTO ([MaxLength(500)] on the constructor parameter) and the EF column (ClaimConfiguration HasMaxLength(500)). Refund references are capped at 40 and RuleApplied at 20, and money columns use HasPrecision(18,2). The new routes sit under the existing global limiter, and both POSTs carry [EnableRateLimiting(\"writes\")]. Body-size and forwarded-header config are not in this diff and are unchanged. No list endpoint was added. See S1 for the one unbounded growth path.",
+      "API6: a second cancel is 409 by CANCEL-4, because ValidateCancellationDate rejects any policy whose Cancellation is not null, for both cancel and quote. A claim means a 0 refund (COULD-2), and an unpaid term refunds 0. Each term's refund is at most term.Amount, because unusedDays is clamped to [0, termDays] and a refund exists only for a term with a Payment. Refund total is therefore at most the sum of payments. RefundCalculator calls Money.Round once, on the final amount. Quote never calls SaveChanges and mutates nothing: Policy.QuoteCancellation is pure, and PolicyService.QuoteCancellation has no save. A concurrent double-cancel or double-claim is caught because PolicyRepository.UpdateTrackedRecords bumps PolicyRecord.Version when child rows are added, and Version is IsConcurrencyToken. The handler maps the resulting conflict to 409. The Cancellation FK to PolicyId is also one-to-one.",
+      "API8: no UseDeveloperExceptionPage, Exception.Message or StackTrace added in src/. The new violations flow through the existing ProblemCatalog titles and the fixed rule messages. No secrets or connection strings in the diff (regex scan clean). Middleware, HSTS, https-required and OpenAPI wiring are untouched by this diff.",
+      "API9: the new routes are POST /policies/{reference}/cancellation (E3), GET /policies/{reference}/cancellation-quote (E4) and POST /policies/{reference}/claims (E5). No canned or stub values remain, and PolicyMappings now fills refunds, claims and cancellation from the domain. gate.stubs found no NotImplementedException in src/. The Quote action rejects non-yyyy-MM-dd dates with a 400 ValidationProblem.",
+      "NET SQL: no FromSqlRaw, ExecuteSqlRaw or SqlQueryRaw; EF LINQ only.",
+      "NET money: decimal throughout, and no double or float in src/. The only rounding call is Money.Round, behind the RS0030 suppression.",
+      "NET time: no DateTime.Now, UtcNow or Today in src/. The service uses UkCalendar.Today(clock).",
+      "NET packages: the diff touches no csproj or package reference, and gate.vulnerable reports 8 projects, none vulnerable.",
+      "NET logging: this diff adds no Log* call. The existing logging prints only method and path, plus the exception or reason, with no body and no personal data.",
+      "Gate receipts: the newest gates.jsonl events are for head 219b4f4, before the rebase and the rename-only refactor to a59fb6c. They are still valid evidence for this analysis, which is a static read of the whole node diff at a59fb6c. I confirmed the renames (QuoteCancellation, RecordClaim) and the deleted forwarders in the trailer log and in the controller and service source. Re-running the gates at the new head is the orchestrator's call."
+    ]
+  }
+}

@@ -1,11 +1,12 @@
 using Riok.Mapperly.Abstractions;
 using Uinsure.Policies.Domain.Policies;
+using Uinsure.Policies.Domain.Rules;
 using Uinsure.Policies.Persistence.Records;
 
 namespace Uinsure.Policies.Persistence;
 
-// Compile-time mapping between the Domain model and the stored records. Version and Restore are hand-written
-// because they are not field copies: Version is Persistence's own, and Restore must run no rule.
+// Compile-time mapping between the Domain model and the stored records. Restore is hand-written because it
+// must run no rule, and Version is not mapped because it is Persistence's own, set by PolicyRepository.
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 internal sealed partial class PolicyRecordMapper
 {
@@ -21,7 +22,9 @@ internal sealed partial class PolicyRecordMapper
             record.HasClaims,
             [.. record.Policyholders.Select(ToDomain)],
             ToDomain(record.Property),
-            [.. record.Terms.Select(ToDomain)]);
+            [.. record.Terms.Select(ToDomain)],
+            [.. record.Claims.Select(ToDomain)],
+            record.Cancellation is null ? null : ToDomain(record.Cancellation));
 
     private static string ToValue(PolicyReference reference) => reference.Value;
 
@@ -36,6 +39,26 @@ internal sealed partial class PolicyRecordMapper
 
     [MapperIgnoreTarget(nameof(PaymentRecord.Id))]
     private partial PaymentRecord ToRecord(Payment payment);
+
+    [MapperIgnoreTarget(nameof(ClaimRecord.Id))]
+    public partial ClaimRecord ToRecord(Claim claim);
+
+    [MapperIgnoreTarget(nameof(CancellationRecord.Id))]
+    public partial CancellationRecord ToRecord(Cancellation cancellation);
+
+    [MapperIgnoreTarget(nameof(RefundCalculationRecord.Id))]
+    private partial RefundCalculationRecord ToRecord(RefundCalculation calculation);
+
+    [MapperIgnoreTarget(nameof(RefundRecord.Id))]
+    private partial RefundRecord ToRecord(Refund refund);
+
+    private partial Claim ToDomain(ClaimRecord record);
+
+    private partial Cancellation ToDomain(CancellationRecord record);
+
+    private partial RefundCalculation ToDomain(RefundCalculationRecord record);
+
+    private partial Refund ToDomain(RefundRecord record);
 
     private partial Policyholder ToDomain(PolicyholderRecord record);
 

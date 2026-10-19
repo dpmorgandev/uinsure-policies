@@ -62,5 +62,7 @@ public sealed class PolicyBuilder(string reference)
         _hasClaims,
         _policyholders,
         _property,
-        _terms);
+        _terms,
+        [],
+        null);
 }

@@ -18,12 +18,16 @@ internal sealed class PolicyRepository(PoliciesDbContext context) : IPolicyRepos
     // The record behind each policy handed out in this request. The repository is scoped, so the map is too.
     private readonly Dictionary<Policy, PolicyRecord> _records = new(ReferenceEqualityComparer.Instance);
 
-    // SELL-4/SELL-5: holders and terms load in the order they were sold, which is their generated key order.
+    // SELL-4/SELL-5: holders, terms, claims, calculations and refunds load in the order they were stored, which is
+    // their generated key order.
     public async Task<Policy?> GetByReference(PolicyReference reference, CancellationToken ct)
     {
         var record = await context.Policies
             .Include(p => p.Policyholders.OrderBy(h => h.Id))
             .Include(p => p.Terms.OrderBy(t => t.Id))
+            .Include(p => p.Claims.OrderBy(c => c.Id))
+            .Include(p => p.Cancellation).ThenInclude(c => c!.Terms.OrderBy(t => t.Id))
+            .Include(p => p.Cancellation).ThenInclude(c => c!.Refunds.OrderBy(r => r.Id))
             .FirstOrDefaultAsync(p => p.Reference == reference.Value, ct);
         if (record is null)
         {
@@ -64,14 +68,28 @@ internal sealed class PolicyRepository(PoliciesDbContext context) : IPolicyRepos
     // Domain → tracked record, then a new Version for every loaded record that now differs from the database.
     private void UpdateTrackedRecords()
     {
+        var changed = new HashSet<PolicyRecord>();
         foreach (var (policy, record) in _records)
         {
             record.AutoRenew = policy.AutoRenew;
             record.HasClaims = policy.HasClaims;
+
+            // Claims only ever grow, and a cancellation is written once.
+            foreach (var claim in policy.Claims.Skip(record.Claims.Count))
+            {
+                record.Claims.Add(_mapper.ToRecord(claim));
+                changed.Add(record);
+            }
+
+            if (policy.Cancellation is not null && record.Cancellation is null)
+            {
+                record.Cancellation = _mapper.ToRecord(policy.Cancellation);
+                changed.Add(record);
+            }
         }
 
         context.ChangeTracker.DetectChanges();
-        foreach (var record in _records.Values.Where(r => context.Entry(r).State == EntityState.Modified))
+        foreach (var record in _records.Values.Where(r => changed.Contains(r) || context.Entry(r).State == EntityState.Modified))
         {
             record.Version = Guid.NewGuid();
         }

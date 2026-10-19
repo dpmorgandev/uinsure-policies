@@ -1,0 +1,91 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T02:14:34Z",
+  "plan": "build",
+  "node": "F3",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "aae42bd751854b23b",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F3",
+    "attempt": 2,
+    "base_sha": "ad7b6b096e2dba88f3a3c71d860b557b789f5247",
+    "head_sha": "f5ce3e7f1672d65018c72176f68b6ee46c61b09b",
+    "diff_fingerprint": "81a0f6e1d85cb5466ab6b94239dfa3744a51e44c",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red@55b2b1aa28496641a99a62fefbff160eaa910e2d",
+      "gate.stub@fc8dc035bf684ce60651629990168416f4163563",
+      "gate.finding-red@61229e777c015028b6515fe1797829c8ddea90ed",
+      "gate.stub@3126e868a081e3e85fe7f8a3d260d9097409a694",
+      "gate.red@49a2e869949c7542fe5bc2cb799710d5f17c1211",
+      "gate.green@aa9073f5bfcee597ee2d85069894b23e314b3f45",
+      "gate.red@45563a7e55d64dd1ac8569f974212670594742cb",
+      "gate.green@e958936f937b46c21f6ff332e70ccb386b98fb56",
+      "gate.green@aec9d5807e35c50df1a7d6dbf2ab245f138bbaea",
+      "gate.green@e6d1ecd5c1ce930dc17133e3582254ce7e9718eb",
+      "gate.run@e6d1ecd5c1ce930dc17133e3582254ce7e9718eb",
+      "gate.refactor@a5761c8c7bcb116b22eee32f6b6a9a18827e63c4",
+      "gate.finding-red@30c7338b8c164140fc966e386d75e6ff6d4b7283",
+      "gate.green@f5ce3e7f1672d65018c72176f68b6ee46c61b09b",
+      "gate.build@f5ce3e7f1672d65018c72176f68b6ee46c61b09b",
+      "gate.test@f5ce3e7f1672d65018c72176f68b6ee46c61b09b",
+      "gate.scope@f5ce3e7f1672d65018c72176f68b6ee46c61b09b",
+      "gate.stubs@f5ce3e7f1672d65018c72176f68b6ee46c61b09b",
+      "gate.run@f5ce3e7f1672d65018c72176f68b6ee46c61b09b",
+      "gate.vulnerable@f5ce3e7f1672d65018c72176f68b6ee46c61b09b"
+    ],
+    "rules_covered": [
+      "CANCEL-1a",
+      "CANCEL-1b",
+      "CANCEL-1c",
+      "CANCEL-2",
+      "CANCEL-3",
+      "CANCEL-4",
+      "CANCEL-6",
+      "CANCEL-7",
+      "COULD-1",
+      "COULD-2",
+      "COULD-2a",
+      "COULD-2b",
+      "COULD-2c"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "COULD-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Services/IPolicyService.cs",
+        "line": 18,
+        "what": "Signatures now differ from binding signatures.md: Policy.Quote, service Quote returning CancellationQuoteResult, RecordNumberedClaim returning RecordedClaim; 'Numbered' isn't domain language.",
+        "why": "signatures.md (binding) lists Policy.QuoteCancellation -> Result<IReadOnlyList<RefundCalculation>>, PolicyService.QuoteCancellation and PolicyService.RecordClaim -> Result<Claim>. The architecture skill's 'Where rules live' also names policy.QuoteCancellation. The new shapes are the right fix for the old R1-R3, but the code and its binding contract now disagree. code-quality Naming: use the requirements' domain language. With the old wrapper deleted, the name RecordClaim is free again. Either David amends signatures.md and the architecture skill (subagents can't write them), or the builder goes back to the documented names.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "COULD-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Services/IPolicyService.cs",
+        "line": 3,
+        "what": "using Uinsure.Policies.Domain.Rules; is now unused: only the deleted QuoteCancellation's RefundCalculation return type needed it.",
+        "why": "code-quality slop list: 'Dead code: unused members, parameters, branches or usings'. No member of IPolicyService refers to RuleIds, RefundCalculator or RefundCalculation at HEAD. The build doesn't enforce IDE0005 (no EnforceCodeStyleInBuild), so -warnaserror doesn't catch it.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "A2/R1 resolved. PolicyService.Quote reads UkCalendar.Today once and returns it as CancellationQuoteResult.QuotedOn. The controller makes one service call. PolicyDetails is back to its binding (Policy, CurrentTerm, Status). Api CancellationQuoteTests.Quote_read_across_UK_midnight_is_checked_and_quoted_on_one_UK_today (FakeTimeProvider auto-advancing 1h per read from 22:30Z BST) expects 200 quotedOn 2026-10-17 with literal 452.76 CANCEL-1b, 1/364 days. It went red at 30c7338 (gate.finding-red: 422 CANCEL-3) and green at f5ce3e7.",
+      "A2/R2 resolved. Policy.Quote owns the whole decision: top-level rule from CurrentTerm(date), no £0 refund, a refund only for a paid term. Policy.Cancel calls Quote and only adds refund references. PolicyMappings.ToResponse(CancellationQuoteResult) only maps. The quote/cancel parity tests (Api, Domain, Services) pin it. Domain quote tests assert only .Terms, but the moved refund/rule logic is exercised through the Domain Cancel tests and the Api quote rows.",
+      "A2/R3 resolved. The controller makes one RecordNumberedClaim call. The service takes the claim number and HasClaims from the policy before SaveChanges, with no second load. ClaimResponseTests uses AfterSaveApiFactory to land a real second claim straight after the save, and to make the policy unreadable after it. Both tests went red at 30c7338 and are green at f5ce3e7. The race test reads both claims back in order through PolicyStateAssert.ReadsBack.",
+      "A2/R4 resolved. Policy.Restore's claims and cancellation parameters have no defaults (Policy.cs diff). The Domain, Services and Api test builders pass [] and null explicitly. The only src caller (PolicyRecordMapper) passes both. gate.build at f5ce3e7 is clean.",
+      "Trail. The three finding reds (eb27f63, eb6fa76, 30c7338) precede the fix 500c0b2. gate.finding-red shows 3 real reds (R1, R3 x2); R4's test-side change passed, as expected for a signature change. 1bdb18f and c407f0c carry TDD: red but weren't red: they retarget tests after 500c0b2 kept the old wrappers. The gate.green receipt at f5ce3e7 records 10 retargeted assertions, unchanged, and 528 = 525 + the 3 new tests, so no test was removed.",
+      "Harness gap, not a producer finding. 500c0b2 is a fix(...) commit without Fixes-Finding, which the requirements-trace skill asks for. Per the orchestrator, the commit-msg hook accepts only A<n>/I<n> ids, and the commit body names A2/R1-R4 and S1. A producer can't fix this without rewriting history, which is banned. The commit-msg hook should accept reviewer/security ids (A<n>/R<n>, A<n>/S<n>); that hook change is David's.",
+      "The R1 midnight test asserts the full quote body with literals but doesn't call PolicyStateAssert.ReadsBackUnchanged afterwards. No canned stub could pass it, and the other quote rows prove the read-back stays unchanged, so it isn't a finding.",
+      "Whole node at HEAD. Every node rule has Api and unit traits, and success and failure rows where the rule has both. Status codes match api.md: 409 CANCEL-4/COULD-2c returned alone before the collected 422s; 422 CANCEL-3/7 and COULD-2a/2b; 201 E3 with no Location; 200 E4 with quotedOn; 201 E5 with Location /policies/{reference}. Money.Round is the only rounding call (Money.cs, RS0030 pragma). No banned time API. No NotImplementedException in src (gate.stubs@f5ce3e7). Postman F3 Cancel: 0 failed (gate.run@f5ce3e7).",
+      "Security's verdict was not read, per my role. S1 is judged only through the R3 tests it shares."
+    ]
+  }
+}
