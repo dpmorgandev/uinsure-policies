@@ -212,12 +212,12 @@ Observations for David (not step rows, not raised as findings):
 
 | | |
 |---|---|
-| Tester | |
-| Date | |
-| Commit signed off | |
-| `dotnet test` result | |
-| Offline checks (`bicep build`, `build-params` ×3, `check-pipeline.py`) | |
-| Steps passed | |
-| Defects raised (finding ids) | |
-| Verdict | ☐ Reject (findings above)  ☐ Accept F5 |
-| Signature | |
+| Tester | David Morgan (steps run by the tester agent, verified by the orchestrator) |
+| Date | 2026-10-19 |
+| Commit signed off | a14af3fa1e6572bd2c81e5a8af96cd7240a9c7e4 (tested; later commits change docs/plans and docs/trace only) |
+| `dotnet test` result | 637 passed / 0 failed / 0 skipped (`dotnet test --solution Uinsure.Policies.slnx`, 2026-10-19) |
+| Offline checks (`bicep build`, `build-params` ×3, `check-pipeline.py`) | all exit 0, zero Bicep warnings; pipeline check passed (mutation-proved) |
+| Steps passed | 33 of 33 |
+| Defects raised (finding ids) | QA O1 (prod approval before what-if), closed by inv-002: red 5defb7f, green a14af3f. Accepted risk: the unapproved what-if shares the deploy ARM connection (inv-002 rec 3 rejected). Carried: A2.3 R1, A3 R1, A3 R2 (checker strength) |
+| Verdict | ☐ Reject (findings above)  ☑ Accept F5 |
+| Signature | David Morgan 19/10/2026 08:25 |
