@@ -51,17 +51,39 @@ for needle in ("dotnet build", "dotnet test", "migrations script --idempotent"):
     check(needle in build_text, f"Build stage must run: {needle}")
 
 # Deploy steps.
-deploy = template["stages"][0]["jobs"][0]
-steps = deploy["strategy"]["runOnce"]["deploy"]["steps"]
+def job_steps(job):
+    return job.get("steps") or job.get("strategy", {}).get("runOnce", {}).get("deploy", {}).get("steps", [])
+
+
+def runs(step, needle):
+    return needle in step.get("inputs", {}).get("inlineScript", "")
+
+
+jobs = template["stages"][0]["jobs"]
+deploy = next(j for j in jobs if "deployment" in j)
+steps = job_steps(deploy)
 az = [s for s in steps if s.get("task") == "AzureCLI@2"]
 check(len(az) >= 3, "deploy needs AzureCLI@2 steps")
 for s in az:
     inputs = s["inputs"]
     for key in ("azureSubscription", "scriptType", "scriptLocation", "inlineScript"):
         check(key in inputs, f"AzureCLI@2 '{s.get('displayName')}' missing input {key}")
-whatif = next((i for i, s in enumerate(steps) if "what-if" in s.get("inputs", {}).get("inlineScript", "")), None)
-create = next((i for i, s in enumerate(steps) if "deployment sub create" in s.get("inputs", {}).get("inlineScript", "")), None)
-check(whatif is not None and create is not None and whatif < create, "what-if must come before deployment sub create")
+create = next((i for i, s in enumerate(steps) if runs(s, "deployment sub create")), None)
+check(create is not None, "the deployment job must run deployment sub create")
+
+# QA: the what-if runs in its own regular job BEFORE the approval-gated deployment job, so the approval on
+# policies-prod is given after the what-if exists. "what-if before create" is proven across the two jobs.
+whatif_jobs = [j for j in jobs if "deployment" not in j and any(runs(s, "az deployment sub what-if") for s in job_steps(j))]
+check(len(whatif_jobs) == 1, "QA: the stage template needs one regular job (not a deployment job) that runs az deployment sub what-if")
+check(not any("environment" in j for j in whatif_jobs), "QA: the what-if job must not declare an environment (no approval gate)")
+check(not any(runs(s, "what-if") for s in steps), "QA: no what-if may run inside the approval-gated deployment job")
+check([j["deployment"] for j in jobs if "environment" in j] == [deploy["deployment"]], "QA: the deployment job must be the only job with an environment")
+wi_name = whatif_jobs[0].get("job") if whatif_jobs else None
+depends = deploy.get("dependsOn")
+depends = [depends] if isinstance(depends, str) else (depends or [])
+check(wi_name is not None and wi_name in depends, "QA: the deployment job must declare dependsOn on the what-if job")
+check(any("what-if" in (s.get("displayName") or "").lower() or runs(s, "what-if") for j in whatif_jobs for s in job_steps(j)) and create is not None
+      and wi_name in depends, "what-if must come before deployment sub create (what-if job, then the deployment job that depends on it)")
 text = (HERE / "stage-template.yml").read_text(encoding="utf-8")
 check("environment: policies-${{ parameters.environmentName }}" in text, "deployment must target environment policies-<env> (prod approval lives there)")
 check("/health/ready" in steps[-1].get("script", ""), "last step must curl /health/ready")
