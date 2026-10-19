@@ -233,7 +233,7 @@ nodes:
     rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c]
     cuttable: false
     budget: null
-    status: in_progress
+    status: paused_acceptance
     attempt: 2
     branch: feature/build/F3
     worktree: .claude/worktrees/build-F3
@@ -248,7 +248,7 @@ nodes:
       - "CANCEL-2 refunds to the original payment method, CANCEL-6 rounds 2dp away from zero in one place, and COULD-2a/b reject a future claim date or one outside every term with 422"
     tasks:
       - {id: t1, role: tester, step: red, layer: acceptance, rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c], title: "Cancel, quote and claims acceptance suite, every success and failure row; Postman F3 folder; throwing stubs; F3 ids out of rule-coverage.pending.txt", status: done}
-      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub POST cancellation, GET cancellation-quote and POST claims with canned bodies", status: pending}
+      - {id: t2, role: builder, step: stub, layer: api, rules: [], title: "Stub POST cancellation, GET cancellation-quote and POST claims with canned bodies", status: done}
       - {id: t3, role: david, step: pause1, layer: null, rules: [], title: "Pause 1: call the Cancel stubs in Postman, read the acceptance tests; go or change", status: pending}
       - {id: t4, role: tester, step: red, layer: domain, rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c], title: "Domain.Tests for policy.Cancel, RefundCalculator, Money.Round and policy.RecordClaim at every boundary: before start, cooling-off day 14/15, pro-rata on 365/366, per-payment method, past date, cancel twice, after cover, claim rules", status: pending}
       - {id: t5, role: builder, step: green, layer: domain, rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c], title: "policy.Cancel, pure RefundCalculator (quote = same calculation), Money.Round, policy.RecordClaim; Policy.Restore gains claims and cancellation", status: pending}
