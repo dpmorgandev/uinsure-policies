@@ -122,6 +122,31 @@ Where the brief was unclear I took a sensible view. The full list, one row per r
 The full lists are in [docs/design.md](docs/design.md#known-limits) and
 [docs/design.md](docs/design.md#behaviours-of-the-renewal-and-input-handling).
 
+## How it was built
+
+AI agents in Claude Code built this repo, inside a harness designed for it, with a human deciding at fixed
+points. In outline:
+
+- **Decide first.** Each part of the system has a spec with options, a recorded decision and a binding contract
+  (`.claude/specs/`). Every rule in the brief has an ID and an interpretation ([docs/requirements.md](docs/requirements.md)).
+- **Plan as a DAG.** Features are nodes with explicit tasks ([build.dag.yaml](docs/plans/active/build.dag.yaml)).
+  Status changes only by commit.
+- **One loop per feature** (`/feature`): failing acceptance tests first, then green layer by layer, then an
+  independent code review and security review. A failure is diagnosed before it is fixed, and the third failure
+  stops for a written investigation.
+- **Six agents with fixed roles.** The agents that review can't write, and the agents that write don't judge
+  their own work. The orchestrating session runs every check itself.
+- **Hooks, not trust.** Hooks block what the rules forbid: writing outside a role, pushing to `main`,
+  force-pushes, skipping the git hooks, leaking private data.
+- **A human at two pauses per feature.** One with the tests red, one at sign-off with a QA script. Every push, PR
+  and merge was approved by hand.
+- **A trail for everything.** Gate results, verdicts, findings and every agent's tool calls, per feature
+  ([docs/trace/](docs/trace/)), a rule-by-rule matrix, and session snapshots so work resumed across days
+  ([docs/context/](docs/context/)).
+
+[docs/harness.md](docs/harness.md) has the full account: what each piece is, why it exists, the slash commands,
+how each feature went, and what the harness missed.
+
 ## More detail
 
 - [docs/design.md](docs/design.md): endpoints, errors, tests, design decisions, security scope, known limits and
