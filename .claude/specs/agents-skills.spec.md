@@ -379,3 +379,33 @@ not a derived copy that can drift. `styles.md` stays as round 1's archive.
 
 **Design-stage branches** gain `feature/ui/DC` (creative direction). Round 2's mockups run on
 `feature/ui/DM2`.
+
+## Amendment A4 (2026-10-19): the kit builder (G3). Approved by David ("proceed with recommendations")
+
+**Why.** The kit stage builds the real React kit: 71 components, each with its examples and test, plus
+the kitchen sink (`design-system.spec.md`). David chose a separate role so `ui-designer` stays limited to
+design artifacts (`web-architecture` Decision).
+
+**Roster row:**
+
+| Agent | Model / effort | Tools | Writes | Preloaded skill | Dispatched by |
+|---|---|---|---|---|---|
+| `kit-builder` | sonnet / high | Read, Grep, Glob, Write, Edit (no Bash, Agent, Skill, web) | `src/web/kit/**`, `tests/web/kit/**` | `react-kit` | `/stylesheet` (main session), one batch per dispatch |
+
+**Skills:**
+
+| Skill | Kind | What it is |
+|---|---|---|
+| `react-kit` | preloaded | One folder per component (`<Name>.tsx`, CSS Module, `<id>.examples.tsx`, `index.ts`) and one test file. Props in, markup out; states as props; tokens only; BUSY-1; semantics and accessibility; observed example data; the sink's `data-comp` contract; a text self-check. It can't run anything, so it never claims a pass |
+| `/stylesheet` | stage skill | Setup on `feature/ui/DK`: scaffold, tokens, install, render checks. Build in 4 waves of 8 batches. Check each wave in the parent (typecheck, tests, CSS lint), with verbatim feedback for up to 2 regenerations. Barrel, build, audit and screenshots. Stop for David at G3, then sign-off and PR |
+
+**Batches** (`.claude/skills/stylesheet/inputs.json`):
+- primitives-a (12), primitives-b (11);
+- patterns-a (12), patterns-b (11), layout (6);
+- project-a (10, including `rung-spine` beside `rule-evidence`, which composes it), project-b (9);
+- the sink.
+
+A component never spans two batches. A later wave imports earlier ones by relative path, and the barrel
+is generated after the build, so parallel agents never share a file.
+
+**Design-stage branches** gain `feature/ui/DK` (the kit), whose PR may carry kit code (guardrails A6).

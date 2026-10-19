@@ -10,7 +10,7 @@ import { repoRoot } from './lib/trace.mjs';
 import { parseHeader, renderPrompt, samePrompt } from '../scripts/design/render-prompt.mjs';
 
 export const DESIGN_AGENT = 'ui-designer';
-export const DESIGN_AGENTS = ['ui-designer', 'creative-director'];
+export const DESIGN_AGENTS = ['ui-designer', 'creative-director', 'kit-builder'];
 
 // Returns a deny reason, or null to allow.
 export function checkDispatch(input) {

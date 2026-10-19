@@ -17,6 +17,10 @@ import { renderPrompt, parseHeader } from '../../scripts/design/render-prompt.mj
 import { lintDesign } from '../../scripts/design/lint.mjs';
 import { coverageProblems } from '../../scripts/design/coverage.mjs';
 import { directionsProblems, contrast, TOKENS } from '../../scripts/design/validate-directions.mjs';
+import { deriveTokens, familiesFromRow } from '../../scripts/design/derive-tokens.mjs';
+import { splitStates, roster, kitProblems } from '../../scripts/design/audit-kit.mjs';
+import { scaffold, barrel, FILES } from '../../scripts/design/scaffold-web.mjs';
+import { existsSync } from 'node:fs';
 
 const HOOKS = resolve(import.meta.dirname, '..');
 const ROOT = resolve(HOOKS, '..', '..');
@@ -355,3 +359,123 @@ test('A3 validator: wrong count, shared archetype or tone, bad citations, low co
   has(doc(), /fails closed/);
   has(null, /fails closed/);
 });
+
+// ---------- Amendment A6: the kit stage ----------
+
+const KIT_INPUTS = JSON.parse(readFileSync(join(ROOT, '.claude', 'skills', 'stylesheet', 'inputs.json'), 'utf8'));
+const KIT_CATALOG = '# Components\n\n## Primitives\n\n| ID | Purpose | States | Uses | From |\n|---|---|---|---|---|\n'
+  + '| button | An action | primary, busy (each variant), focus | 6 (W) | B4 |\n'
+  + '\n## Project-specific compositions\n\n| ID | Purpose | States | Uses | From |\n|---|---|---|---|---|\n'
+  + '| rung-spine | The spine | one rung, a branch that rejoins | 2 (E+W) | concept |\n';
+
+// A repo with what the kit renderer reads: a territory, its type row, tokens.css, the references, a catalog.
+function withKitRepo(fn) {
+  return withDesignRepo((root) => {
+    const territory = { name: 'idea-one', governingIdea: 'order is the proof', derivedStyle: { type: { sans: 'T5', mono: 'T5' } } };
+    writeFileSync(join(root, 'docs', 'ui', 'directions.json'), JSON.stringify({ version: 1, territories: [territory] }));
+    mkdirSync(join(root, 'docs', 'ui', 'research'), { recursive: true });
+    writeFileSync(join(root, 'docs', 'ui', 'research', 'mood-type-icons.md'), '| T5 | Atkinson Hyperlegible Next + Atkinson Hyperlegible Mono | EULA |\n');
+    writeFileSync(join(root, 'docs', 'ui', 'components.md'), KIT_CATALOG);
+    writeFileSync(join(root, 'docs', 'ui', 'screens.json'), JSON.stringify({ app: { iconsVerified: ['check'], iconsToVerify: ['copy'], screens: [{ id: 'rule', icons: ['x'] }] } }));
+    for (const r of KIT_INPUTS.references) {
+      const p = join(root, r.replace('{territory}', 'idea-one'));
+      mkdirSync(join(p, '..'), { recursive: true });
+      writeFileSync(p, '<!doctype html>\n');
+    }
+    mkdirSync(join(root, 'src', 'web', 'kit', 'tokens'), { recursive: true });
+    writeFileSync(join(root, KIT_INPUTS.tokensCss), ':root { --color-primary: #165f73; }\n');
+    return fn(root);
+  });
+}
+
+const kitRender = (root, screen, attempt = 1) => renderPrompt({ root, stage: 'stylesheet', direction: 'idea-one', screen, attempt });
+
+test('A6 G1: kit-builder may write only src/web/kit/** and tests/web/kit/**', () => {
+  assert.ok(isKnownRole('kit-builder'));
+  const may = (p) => matchesAny(p, allowlist('kit-builder'));
+  for (const p of ['src/web/kit/primitives/button/Button.tsx', 'tests/web/kit/button.test.tsx']) assert.ok(may(p), p);
+  for (const p of ['src/web/app/explorer/rule/Rule.tsx', 'src/web/package.json', 'tests/web/e2e/fl1.spec.ts', 'docs/ui/components.md', 'src/Uinsure.Policies.Api/Program.cs'])
+    assert.ok(!may(p), p);
+  // The API builder's src/** still covers the kit (a recorded gap, guardrails A6; the ui plan's web-builder excludes it).
+  for (const role of BUILD_ROLES.filter((r) => r !== 'builder').concat('ui-designer', 'creative-director')) assert.ok(!matchesAny('src/web/kit/x.tsx', allowlist(role)), role);
+});
+
+test('A6 G15: a kit batch renders with the territory, tokens, catalog rows and paths; the sink uses its own template', () => withKitRepo((root) => {
+  const missingComponent = () => kitRender(root, 'primitives-a');
+  assert.throws(missingComponent, /component status-tag is not in docs\/ui\/components\.md/, 'a batch naming an uncatalogued component fails closed');
+  writeFileSync(join(root, 'docs', 'ui', 'components.md'), KIT_CATALOG + KIT_INPUTS.batches['primitives-b'].filter((id) => id !== 'button')
+    .map((id) => `| ${id} | x | pop | 1 (W) | B |\n`).join(''));
+  const p = kitRender(root, 'primitives-b');
+  assert.match(p, /^<!-- design-prompt v1 stage=stylesheet direction=idea-one screen=primitives-b attempt=1 /);
+  assert.match(p, /## Territory: idea-one/);
+  assert.match(p, /\| T5 \| Atkinson Hyperlegible Next/);
+  assert.match(p, /--color-primary: #165f73;/);
+  assert.match(p, /- `button`: `src\/web\/kit\/primitives\/button\/` \(data-comp tier `primitive`\)/);
+  assert.match(p, /None: this is the first wave\./);
+  assert.equal(dispatch(root, 'kit-builder', p), null);
+  assert.match(dispatch(root, 'kit-builder', p.replace('Build every component listed', 'Build some components')), /^G15: the kit-builder prompt differs/);
+  rmSync(join(root, KIT_INPUTS.tokensCss));
+  assert.throws(() => kitRender(root, 'primitives-b'), /missing source/);
+}));
+
+test('A6 G16: a kit-builder receipt passes for clean code; a fence or a prose preamble in code blocks', () => withDesignRepo((root) => {
+  const file = 'src/web/kit/primitives/button/Button.tsx';
+  mkdirSync(join(root, file, '..'), { recursive: true });
+  writeFileSync(join(root, file), 'export function Button() { return null; }\n');
+  const r = JSON.stringify({ agent: 'kit-builder', stage: 'stylesheet', direction: 'idea-one', screen: 'primitives-b', status: 'written', files: [file], notes: 'ok' });
+  assert.deepEqual(designProblems(root, r, 'kit-builder'), []);
+  writeFileSync(join(root, file), '```tsx\nexport function Button() { return null; }\n```\n');
+  assert.ok(designProblems(root, r, 'kit-builder').some((p) => /markdown fence/.test(p)));
+  writeFileSync(join(root, file), 'Here is the button component.\nexport function Button() { return null; }\n');
+  assert.ok(designProblems(root, r, 'kit-builder').some((p) => /starts with prose/.test(p)));
+  assert.ok(designProblems(root, r.replace(file, 'docs/ui/components.md'), 'kit-builder').some((p) => /outside the kit-builder's write scope/.test(p)));
+}));
+
+test('A6 tokens: the territory palette with overrides, the research families, both themes and reduced motion', () => {
+  const families = familiesFromRow('| T5 | Atkinson Hyperlegible Next + Atkinson Hyperlegible Mono | EULA |');
+  assert.deepEqual(families, { sans: 'Atkinson Hyperlegible Next', mono: 'Atkinson Hyperlegible Mono' });
+  const palette = Object.fromEntries(TOKENS.map((t) => [t, { light: '#111111', dark: '#eeeeee', source: 'proposed' }]));
+  palette.error = { light: '#ca3535', dark: '#fa4d56', source: 'K1' };
+  const { json, css } = deriveTokens({ derivedStyle: { palette } }, families, KIT_INPUTS.tokens);
+  assert.equal(json.color.error.$extensions.dark, '#fb747b', 'the O1 override is applied');
+  assert.match(css, /--color-error: #ca3535;/);
+  assert.match(css, /\[data-theme="dark"\] \{\n[\s\S]*--color-error: #fb747b;/);
+  assert.match(css, /@media \(prefers-color-scheme: dark\)/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*--duration-short: 0ms;/);
+  assert.match(css, /--font-sans: "Atkinson Hyperlegible Next", system-ui, sans-serif;/);
+  assert.throws(() => deriveTokens({ derivedStyle: { palette: { error: palette.error } } }, families, KIT_INPUTS.tokens), /expected 10 colour tokens/);
+  assert.throws(() => familiesFromRow('| T9 | Just one face | x |'), /sans \+ mono/);
+});
+
+test('A6 audit: every catalogued state must be tagged; unknown tags, missing icons and specimens fail; empty fails closed', () => {
+  assert.deepEqual(splitStates('one, 422 multi (no field path: listed, not placed), two'), ['one', '422 multi (no field path: listed, not placed)', 'two']);
+  const cat = new Map([['button', { tag: 'primitive', row: '| button | An action | primary, busy (each variant) | 6 (W) | B4 |' }]]);
+  const expected = roster(cat);
+  assert.deepEqual(expected, [{ id: 'button', tag: 'primitive', states: ['primary', 'busy (each variant)'] }]);
+  const full = { tags: ['button · primitive · primary', 'button · primitive · busy (each variant)'], icons: ['check'], iconsMissing: [], iconsExpected: ['check'], specimens: ['type', 'icons'] };
+  assert.deepEqual(kitProblems(expected, full), []);
+  const has = (found, re) => assert.ok(kitProblems(expected, { ...full, ...found }).some((p) => re.test(p)), `${re} not reported`);
+  has({ tags: ['button · primitive · primary'] }, /missing states "busy \(each variant\)"/);
+  has({ tags: [...full.tags, 'buton · primitive · primary'] }, /matches no catalog row/);
+  has({ icons: [] }, /icon check: not in the icon catalogue/);
+  has({ icons: [], iconsMissing: ['check'] }, /lucide-react has no such icon/);
+  has({ specimens: ['icons'] }, /no type specimen/);
+  assert.ok(kitProblems(expected, { ...full, tags: [] }).some((p) => /fails closed/.test(p)));
+  assert.ok(kitProblems([], full).some((p) => /fails closed/.test(p)));
+});
+
+test('A6 scaffold: writes the root config once and never overwrites; the barrel lists component folders', () => withDesignRepo((root) => {
+  assert.deepEqual(scaffold(root).sort(), Object.keys(FILES).sort());
+  writeFileSync(join(root, 'src', 'web', 'package.json'), '{"name":"kept"}');
+  assert.deepEqual(scaffold(root), []);
+  assert.equal(readFileSync(join(root, 'src', 'web', 'package.json'), 'utf8'), '{"name":"kept"}');
+  for (const [folder, id] of [['primitives', 'button'], ['project', 'rung-spine']]) {
+    mkdirSync(join(root, 'src', 'web', 'kit', folder, id), { recursive: true });
+    writeFileSync(join(root, 'src', 'web', 'kit', folder, id, 'index.ts'), 'export {};\n');
+  }
+  mkdirSync(join(root, 'src', 'web', 'kit', 'patterns', 'half-built'), { recursive: true });
+  assert.equal(barrel(root), 2);
+  const text = readFileSync(join(root, 'src', 'web', 'kit', 'index.ts'), 'utf8');
+  assert.match(text, /export \* from '\.\/primitives\/button';\nexport \* from '\.\/project\/rung-spine';/);
+  assert.ok(existsSync(join(root, 'src', 'web', 'vite.config.ts')));
+}));

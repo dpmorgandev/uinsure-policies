@@ -183,11 +183,12 @@ Worst-case limits, not targets. Reaching one stops the stage for David.
 |---|---|---|
 | Research (`ui-research`) | 3–4 parallel search and read subagents, once | Sonnet |
 | Mockups (G2) | 2–3 directions × 2 screens (overview, one interior) = 4–6 `ui-designer`, at most 2 regenerations each | Sonnet |
-| Stylesheet (G3) | 0–1 (the main session may do it) | Sonnet |
+| Stylesheet (G3) | **amended 2026-10-19 (David):** the kit is 71 React components with tests, so at most 9 `kit-builder` dispatches (8 batches in 4 dependency waves), up to 3 in parallel, at most 2 regenerations each. Was 0–1, set when the stage meant tokens and a static preview | Sonnet |
 | Screens (G4) | 1 `ui-designer` per remaining screen (about 10), up to 4 in parallel, at most 2 regenerations each | Sonnet |
 | Build nodes | the existing loop and retry ladder, unchanged | as `agents-skills.spec.md` |
 
-About 20 dispatches for the design phases in the normal case, and no judge calls.
+About 28 dispatches for the design phases in the normal case (was about 20 before the kit moved into
+the stylesheet stage), and no judge calls.
 
 ### Not built
 

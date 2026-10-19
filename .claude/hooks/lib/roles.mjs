@@ -5,12 +5,14 @@ import { join } from 'node:path';
 import { parseYaml } from '../../skills/plan-dag/validate-dag.mjs';
 import { currentBranch, planNodeFromBranch } from './trace.mjs';
 
-export const ROLES = ['tester', 'builder', 'reviewer', 'security', 'investigator', 'git', 'ui-designer', 'creative-director'];
+export const ROLES = ['tester', 'builder', 'reviewer', 'security', 'investigator', 'git', 'ui-designer', 'creative-director', 'kit-builder'];
 
 // agents-skills Amendment A1: design artifacts only.
 const DESIGN = ['docs/ui/mockups/**', 'docs/ui/kit/**', 'docs/ui/screens/**'];
 // agents-skills Amendment A3: the creative director writes one file, the territories.
 const DIRECTIONS = ['docs/ui/directions.json'];
+// agents-skills Amendment A4: the kit builder writes the React kit and its tests, nothing else.
+export const KIT = ['src/web/kit/**', 'tests/web/kit/**'];
 
 const BUILD_FILES = ['*.slnx', 'global.json', '.editorconfig', 'Directory.Build.props', 'Directory.Packages.props', 'BannedSymbols.txt', '.gitattributes'];
 const BY_KIND = {
@@ -34,6 +36,7 @@ export function allowlist(role, kind) {
   if (role === 'tester') return ['tests/**', 'docs/qa/**'];
   if (role === 'ui-designer') return DESIGN;
   if (role === 'creative-director') return DIRECTIONS;
+  if (role === 'kit-builder') return KIT;
   return [];
 }
 

@@ -449,6 +449,32 @@ test('G14: a ui design stage opens its PR on David\'s sign-off, touching only do
   assert.match(pr() ?? '', /only docs\/ui\/ and docs\/trace\/ui\/DM\/.*src\/Existing\.cs/);
 }));
 
+test('G14 (A6): the kit stage may carry the kit, its tests and the web scaffold; app code and other stages may not', () => withRepo('main', (root) => {
+  sh(root, 'update-ref', 'refs/remotes/origin/ui', 'HEAD');
+  sh(root, 'checkout', '-q', '-b', 'feature/ui/DK');
+  const pr = () => check({ command: 'gh pr create --base ui --body-file b.md', subagent: false, role: '', root });
+  const put = (path) => {
+    mkdirSync(join(root, path, '..'), { recursive: true });
+    writeFileSync(join(root, path), 'x\n');
+    sh(root, 'add', path);
+  };
+  for (const p of ['src/web/kit/primitives/button/Button.tsx', 'tests/web/kit/button.test.tsx', 'src/web/package.json', 'src/web/vite.config.ts']) put(p);
+  sh(root, 'commit', '-q', '-m', 'kit');
+  const signed = sh(root, 'rev-parse', 'HEAD');
+  put('docs/trace/ui/DK/loop.jsonl');
+  writeFileSync(join(root, 'docs/trace/ui/DK/loop.jsonl'), `{"event":"signoff(${signed})"}\n`);
+  sh(root, 'add', 'docs/trace/ui/DK/loop.jsonl');
+  sh(root, 'commit', '-q', '-m', 'signoff');
+  assert.equal(pr(), null);
+  put('src/web/app/App.tsx');
+  sh(root, 'commit', '-q', '-m', 'app');
+  assert.match(pr() ?? '', /may touch only .*src\/web\/kit\/.*src\/web\/app\/App\.tsx/);
+  sh(root, 'checkout', '-q', '-b', 'feature/ui/DM3', 'refs/remotes/origin/ui');
+  put('src/web/kit/x.tsx');
+  sh(root, 'commit', '-q', '-m', 'kit on a mockups branch');
+  assert.match(pr() ?? '', /may touch only docs\/ui\/ and docs\/trace\/ui\/DM3\/ .*src\/web\/kit\/x\.tsx/);
+}));
+
 test('G14: a design stage with a digit (feature/ui/DM2, round 2) takes the design route, not the verdict path', () => withRepo('main', (root) => {
   sh(root, 'update-ref', 'refs/remotes/origin/ui', 'HEAD');
   sh(root, 'checkout', '-q', '-b', 'feature/ui/DM2');
