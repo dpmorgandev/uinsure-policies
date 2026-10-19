@@ -9,7 +9,10 @@ public sealed class Policy
     private const int MaxPolicyholders = 3;
     private const int MinimumAge = 16;
 
+    private const int RenewalWindowDays = 30;
+
     private readonly List<Claim> _claims;
+    private readonly List<Term> _terms;
 
     private Policy(
         PolicyReference reference,
@@ -30,7 +33,7 @@ public sealed class Policy
         HasClaims = hasClaims;
         Policyholders = policyholders;
         Property = property;
-        Terms = terms;
+        _terms = [.. terms];
     }
 
     public PolicyReference Reference { get; }
@@ -39,7 +42,7 @@ public sealed class Policy
     public bool HasClaims { get; private set; }
     public IReadOnlyList<Policyholder> Policyholders { get; }
     public Property Property { get; }
-    public IReadOnlyList<Term> Terms { get; }
+    public IReadOnlyList<Term> Terms => _terms;
     public IReadOnlyList<Claim> Claims => _claims;
     public Cancellation? Cancellation { get; private set; }
 
@@ -122,7 +125,66 @@ public sealed class Policy
         return Result<Cancellation>.Success(cancellation);
     }
 
-    public Result<Term> Renew(decimal amount, PaymentMethod? method, DateOnly today, Func<string> paymentReference) => throw new NotImplementedException();
+    // RENEW-6 is a conflict and is returned alone; RENEW-1/2, 3b, 5 and COULD-3 are all collected.
+    public Result<Term> Renew(decimal amount, PaymentMethod? method, DateOnly today, Func<string> paymentReference)
+    {
+        if (Cancellation is not null)
+        {
+            return Result<Term>.Failure(Conflict(
+                RuleIds.Renew6,
+                $"The policy was cancelled on {Cancellation.CancellationDate:yyyy-MM-dd}, so it cannot be renewed.",
+                ("cancellationDate", Cancellation.CancellationDate)));
+        }
+
+        var violations = new List<RuleViolation>();
+
+        // RENEW-1/2: end - 30 days to the end date, inclusive, measured from the latest term.
+        var windowStart = LatestTerm.End.AddDays(-RenewalWindowDays);
+        var windowEnd = LatestTerm.End;
+        if (today < windowStart || today > windowEnd)
+        {
+            violations.Add(Violation(
+                RuleIds.Renew12,
+                $"A policy can be renewed from {windowStart:yyyy-MM-dd} to {windowEnd:yyyy-MM-dd}.",
+                ("windowStart", windowStart),
+                ("windowEnd", windowEnd)));
+        }
+
+        // RENEW-3b: without auto-renew the term is unpaid, so a payment method makes no sense.
+        if (!AutoRenew && method is not null)
+        {
+            violations.Add(Violation(
+                RuleIds.Renew3b,
+                "The policy does not auto-renew, so the renewal is unpaid and takes no payment method.",
+                ("paymentMethod", method)));
+        }
+
+        if (amount <= 0)
+        {
+            violations.Add(Violation(RuleIds.Renew5, "The renewal amount must be greater than 0.", ("amount", amount)));
+        }
+
+        // RENEW-3a: the method defaults to the one that paid the current term. An auto-renewing policy's terms are all paid.
+        var paidBy = AutoRenew ? method ?? CurrentTerm(today).Payment!.Method : (PaymentMethod?)null;
+        if (paidBy == PaymentMethod.Cheque)
+        {
+            violations.Add(Violation(
+                RuleIds.Could3,
+                "An auto-renewing policy cannot be renewed by Cheque. Use Card or DirectDebit.",
+                ("paymentMethod", PaymentMethod.Cheque)));
+        }
+
+        if (violations.Count > 0)
+        {
+            return Result<Term>.Failure([.. violations]);
+        }
+
+        // RENEW-4: the next term starts the day after the latest ends. Its payment is for the term's full amount.
+        var payment = paidBy is { } paymentMethod ? new Payment(paymentReference(), paymentMethod, amount) : null;
+        var term = new Term(LatestTerm.End.AddDays(1), amount, payment);
+        _terms.Add(term);
+        return Result<Term>.Success(term);
+    }
 
     // COULD-2a/2b are both collected; COULD-2c is a conflict and is returned alone.
     public Result<Claim> RecordClaim(DateOnly claimDate, string? description, DateOnly today)
