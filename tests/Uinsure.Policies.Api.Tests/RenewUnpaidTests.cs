@@ -65,6 +65,28 @@ public sealed class RenewUnpaidTests : IClassFixture<PoliciesApiFactory>
         PolicyStateAssert.ReadsBackUnchanged(await client.ReadBack(reference), sold, reference, new DateOnly(2027, 11, 1), "Active");
     }
 
+    // Finding A1/R2. The contract's RENEW-3b row has no extensions ('—'): the problem carries only the members
+    // every 422 carries, and its one violation only ruleId and detail. Start 2026-11-20 ends 2027-11-19.
+    [Fact]
+    [Trait("Rule", "RENEW-3b")]
+    public async Task Renewal_without_auto_renew_with_a_payment_method_is_rejected_with_no_extension_members()
+    {
+        const string reference = "RENEW3B-NO-EXT";
+        var sold = new SellPolicyRequestBuilder(reference)
+            .WithStartDate(new DateOnly(2026, 11, 20)).WithAmount(357.83m).WithAutoRenew(false).WithPaymentMethod("Card").Build();
+        using var client = _factory.CreateClient();
+        await client.SellAndReadBack(sold, reference);
+        _factory.MoveClockTo(new DateOnly(2027, 11, 3));
+
+        using var response = await client.PostRenewal(reference, new RenewalRequestBuilder().WithAmount(371.46m).WithPaymentMethod("DirectDebit").Build());
+
+        var problem = await ProblemAssert.SingleRuleViolation(response, "RENEW-3b", Title, RenewalActions.RenewalsPath(reference));
+        PolicyResponseAssert.HasMembers(
+            problem, ["type", "title", "status", "detail", "instance", "ruleId", "traceId", "violations"], "RENEW-3b problem");
+        PolicyResponseAssert.HasMembers(Assert.Single(problem.Member("violations").EnumerateArray()), ["ruleId", "detail"], "RENEW-3b violation");
+        PolicyStateAssert.ReadsBackUnchanged(await client.ReadBack(reference), sold, reference, new DateOnly(2027, 11, 19), "Active");
+    }
+
     [Fact]
     [Trait("Rule", "RENEW-3b")]
     [Trait("Rule", "COULD-3")]
