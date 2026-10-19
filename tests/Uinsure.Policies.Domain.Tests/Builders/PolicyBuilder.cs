@@ -39,6 +39,12 @@ public sealed class PolicyBuilder
         return this;
     }
 
+    public PolicyBuilder WithAutoRenew(bool value)
+    {
+        _autoRenew = value;
+        return this;
+    }
+
     public PolicyBuilder WithPaymentMethod(PaymentMethod value)
     {
         _paymentMethod = value;

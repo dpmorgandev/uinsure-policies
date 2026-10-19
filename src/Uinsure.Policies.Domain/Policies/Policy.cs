@@ -122,6 +122,8 @@ public sealed class Policy
         return Result<Cancellation>.Success(cancellation);
     }
 
+    public Result<Term> Renew(decimal amount, PaymentMethod? method, DateOnly today, Func<string> paymentReference) => throw new NotImplementedException();
+
     // COULD-2a/2b are both collected; COULD-2c is a conflict and is returned alone.
     public Result<Claim> RecordClaim(DateOnly claimDate, string? description, DateOnly today)
     {
