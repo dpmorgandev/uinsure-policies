@@ -1,23 +1,8 @@
 {
-  "outputDir": "mockups",
-  "node": "DM",
-  "directions": {
-    "case-file": "## Style 0: Case file",
-    "instrument": "## Style 1: Instrument",
-    "chronology": "## Style 2: Chronology"
-  },
+  "outputDir": "mockups/r2",
+  "node": "DM2",
+  "directionsFrom": "docs/ui/directions.json",
   "screens": {
-    "overview": {
-      "excerpts": [
-        { "file": "docs/trace/requirements-matrix.md" },
-        { "file": "docs/plans/active/build.dag.yaml", "match": "^  - id: |^    (title|kind|status|attempt|pr|depends_on|rules):" },
-        { "file": "docs/trace/build/F0b/README.md", "head": 14 },
-        { "file": "docs/trace/build/F1/README.md", "head": 14 },
-        { "file": "docs/trace/build/F1b/README.md", "head": 14 },
-        { "file": "docs/trace/build/F2/README.md", "head": 14 },
-        { "file": "docs/trace/build/F2/loop.jsonl", "match": "\"event\":\"(pause1|steer\\(|signoff\\(|merged\\(|attempt\\+\\+|investigation\\.opened)" }
-      ]
-    },
     "rule": {
       "excerpts": [
         { "file": "docs/requirements.md", "match": "^\\| (GET-1|—) \\|" },
@@ -26,6 +11,13 @@
         { "file": "docs/trace/build/F2/README.md", "head": 14 },
         { "file": "docs/trace/build/F2/loop.jsonl", "match": "\"event\":\"(gate\\.(red|stub|green|refactor)|verdict\\(|attempt\\+\\+|signoff\\(|merged\\(|pr\\()" },
         { "file": "docs/qa/build-F2.md", "match": "^(Rule IDs:|\\| (Tester|Date|Commit signed off|Steps passed|Defects raised|Verdict|Signature) \\||\\| 1 \\| GET-1 \\|)" }
+      ]
+    },
+    "wb-cancel": {
+      "excerpts": [
+        { "file": "docs/requirements.md", "match": "^\\| (CANCEL-1a|CANCEL-1b|CANCEL-1c|CANCEL-2|CANCEL-3|CANCEL-4|CANCEL-7|COULD-1|COULD-2) \\|" },
+        { "file": "docs/ui/research/api-inventory.md", "match": "^(\\| E[34] \\||\\*\\*A(9|10|11|12) |\\| `/problems/cancel)" },
+        { "file": "docs/qa/build-F3.md", "match": "^\\| \\d+ \\| [^|]*(COULD-1|CANCEL-4)[^|]* \\|" }
       ]
     }
   }

@@ -49,14 +49,19 @@ function withDesignRepo(fn) {
   }
 }
 
-// The fixture only needs the files the mockups inputs excerpt; point every excerpt at the matrix.
+// The mockups inputs (round 2): territories from docs/ui/directions.json, screens rule and wb-cancel.
+const MOCKUPS = JSON.parse(readFileSync(join(ROOT, '.claude', 'skills', 'mockups', 'inputs.json'), 'utf8'));
+const TERRITORY = 'idea-one';
+
+// The fixture only needs the files the rule screen excerpts, and one territory; point every excerpt at
+// lines its pattern matches.
 function renderFixture(root, attempt = 1) {
-  const inputs = JSON.parse(readFileSync(join(ROOT, '.claude', 'skills', 'mockups', 'inputs.json'), 'utf8'));
-  for (const s of Object.values(inputs.screens)) for (const e of s.excerpts) {
+  for (const e of MOCKUPS.screens.rule.excerpts) {
     mkdirSync(join(root, e.file, '..'), { recursive: true });
     writeFileSync(join(root, e.file), '| rule | plan/node |\n| GET-1 | build/F2 |\n  - id: F2\n# heading\n| — | Status |\n"event":"pause1"\n"event":"gate.red"\nRule IDs: GET-1\n| 1 | GET-1 | x |\n| 5 | 94a7473 | red | tests |\n');
   }
-  return renderPrompt({ root, stage: 'mockups', direction: 'case-file', screen: 'overview', attempt });
+  writeFileSync(join(root, MOCKUPS.directionsFrom), JSON.stringify({ version: 1, territories: [{ name: TERRITORY, governingIdea: 'order is the proof', signatureMove: { explorer: 'a spine', workbench: 'three rungs' } }] }));
+  return renderPrompt({ root, stage: 'mockups', direction: TERRITORY, screen: 'rule', attempt });
 }
 
 const dispatch = (root, subagent_type, prompt) => checkDispatch({ cwd: root, tool_input: { subagent_type, prompt } });
@@ -109,12 +114,19 @@ test('G15: a rendered ui-designer prompt passes; one changed byte, a missing hea
 
 test('G15: attempt 2 carries the trail feedback file verbatim; without it the render fails closed', () => withDesignRepo((root) => {
   assert.throws(() => renderFixture(root, 2), /missing source/);
-  mkdirSync(join(root, 'docs', 'trace', 'ui', 'DM', 'feedback'), { recursive: true });
-  writeFileSync(join(root, 'docs', 'trace', 'ui', 'DM', 'feedback', 'case-file-overview-2.txt'), 'region "stamp" is missing: no data-req carries DATA-3\n');
+  mkdirSync(join(root, 'docs', 'trace', 'ui', MOCKUPS.node, 'feedback'), { recursive: true });
+  writeFileSync(join(root, 'docs', 'trace', 'ui', MOCKUPS.node, 'feedback', `${TERRITORY}-rule-2.txt`), 'region "stamp" is missing: no data-req carries DATA-3\n');
   const prompt = renderFixture(root, 2);
   assert.equal(parseHeader(prompt).attempt, 2);
   assert.match(prompt, /Attempt 1 failed these checks[\s\S]*no data-req carries DATA-3/);
   assert.equal(dispatch(root, 'ui-designer', prompt), null);
+}));
+
+test('round 2: a mockups prompt carries its territory verbatim from directions.json; an unknown one fails closed', () => withDesignRepo((root) => {
+  const prompt = renderFixture(root);
+  assert.match(prompt, /## Territory: idea-one[\s\S]*"governingIdea": "order is the proof"/);
+  assert.match(prompt, /`docs\/ui\/mockups\/r2\/idea-one\/rule\.html`/);
+  assert.throws(() => renderPrompt({ root, stage: 'mockups', direction: 'case-file', screen: 'rule' }), /not a territory/);
 }));
 
 // ---------- G16: receipt and artifact gate ----------

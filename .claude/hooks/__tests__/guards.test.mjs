@@ -449,6 +449,17 @@ test('G14: a ui design stage opens its PR on David\'s sign-off, touching only do
   assert.match(pr() ?? '', /only docs\/ui\/ and docs\/trace\/ui\/DM\/.*src\/Existing\.cs/);
 }));
 
+test('G14: a design stage with a digit (feature/ui/DM2, round 2) takes the design route, not the verdict path', () => withRepo('main', (root) => {
+  sh(root, 'update-ref', 'refs/remotes/origin/ui', 'HEAD');
+  sh(root, 'checkout', '-q', '-b', 'feature/ui/DM2');
+  mkdirSync(join(root, 'docs', 'ui', 'mockups', 'r2'), { recursive: true });
+  writeFileSync(join(root, 'docs', 'ui', 'mockups', 'r2', 'a.html'), '<!doctype html>\n');
+  sh(root, 'add', 'docs/ui/mockups/r2/a.html');
+  sh(root, 'commit', '-q', '-m', 'a');
+  const pr = check({ command: 'gh pr create --base ui --body-file b.md', subagent: false, role: '', root });
+  assert.match(pr ?? '', /no signoff\(<sha>\) by David in docs\/trace\/ui\/DM2\/loop\.jsonl/);
+}));
+
 // ---------- verdict and findings checks ----------
 
 const verdict = (over = {}) => ({

@@ -102,7 +102,7 @@ function designPrGate(root, subagent, node) {
 export function prGate(root, subagent = false) {
   const branch = currentBranch(root);
   if (/^harness\/[a-z0-9][a-z0-9-]*$/.test(branch)) return harnessPrGate(root, subagent);
-  const design = /^feature\/ui\/(D[A-Z]+)$/.exec(branch);
+  const design = /^feature\/ui\/(D[A-Z][A-Z0-9]*)$/.exec(branch);
   if (design) return designPrGate(root, subagent, design[1]);
   const where = planNodeFromBranch(branch);
   if (!where) return 'G14: gh pr create is only allowed from a node branch with verdicts, or a harness/<slug> branch';

@@ -60,6 +60,20 @@ function directionsFill(root, inputs, { direction, screen, attempt }) {
   };
 }
 
+// A direction's block. Round 2 (agents-skills A3): a territory, verbatim from the creative director's
+// docs/ui/directions.json, named by its kebab-case `name`. Round 1: a `## Style` section of styles.md.
+function directionStyle(root, inputs, styles, direction) {
+  if (inputs.directionsFrom) {
+    const doc = JSON.parse(readText(join(root, inputs.directionsFrom)));
+    const t = (doc.territories ?? []).find((x) => x.name === direction);
+    if (!t) throw new Error(`unknown direction: ${direction} is not a territory in ${inputs.directionsFrom}`);
+    return `## Territory: ${direction}\n\nFrom \`${inputs.directionsFrom}\`, verbatim.\n\n\`\`\`json\n${JSON.stringify(t, null, 2)}\n\`\`\``;
+  }
+  const heading = inputs.directions?.[direction];
+  if (!heading) throw new Error(`unknown direction: ${direction}`);
+  return section(styles, heading);
+}
+
 export function renderPrompt({ root, stage, direction, screen, attempt = 1 }) {
   if (!Number.isInteger(attempt) || attempt < 1) throw new Error(`bad attempt: ${attempt}`);
   const dir = join(HARNESS, '.claude', 'skills', stage);
@@ -68,12 +82,10 @@ export function renderPrompt({ root, stage, direction, screen, attempt = 1 }) {
   if (inputs.kind === 'directions') {
     return finish(template, { stage, direction, screen, attempt: String(attempt), ...directionsFill(root, inputs, { direction, screen, attempt }) }, { stage, direction, screen, attempt });
   }
-  const heading = inputs.directions[direction];
-  if (!heading) throw new Error(`unknown direction: ${direction}`);
   const spec = inputs.screens[screen];
   if (!spec) throw new Error(`screen ${screen} is not part of stage ${stage}`);
-
   const styles = readText(join(root, 'docs', 'ui', 'styles.md'));
+  const style = directionStyle(root, inputs, styles, direction);
   const entry = JSON.parse(readText(join(root, 'docs', 'ui', 'screens.json'))).app.screens.find((s) => s.id === screen);
   if (!entry) throw new Error(`screen ${screen} is not in docs/ui/screens.json`);
   const components = readText(join(root, 'docs', 'ui', 'components.md')).split('\n')
@@ -83,7 +95,7 @@ export function renderPrompt({ root, stage, direction, screen, attempt = 1 }) {
     stage, direction, screen,
     output: `docs/ui/${inputs.outputDir}/${direction}/${screen}.html`,
     shared_constraints: section(styles, '## Shared constraints (all three directions)'),
-    style: section(styles, heading),
+    style,
     screen_entry: JSON.stringify(entry, null, 2),
     components: ['| ID | Purpose | States | Uses | From |', '|---|---|---|---|---|', ...components].join('\n'),
     data: spec.excerpts.map((e) => excerpt(root, e)).join('\n\n'),

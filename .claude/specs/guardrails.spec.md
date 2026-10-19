@@ -470,3 +470,19 @@ branch with its tests, because `/directions` runs it at setup and G17 found the 
 **Merge safety** (as A1): every change to a shared hook is additive or widens a list. The build roles'
 paths are unchanged (the no-op fixtures for the six roles still pass). The G3 change only removes false
 positives for commits trailered `Agent: main`. The self-test runs in pre-push.
+
+## Amendment A4 (2026-10-19): round-2 mockups
+
+- **G15 renders territories from `docs/ui/directions.json`** when the mockups inputs set `directionsFrom`.
+  The direction block is the territory, verbatim as JSON. An unknown territory fails the render (closed).
+  Round 1's `styles.md` sections stay readable for the archive. Fixture: the territory is carried
+  verbatim; an unknown name throws.
+- **The mockups inputs are round 2's:**
+  - node `DM2`, output `docs/ui/mockups/r2/`;
+  - one explorer screen (`rule`) and one workbench screen (`wb-cancel`), whose excerpts are the CANCEL
+    and COULD-1 requirement rows, the API inventory's E3/E4, A9–A12 and CANCEL problem lines, and the
+    recorded F3 QA rows for COULD-1 and CANCEL-4.
+- **The mandates now bind each territory's `excludes`** and its signature move for the screen's half.
+- **G14's design route accepts a digit in the stage name** (`feature/ui/DM2`). It was `D[A-Z]+`, which
+  sent `DM2` down the verdict path and would have denied its PR. Fixture added.
+- **David's G2 concept is recorded in `docs/ui/concept.md`.** `styles.md` is round 1's archive.
