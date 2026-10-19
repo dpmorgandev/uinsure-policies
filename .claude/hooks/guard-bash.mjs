@@ -67,10 +67,43 @@ function harnessPrGate(root, subagent) {
   return outside.length ? `G14: a harness PR may touch only .claude/, .githooks/ and CLAUDE.md (found ${outside.slice(0, 3).join(', ')})` : null;
 }
 
+// G14 design route (guardrails Amendment A2): a ui design stage (feature/ui/D<X>) has no reviewer or security;
+// David judges it. Its PR needs his signoff(<sha>) in the stage's trail, with only the trail changed since,
+// and a diff into origin/ui that touches only docs/ui/ and the stage's own trail.
+function designPrGate(root, subagent, node) {
+  if (subagent) return 'G14: a design-stage PR is the main session\'s, not an agent\'s';
+  const trail = `docs/trace/ui/${node}/`;
+  let files;
+  try {
+    files = git(['diff', '--name-only', 'origin/ui...HEAD'], root).split('\n').filter(Boolean);
+  } catch {
+    return 'G14: cannot diff the design branch against origin/ui; denied';
+  }
+  if (!files.length) return 'G14: the design branch has no changes against origin/ui';
+  const outside = files.filter((f) => !f.startsWith('docs/ui/') && !f.startsWith(trail));
+  if (outside.length) return `G14: a design-stage PR may touch only docs/ui/ and ${trail} (found ${outside.slice(0, 3).join(', ')})`;
+  const loop = join(root, trail, 'loop.jsonl');
+  const signoffs = existsSync(loop)
+    ? readFileSync(loop, 'utf8').split('\n').map((l) => /"event":"signoff\(([0-9a-f]{40})\)"/.exec(l)?.[1]).filter(Boolean)
+    : [];
+  if (!signoffs.length) return `G14: no signoff(<sha>) by David in ${trail}loop.jsonl; no design PR before his sign-off`;
+  const signed = signoffs.at(-1);
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', signed, 'HEAD'], { cwd: root, stdio: 'ignore' });
+    const since = git(['diff', '--name-only', signed, 'HEAD'], root).split('\n').filter(Boolean);
+    if (since.some((f) => !f.startsWith(trail))) return `G14: HEAD changed more than ${trail} since the sign-off at ${signed.slice(0, 7)}`;
+  } catch {
+    return `G14: the signed-off commit ${signed.slice(0, 7)} is not an ancestor of HEAD`;
+  }
+  return null;
+}
+
 // G14: the latest reviewer and security verdicts must both be PASS and still cover HEAD (coversHead). Null = allow.
 export function prGate(root, subagent = false) {
   const branch = currentBranch(root);
   if (/^harness\/[a-z0-9][a-z0-9-]*$/.test(branch)) return harnessPrGate(root, subagent);
+  const design = /^feature\/ui\/(D[A-Z]+)$/.exec(branch);
+  if (design) return designPrGate(root, subagent, design[1]);
   const where = planNodeFromBranch(branch);
   if (!where) return 'G14: gh pr create is only allowed from a node branch with verdicts, or a harness/<slug> branch';
   const dir = join(traceDir(root, where.plan, where.node), 'verdicts');

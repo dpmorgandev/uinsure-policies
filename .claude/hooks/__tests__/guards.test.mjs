@@ -405,6 +405,33 @@ test('G14: a harness/<slug> branch opens a PR from the main session only, touchi
   assert.match(pr() ?? '', /node branch with verdicts, or a harness/);
 }));
 
+test('G14: a ui design stage opens its PR on David\'s sign-off, touching only docs/ui/ and its trail', () => withRepo('main', (root) => {
+  sh(root, 'update-ref', 'refs/remotes/origin/ui', 'HEAD');
+  sh(root, 'checkout', '-q', '-b', 'feature/ui/DM');
+  const pr = (subagent = false) => check({ command: 'gh pr create --base ui --body-file b.md', subagent, role: subagent ? 'git' : '', root });
+  const commit = (path, text) => {
+    mkdirSync(join(root, path, '..'), { recursive: true });
+    writeFileSync(join(root, path), text);
+    sh(root, 'add', path);
+    sh(root, 'commit', '-q', '-m', path);
+    return sh(root, 'rev-parse', 'HEAD');
+  };
+  assert.match(pr() ?? '', /no changes/);
+  const signed = commit('docs/ui/mockups/a/overview.html', '<!doctype html>\n');
+  assert.match(pr() ?? '', /no signoff/);
+  const loop = 'docs/trace/ui/DM/loop.jsonl';
+  commit(loop, `{"event":"signoff(${signed})"}\n`);
+  assert.equal(pr(), null);
+  assert.match(pr(true) ?? '', /main session/);
+  commit('docs/ui/mockups/a/rule.html', '<!doctype html>\n');
+  assert.match(pr() ?? '', /since the sign-off/);
+  const resigned = sh(root, 'rev-parse', 'HEAD');
+  commit(loop, `{"event":"signoff(${signed})"}\n{"event":"signoff(${resigned})"}\n`);
+  assert.equal(pr(), null);
+  commit('src/Existing.cs', 'namespace Z;\n');
+  assert.match(pr() ?? '', /only docs\/ui\/ and docs\/trace\/ui\/DM\/.*src\/Existing\.cs/);
+}));
+
 // ---------- verdict and findings checks ----------
 
 const verdict = (over = {}) => ({
