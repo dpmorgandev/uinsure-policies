@@ -417,3 +417,18 @@ missing feedback file fails the render (closed).
 4. The PR description lists every changed file and the self-test output. David pulls it into the main
    checkout **between F3 dispatches** (at a pause, or with no subagent running), never mid-dispatch.
 5. Rollback is one revert commit on `main` plus a pull. Nothing else depends on the slice.
+
+## Amendment A2 (2026-10-19): G14 design route. Approved by David ("1")
+
+**Found by running it.** `/mockups` reached its PR step on `feature/ui/DM` and G14 denied `gh pr create`:
+"no verdicts for this node". G14 reads every `feature/*` branch as a build node needing reviewer and
+security PASS, but a design stage runs neither (no judge, EFF-8); David's G2 sign-off is its gate. A1
+put design stages on `feature/ui/<stage>` (Option B) without amending G14: a gap in A1.
+
+| ID | Law | Mechanism | File | Test (fixture) |
+|---|---|---|---|---|
+| G14 (design route) | A design stage's PR rests on David's sign-off | `prGate` matches `feature/ui/D<X>` before the verdict path. Main session only. The diff against `origin/ui` must be non-empty and touch only `docs/ui/` and `docs/trace/ui/<node>/`. The stage's committed `loop.jsonl` must hold a `signoff(<40-hex sha>)`; the latest one must be an ancestor of HEAD, with only `docs/trace/ui/<node>/` changed since. Build branches (`feature/build/*`) are untouched: same verdict path as before | `guard-bash.mjs` | no changes → deny; no sign-off → deny; signed → allow; from a subagent → deny; an artifact changed after the sign-off → deny; re-signed → allow; a file outside `docs/ui/` → deny |
+
+`/mockups` gains two fixes found in the same run: the worktree path is `../ui-DM` (a sibling; the old
+relative path nested it inside the `ui` worktree), and the trailers sit in one final paragraph with
+`Co-Authored-By` (G9 found no `Agent` trailer otherwise). Step 4 now commits the sign-off before the PR.

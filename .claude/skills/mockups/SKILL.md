@@ -27,7 +27,8 @@ You are the main session. You dispatch, run every check yourself, and stop for D
 ## 0. Setup (once)
 
 1. From the `ui` worktree: `git fetch origin`, then
-   `git worktree add .claude/worktrees/ui-DM -b feature/ui/DM origin/ui`, then `EnterWorktree` into it.
+   `git worktree add ../ui-DM -b feature/ui/DM origin/ui` (a sibling under `.claude/worktrees/`; a path
+   relative to the worktree root would nest it inside `ui`), then `EnterWorktree` into it.
 2. `npm --prefix .claude/scripts/design ci` (Playwright, pinned; Chromium from the local cache).
 3. Check the inputs render: for every direction and screen in `inputs.json`,
    `node .claude/scripts/design/render-prompt.mjs mockups <direction> <screen> > /dev/null`. Any error
@@ -72,7 +73,9 @@ check is wrong, that's a harness bug: stop and tell David.
    request or zero artifacts fails the script.
 2. Event `gate.screenshots` with the real exit code, `expect: "0"`.
 3. Commit the artifacts, shots, review page, feedback files and trail:
-   `git add docs/ui/mockups docs/trace/ui/DM`, with trailers `Agent: main`, `Plan: ui`, `Node: DM`.
+   `git add docs/ui/mockups docs/trace/ui/DM`, with trailers `Agent: main`, `Plan: ui`, `Node: DM`. The
+   trailers and `Co-Authored-By` form the message's last paragraph, with no blank line between them:
+   git reads trailers from the last paragraph only, and G9 rejects a commit whose `Agent` it can't find.
 
 ## 4. Stop for David: gate G2
 
@@ -87,7 +90,9 @@ David picks a direction (or asks for changes: a steer, recorded as `steer(D<n>,p
 
 1. He writes the direction's concept paragraph himself (EFF-9): the governing idea, what it excludes, the
    category default it rejects. Record it in `docs/ui/styles.md` under the chosen style, as he wrote it.
-2. Event `signoff(<HEAD sha>)` with `detail` naming the chosen direction.
+2. Commit the concept, then event `signoff(<HEAD sha>)` with `detail` naming the chosen direction, and
+   commit the trail. G14 reads that sign-off: the PR is allowed only when it's committed and nothing but
+   `docs/trace/ui/DM/` changed after the signed commit.
 3. Push `feature/ui/DM` and open a PR into `ui` (each needs David's approval). David merges in the GitHub
    UI; his merge is G2 passed.
 
