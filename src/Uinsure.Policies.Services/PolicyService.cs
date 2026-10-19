@@ -96,6 +96,8 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
             : Result<CancellationQuoteResult>.Failure([.. quote.Violations]);
     }
 
+    public Task<Result<Term>> Renew(PolicyReference reference, decimal amount, PaymentMethod? method, CancellationToken ct) => throw new NotImplementedException();
+
     public async Task<Result<RecordedClaim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
     {
         var today = UkCalendar.Today(clock);
