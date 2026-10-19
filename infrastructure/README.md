@@ -6,8 +6,8 @@
 > Azure DevOps. The repo's real gate is its local git hooks (requirements §3, "No CI"). This pipeline shows
 > how CI/CD would look at Uinsure.
 
-Everything is under `infrastructure/`. It was built (F5) and was not cut. `az` is never run and nothing is
-deployed. Back to the [project README](../README.md).
+Everything is under `infrastructure/`. `az` is never run and nothing is deployed. Back to the
+[project README](../README.md).
 
 ## Status
 
@@ -28,7 +28,7 @@ signed-in subscription.
 |---|---|---|
 | dev | B1 | Basic |
 | test | B1 | Basic |
-| prod | P1v3 | General Purpose serverless, `GP_S_Gen5_1` |
+| prod | P1v3 | General Purpose, `GP_S_Gen5_1` |
 
 ## No secrets
 
@@ -56,7 +56,9 @@ It wasn't confirmed with `az webapp list-runtimes`.
 
 ## The pipeline
 
-`infrastructure/pipelines/azure-pipelines.yml` runs on pushes to `main` only (`pr: none`):
+`infrastructure/pipelines/azure-pipelines.yml` has a CI trigger on pushes to `main` and `pr: none`, so a push to
+another branch or a pull request does not start it. The YAML does not stop someone with queue rights from
+running it by hand against another branch (see the branch control step in [One-time setup](#one-time-setup-none-of-it-done)):
 
 1. **Build** (hosted agent): `dotnet build -warnaserror`, `dotnet test`, the idempotent migration script
    (`dotnet-ef` 10.0.13), then a published app zip and the `infrastructure/` folder as one `drop` artifact.
@@ -73,8 +75,8 @@ task inputs, service connections and environments are not checked.
 
 `python -I infrastructure/pipelines/check-pipeline.py` (needs PyYAML and jsonschema) validates both YAML files
 against `pipeline.schema.json` and asserts a set of structural rules the schema cannot express: the stage
-order, a what-if stage with no environment, the approval environment, the migration step, the smoke test, and
-the NSG rules.
+order, a what-if stage with no environment, the deploy environment name `policies-<env>`, the migration step,
+the smoke test, and the NSG rules. It exits 0 with "pipeline check passed" on this branch (run on 2026-10-19).
 
 ## Prod approval
 
@@ -97,9 +99,9 @@ approving. The check must sit on the environment only. If it were put on the ARM
    `sqlAdminGroupObjectId`. The `.bicepparam` files hold an all-zero placeholder.
 5. The environments `policies-dev`, `policies-test` and `policies-prod`, which aren't auto-created from YAML,
    with the Approval check on prod.
-
-The names above are the ones in the repo. The original brief used `sc-uinsurepolicies-*` and
-`uinsurepolicies-*`; the YAML says `sc-policies-*` and `policies-*`.
+6. A branch control check on each environment `policies-<env>`, on the three agent pools and on the service
+   connections, allowing `refs/heads/main` only. Without it, nothing in the repo stops a manual run of another
+   branch from reaching the privileged agents and the connections.
 
 ## Deployment prerequisites outside the repo
 
@@ -107,23 +109,26 @@ None of this exists and none of it can be checked from the repo.
 
 - **Three self-hosted agent pools**, `policies-dev-vnet`, `policies-test-vnet`, `policies-prod-vnet`. Their
   agents need `az`, `jq`, go-sqlcmd (`sqlcmd`) and `curl`. **The agent hosts are privileged**: they can reach
-  the private SQL endpoint and run with the service connections. Only merged code reaches them (`main` only,
-  `pr: none`).
+  the private SQL endpoint and run with the service connections. The CI trigger is `main` only with
+  `pr: none`; manual runs are limited only if the branch control check in setup step 6 is in place.
 - **Network peering and DNS.** The agents' network must be peered to (or be) `vnet-policies-<env>` and resolve
   `privatelink.database.windows.net`. The private DNS zone is linked only to the environment's own VNet, so
   the agents' network needs its own zone link or DNS forwarding. The peering can only be made after the first
   infrastructure deployment creates the VNet.
 - **A narrow `agentAddressPrefix`.** Each `.bicepparam` holds the placeholder `10.30.0.0/24`. Replace it with
-  the real agent subnet before the first deployment. Never `0.0.0.0/0` or a `/8`. There is no CIDR validation,
-  so the narrowness rests on review. The placeholder fails closed: it blocks the agents, it does not open SQL.
+  the real agent subnet before the first deployment. Never `0.0.0.0/0` or a `/8`. There is no CIDR validation
+  in the Bicep, so the narrowness rests on review. If the agents' real range is outside the placeholder, the NSG
+  rule blocks them: it does not open SQL.
 - **The SQL admin group** (item 4 above) and **ARM and SQL service connections**. The SQL connections
   (`sc-policies-<env>-sql`) are separate from the ARM ones. Each one's principal is a database-scoped user with
-  `db_owner` on the `policies` database and is not in the server admin group.
+  `db_owner` on the `policies` database and is not in the server admin group. That is how the setup is meant
+  to be done; the repo cannot check it.
 - **A one-off database bootstrap per environment.** After the first infrastructure deployment, a member of the
   admin group, connected to the `policies` database, runs
   `CREATE USER [<SQL service connection principal name>] FROM EXTERNAL PROVIDER;` and
   `ALTER ROLE db_owner ADD MEMBER [<SQL service connection principal name>];`.
-  **The first run fails at the migrations step until this is done.**
+  **The first run is expected to fail at the migrations step until this is done** (stated in
+  `stage-template.yml`; never run).
 
 ## Accepted risks and notes
 
@@ -133,32 +138,38 @@ None of this exists and none of it can be checked from the repo.
   it reads must stay secret-free, because it is read before approval.
 - **The ARM connection could rewrite the SQL admin.** It holds subscription-scope rights, so a leaked ARM token
   could change the SQL server's Entra admin through ARM. A subscription-scope deployment needs those rights.
-  The pipeline's SQL steps use the separate SQL connection, which cannot administer the server.
-- **`httpsOnly` and forwarded headers.** The web app sets `httpsOnly: true`, so App Service redirects plain
-  HTTP at its front end and the API's own `400 /problems/https-required` path is never reached there. The API
-  trusts `X-Forwarded-For` and `X-Forwarded-Proto` only from private ranges (10.0.0.0/8, 172.16.0.0/12,
-  192.168.0.0/16) and never uses `ASPNETCORE_FORWARDEDHEADERS_ENABLED`. App Service Linux may set that
-  variable itself, and the API's design says not to rely on it. This interaction has not been tested on App
-  Service.
+  The pipeline's SQL steps use the separate SQL connection (`sqlServiceConnection`). When that connection is set
+  up as listed in the prerequisites (a database-scoped `db_owner` user, not in the admin group), it cannot
+  administer the server. The repo cannot check how it is set up.
+- **`httpsOnly` and forwarded headers: configured, not tested on App Service.** The web app sets
+  `httpsOnly: true`. The expectation is that App Service answers plain HTTP at its front end, so requests would
+  not normally reach the API's own `400 /problems/https-required` check. The API honours `X-Forwarded-For` and
+  `X-Forwarded-Proto` only from private ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16), and the code does
+  not use `ASPNETCORE_FORWARDEDHEADERS_ENABLED`. If the front end connects from outside those ranges,
+  `X-Forwarded-Proto` is ignored and, by the code, the API would answer that `400` to every request outside
+  `/health/*`. Whether App Service Linux sets that environment variable itself is unchecked. None of this has
+  been tested on App Service.
 - **SQL connection policy is `Default`.** `sql.bicep` does not set it. Private-endpoint traffic is then
   expected to use port 1433 only, which is all the NSG opens. If the policy were set to Redirect, ports
   11000-11999 would also need to be opened. This is an expectation, not something verified.
-- **One VNet range for all environments.** Every `vnet-policies-<env>` is `10.20.0.0/16`. One agent network
-  cannot be peered to more than one environment, which is why the pipeline uses one pool per environment.
+- **One VNet range for all environments.** Every `vnet-policies-<env>` is `10.20.0.0/16`. The pipeline uses one
+  agent pool per environment, which is compatible with that shared range. A single shared agent network
+  peered to all three environments would not be, because their ranges overlap. This is reasoning recorded in the
+  QA script `docs/qa/build-F5.md` (observation O4), not something tested.
 
 ## Known limits of the evidence
 
 The offline checker proves structure, not runtime. A green check means the files are shaped as described. It
-does not mean the pipeline would run. Three review findings on the checker were carried and not fixed:
+does not mean the pipeline would run. Three known gaps in the checker were left as they are:
 
-- **F5 A2.3 R1:** the NSG assertions do not prove "only". A second Allow rule, or an extra source in the
-  existing allow, would still pass. The Bicep itself is correct: one allow rule, then deny-all. It must be
-  read by eye.
-- **F5 A3 R1:** the "AzureCLI@2 inputs" check covers the deploying stage only. The what-if stage's AzureCLI@2
-  step is not checked for `scriptType`, `scriptLocation` or `inlineScript`.
-- **F5 A3 R2:** the checker has a few redundant assertions, which the author would have to explain.
-  Each is harmless.
+- **The NSG assertions do not prove "only".** A second Allow rule, or an extra source in the existing allow,
+  would still pass. The Bicep itself has one allow rule, then deny-all (`network.bicep`), which has to be read
+  by eye.
+- **The "AzureCLI@2 inputs" check covers the deploying stage only.** The what-if stage's AzureCLI@2 step is not
+  checked for `scriptType`, `scriptLocation` or `inlineScript`.
+- **A few assertions repeat others.** One checks the what-if stage's position in the template, which Azure
+  DevOps ignores when `dependsOn` is explicit, and two more follow from other checks. They add no coverage.
 
-The investigations that shaped F2 and F5 are in `docs/plans/active/inv-001.plan.md` and
-`docs/plans/active/inv-002.plan.md`. The second moved the what-if into its own stage, because an approval check
-on the environment ran before the what-if in the first layout.
+The reasoning for the stage layout is in `docs/plans/active/inv-002.plan.md`: the what-if has its own stage
+because Azure DevOps evaluates an environment's checks when a stage starts, so an approval on the environment
+would otherwise be asked before the what-if ran.

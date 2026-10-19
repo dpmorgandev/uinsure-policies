@@ -7,14 +7,15 @@ are in [requirements.md](requirements.md). This file does not repeat them. Deplo
 Contents: [Running locally](#running-locally) · [Endpoints](#endpoints) · [Errors](#errors) ·
 [Tests](#tests) · [Branching and merging](#branching-and-merging) · [Design decisions](#design-decisions) ·
 [Security scope](#security-scope) · [Known limits](#known-limits) ·
-[Behaviours to review](#behaviours-to-review)
+[Behaviours of the renewal and input handling](#behaviours-of-the-renewal-and-input-handling)
 
 ## Running locally
 
 - Launch profiles: `http` (`http://localhost:5080`, used for development and Postman) and `https`
   (`https://localhost:7080;http://localhost:5080`). Both set `ASPNETCORE_ENVIRONMENT=Development`.
-- Locally the app uses SQLite (`Database:Provider` = `Sqlite`, file `policies.development.db` in the project
-  folder). It creates the schema at start-up with `EnsureCreated()`. It never calls `Database.Migrate()`.
+- Locally the app uses SQLite (`Database:Provider` = `Sqlite`, file `policies.development.db`, relative to the
+  working directory). With SQLite it creates the schema at start-up with `EnsureCreated()`. It never calls
+  `Database.Migrate()`.
 - In the deployed environments the provider is `SqlServer`, set by an app setting. The one migration set is
   SQL Server only (`src/Uinsure.Policies.Persistence/Migrations`).
 - In Development only: the OpenAPI 3.1 document at `/openapi/v1.json` and the Scalar UI at `/scalar`.
@@ -47,22 +48,32 @@ as a `DateOnly`. The code never uses `DateTime.Now`, `UtcNow` or `Today`; an ana
 
 ## Errors
 
-Every problem is RFC 9457 problem details with `type` (`/problems/{rule-id}`, lower-case), `title`,
-`status`, `detail`, `instance`, `ruleId` and `traceId`.
+A rule violation (the `404` for GET-1, a `409` rule conflict, a `422`) is RFC 9457 problem details with `type`
+(`/problems/{rule-id}`, lower-case, `/` written as `-`), `title`, `status`, `detail`, `instance`, `ruleId` and
+`traceId`. The other problems have no `ruleId`: the `400` shape error, the concurrency `409`
+(`/problems/concurrency`), the `429` (`/problems/rate-limited`), the HTTPS `400` (`/problems/https-required`) and
+the `500`. Rule problems, transport problems (`429`, HTTPS `400`, `413`) and the `400` shape error all carry
+`instance` (the request path) and `traceId`, and the tests assert both. The `500` carries a `traceId`, which a test
+also asserts.
 
 | Status | When |
 |---|---|
 | `400` | Shape: `errors` map, no `ruleId`. Checked first |
 | `404` | GET-1: unknown reference |
-| `409` | State conflicts (SELL-1, CANCEL-4, RENEW-6, COULD-2c) and a database concurrency conflict. Returned alone |
-| `422` | The business rules: every numbered rule that is not a `404` or `409`. All broken rules are collected in `violations[]`; `ruleId` is the first of them |
+| `409` | Rule conflicts (SELL-1, CANCEL-4, RENEW-6, COULD-2c), each returned alone. A database concurrency conflict is also a `409`, without a `ruleId` |
+| `422` | The rules that can be broken: SELL-2, SELL-4, SELL-5, SELL-7, RENEW-1/2, RENEW-3b, RENEW-5, CANCEL-3, CANCEL-7, COULD-2a, COULD-2b, COULD-3. All broken rules are collected in `violations[]`; `ruleId` is the first of them |
 | `429` | Rate limit, with `Retry-After` |
 | `500` | A generic `detail` and a `traceId`. The exception goes to the logs only, never a stack trace in the body |
 
 Two details that surprise people:
 
-- **Validation error keys are camelCase.** An unknown query key `?REFERENCE=x` is a `400` whose `errors` key is
-  `reference`, not `REFERENCE`. That is the JSON naming policy applied to the key. It is cosmetic.
+- **Validation error keys.** For a body or model error, the API rewrites each key by lower-casing the first
+  letter of every dot-separated segment (`ValidationProblems.cs`), so keys use the JSON field names, for
+  example `policyholders[0].dateOfBirth`. A key the client sent keeps the rest of its casing, so an unknown
+  query key that differs from a route parameter only in case (`?REFERENCE=x`) is a `400` with an `errors`
+  entry. By that code its key would be `rEFERENCE`. One manual check (see `docs/qa/build-F2.md`) saw the key
+  `reference` instead. No test pins the casing of a client-sent key, so treat it as unspecified. The renewal
+  endpoint with no body writes its key, `amount`, by hand in the controller.
 - Outside Development the API rejects plain HTTP with a `400` (`/problems/https-required`) instead of
   redirecting. `/health/*` is exempt. There is no `UseHttpsRedirection()`.
 
@@ -72,19 +83,20 @@ Two details that surprise people:
 dotnet test --solution Uinsure.Policies.slnx
 ```
 
-Result at F6: **637 passed, 0 failed, 0 skipped.**
+Result measured on this branch on 2026-10-19: **637 passed, 0 failed, 0 skipped.**
 
 | Project | Tests | What it proves |
 |---|---|---|
-| `Uinsure.Policies.Domain.Tests` | 173 | Every rule and boundary, with `DateOnly today` passed in |
+| `Uinsure.Policies.Domain.Tests` | 173 | Rule and boundary tests, with `DateOnly today` passed in |
 | `Uinsure.Policies.Services.Tests` | 65 | Orchestration and `UkCalendar` (including the BST boundary) |
 | `Uinsure.Policies.Api.Tests` | 332 | The acceptance suite over HTTP: `WebApplicationFactory`, SQLite in memory, `FakeTimeProvider` |
 | `Uinsure.Policies.Architecture.Tests` | 67 | Layering (NetArchTest) and rule coverage |
 
 - xUnit v3 on Microsoft.Testing.Platform, plain `Assert`.
-- Each rule test carries `[Trait("Rule", "<id>")]`. A check fails if any rule ID in `docs/requirements.md`
-  has no test. Run one rule: `dotnet test --solution Uinsure.Policies.slnx -- --filter-trait "Rule=SELL-2"`.
-- Postman: `tests/postman/Uinsure.Policies.postman_collection.json` (109 requests in folders `F0b` to `F4`)
+- Each rule test carries `[Trait("Rule", "<id>")]`. `RuleCoverageTests` fails if a rule ID in
+  `docs/requirements.md` has no unit trait or no integration trait, unless it is listed in
+  `tests/rule-coverage.pending.txt` (empty at the moment). Run one rule: `dotnet test --solution Uinsure.Policies.slnx -- --filter-trait "Rule=SELL-2"`.
+- Postman: `tests/postman/Uinsure.Policies.postman_collection.json` (109 requests, in six folders from `F0b Walking skeleton` to `F4 Renew`)
   with the `local` environment (`baseUrl` = `http://localhost:5080`). Run it against a running API with the
   Postman CLI:
 
@@ -93,9 +105,9 @@ Result at F6: **637 passed, 0 failed, 0 skipped.**
     -e tests/postman/local.postman_environment.json
   ```
 
-  Postman runs by hand only; no git hook runs it. It holds only rows that can run in real time. Rows that need
-  a fake clock are integration tests only.
-- Manual QA scripts, one per node, are in `docs/qa/`.
+  Postman runs by hand only; no git hook runs it. The collection holds the rows that can run in real time
+  (the convention in requirements section 3). Rows that need a fake clock are covered by the integration tests.
+- Manual QA scripts are in `docs/qa/`.
 
 ### What SQLite cannot prove
 
@@ -105,33 +117,36 @@ the migrations themselves. The pre-push idempotent migration script
 
 ### Local git hooks
 
-There is no CI for the code (see [infrastructure/README.md](../infrastructure/README.md)). The gate
-is the hooks in `.githooks/`:
+The repository has no CI for the code: the pipeline in `infrastructure/` was never connected (see
+[infrastructure/README.md](../infrastructure/README.md)). The local gate is the hooks in `.githooks/`:
 
 - `pre-commit`: refuses a commit on `main` once the `main-locked` marker exists, then a privacy scan of staged
   files, then `dotnet build -warnaserror`.
-- `commit-msg`: on `feature/*` and `bug/*` branches, checks the `Agent`, `Plan` and `Node` trailers (and `Rule` and
-  `TDD` on tester and builder commits), and that `Plan` and `Node` match the branch.
+- `commit-msg`: on `feature/*` and `bug/*` branches, checks the `Agent`, `Plan` and `Node` trailers (and `Rule`, plus
+  `TDD` unless the subject starts `docs(`, on tester and builder commits), and that `Plan` and `Node` match the
+  branch.
 - `pre-push`: refuses a push to `main` once it is locked, then a Release build, the full test suite, the
   idempotent migration script, and the harness self-test.
 
 ## Branching and merging
 
 `main` is the integration branch. There is no `develop` branch and no integration agent. Feature and bug
-branches are cut from `origin/main`, rebased onto it before the pull request, and merged by the author with a
-**merge commit**. Every TDD commit and its SHA therefore survives on `main`, and
-`git log --first-parent main` shows one line per feature.
+branches are cut from `origin/main`, rebased onto it before the pull request, and merged by the repository owner
+in the GitHub UI with a **merge commit**. That is the practice followed, not something the repo enforces: the
+merge method is a GitHub setting. With a merge commit the branch's commits (as rebased) stay on `main`, and
+`git log --first-parent main` shows one `Merge pull request` line per merged pull request.
 
-Commits carry the trailers `Agent`, `Plan`, `Node`, `Rule` and `TDD` (`scaffold`, `red`, `stub`, `green` or
-`refactor`), so each rule can be traced from its red test to its green commit.
+Tester and builder commits carry the trailers `Agent`, `Plan`, `Node`, `Rule` and `TDD` (`scaffold`, `red`, `stub`,
+`green` or `refactor`). A rule's red and green commits can be found through its `Rule` trailer.
 
 ## Design decisions
 
 ### Layers
 
 `Api` → `Services` → `Domain`, and `Persistence` → `Services`. Domain has no packages and no references.
-Services orchestrates only: load, today, domain, save. The rules live in the domain. There is one model per
-layer (API DTOs, domain, persistence records). Interfaces exist at the layer seams only
+Services orchestrates: load, today, domain, save. The rules live in the domain, except SELL-1 (uniqueness),
+which `PolicyService` checks through the repository. There is one model per layer (API DTOs, domain,
+persistence records). Interfaces exist at the layer seams only
 (`IPolicyService`, `IPolicyRepository`, `IReferenceGenerator`). There is no generic repository and no unit of
 work. Architecture tests enforce these references.
 
@@ -140,8 +155,8 @@ authentication.
 
 ### Authentication
 
-Authentication is out of scope by requirement. `UseAuthorization()` stays in the pipeline at its usual
-position, ready for it.
+Authentication is out of scope by requirement. No authentication is configured. `UseAuthorization()` is in
+the pipeline, ready for it.
 
 ### `Location` on renewals and claims
 
@@ -156,7 +171,8 @@ There is no versioning. A breaking change would mean `/v2` or an `api-version` p
 ### Idempotency
 
 `POST /policies` is safe to retry: a repeated reference gets `409` (SELL-1). **Claims are not idempotent**, and
-there is no `Idempotency-Key`. Posting the same claim twice records two claims.
+there is no `Idempotency-Key`. `Policy.RecordClaim` has no duplicate check, so posting the same claim twice
+would record two (no test posts an identical claim twice).
 
 ### No refunds of zero
 
@@ -172,8 +188,8 @@ derived from today and never stored.
 
 ## Security scope
 
-Checked against the OWASP API Security Top 10 2023. Reviewed on every node. These are out of scope, stated
-rather than skipped:
+The development loop includes a security review against the OWASP API Security Top 10 2023 (requirements
+section 3). These items are out of scope, stated rather than skipped:
 
 - **API1 (broken object-level authorisation):** there is no auth or tenancy. The reference is the only key,
   and references are client-chosen and guessable.
@@ -183,41 +199,63 @@ rather than skipped:
 - **API7 (SSRF):** the API makes no outbound URL fetches.
 - **API10 (unsafe consumption of APIs):** there are no upstream APIs. Pricing is supplied by the client.
 
-In scope and built: resource limits (a 64 KiB body cap, a per-IP rate limit), strict input, no secrets, no
-personal data in logs, and a generic 500 body. Rate limits are described under [Known limits](#known-limits).
+In scope and built: resource limits (a 64 KiB body cap, a per-IP rate limit), strict input, no passwords in the
+Bicep (the app signs in to SQL with a managed identity), log calls that name no personal field, and a generic 500 body. Rate limits are
+described under [Known limits](#known-limits).
+
+**Exposure if deployed.** The Bicep sets no IP restriction on the web app (`appservice.bicep` has no
+`ipSecurityRestrictions`), and its 16 resources include no Front Door, WAF or API gateway. The deployed app
+would therefore be reachable from the internet with only the API's own limits in front of it. With no
+authentication and client-chosen, guessable references, anyone who reaches the host and knows or guesses a
+reference could read that policy (names, dates of birth, address) and post claims, cancellations or renewals
+to it. The only brakes are the per-client, per-instance rate limits and the request body cap. Nothing has been
+deployed, so this is read from the Bicep and has not been observed on a running service.
 
 ## Known limits
 
 - **Rate limits are per instance.** The limiter is the built-in in-memory fixed window, per client IP. Each
-  App Service instance counts on its own, so with N instances the real limit is up to N times higher.
-  Defaults outside Development: 100 requests per minute globally and 10 per minute on every `POST` (the
-  `writes` policy). Development: 10,000 and 1,000. Both come from the `RateLimiting` configuration section.
-  Behind App Service the client IP is read from `X-Forwarded-For` only when the proxy is in 10.0.0.0/8,
-  172.16.0.0/12 or 192.168.0.0/16.
-- **No cap on claims per policy.** Each claim POST appends a claim, and `GET` returns them all. Growth is
-  bounded only by the write rate limit. No rule asks for a cap, and it was left out on purpose.
-- **Few application log lines.** There is no log line for a successful or a 4xx rule outcome. The app logs only
-  a client abort (Information), a bad request, a persistence conflict (Warning) and an unhandled exception
-  (Error). Logs carry the method and path, never names, dates of birth, addresses, postcodes or bodies.
+  instance counts on its own, so a client whose requests are spread over N instances can get up to N times the
+  limit (by construction; not tested). Defaults outside Development: 100 requests per minute globally and 10 per
+  minute on every `POST` (the `writes` policy). Development: 10,000 and 1,000. Both come from the `RateLimiting`
+  configuration section.
+- **Forwarded headers are configured, not tested on App Service.** The code honours `X-Forwarded-For` and
+  `X-Forwarded-Proto` only from 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16, and tests cover that with a
+  simulated proxy address. Whether App Service's front end connects from those ranges has not been tested. If it
+  does not, the headers are ignored: by the code, every client would share one rate-limit partition, and outside
+  Development every request except `/health/*` would get the HTTPS `400`.
+- **No cap on claims per policy.** Each claim POST appends a claim, and `GET` returns them all. There is no
+  cap. The only brake is the per-client, per-instance write rate limit. No rule in the requirements asks for a
+  cap.
+- **Few application log lines.** There is no log line for a successful or a 4xx rule outcome. The log calls in
+  `src/` are a client abort (Information), a bad request (Warning), a persistence conflict (Warning) and an
+  unhandled exception (Error). Their templates carry the method, path, status or reason, and no call passes a
+  name, date of birth, address, postcode or request body. The bad-request and unhandled-exception calls also
+  pass the exception object, whose content this code does not control.
 - **SQLite versus SQL Server:** see [What SQLite cannot prove](#what-sqlite-cannot-prove).
 - **`Policy.Renew` relies on every auto-renewing term being paid.** On auto-renew it reads
-  `CurrentTerm(today).Payment!.Method`. That is safe because every term of an auto-renewing policy is created
-  with a payment. If stored data ever broke that invariant, it would throw a `NullReferenceException` (a 500).
-  No test breaks the invariant. (Noted in the F4 security review.)
+  `CurrentTerm(today).Payment!.Method` when the request sends no method. A term of an auto-renewing policy gets
+  a payment when it is created (SELL-6 on sale, RENEW-3a on renewal), so the value is present for data the code
+  wrote. If stored data ever broke that, the read would throw a `NullReferenceException` (a 500). No test
+  breaks it.
 
-## Behaviours to review
+## Behaviours of the renewal and input handling
 
-These came out of the F4 (renew) review. Each is a decision the author should confirm.
+These are behaviours the written rules do not fully fix. Each is stated with its reason and whether a test
+pins it.
 
-- **E6 detail texts differ from the contract's examples.** RENEW-1/2 says "A policy can be renewed from W to E."
+- **Renewal detail texts are the code's wording.** RENEW-1/2 says "A policy can be renewed from W to E."
   RENEW-6 says "The policy was cancelled on T, so it cannot be renewed." COULD-3 says "An auto-renewing policy
-  cannot be renewed by Cheque. Use Card or DirectDebit." for both a sent and a defaulted Cheque. The
-  requirement only asks that the `detail` asks for another method. The dates are in the `windowStart`,
-  `windowEnd` and `cancellationDate` extensions.
+  cannot be renewed by Cheque. Use Card or DirectDebit." for both a sent and a defaulted Cheque. These differ
+  from the example texts in the API contract written before the build (noted in `docs/qa/build-F4.md`). The
+  requirement only asks that the COULD-3 `detail` asks for another method. The dates are also in the
+  `windowStart`, `windowEnd` and `cancellationDate` extensions.
 - **A multi-violation 422 has no top-level rule extensions.** With two or more violations the top level
   carries no `windowStart`, `windowEnd`, `amount` or `paymentMethod`. A `violations[]` entry carries only
-  `ruleId` and `detail`. The contract defines the extensions only for a single violation.
+  `ruleId` and `detail` (`ResultExtensions.cs`). The extensions are copied to the top level only for a single
+  violation.
 - **A `null` `paymentMethod` counts as none.** On a policy that does not auto-renew, `"paymentMethod": null`
-  is not RENEW-3b, because the rule says a request that "sends" a method gets 422. No test pins this.
-- **Enum names are case-insensitive.** `"card"` is accepted as `Card`, on sale and renewal alike. Integers are
-  refused.
+  is not RENEW-3b, because the rule says a request that "sends" a method gets 422. Observed by hand
+  (`docs/qa/build-F4.md`); no test pins this.
+- **Enum names were accepted in lower case when tried by hand.** `"card"` was accepted as `Card` on renewal and
+  `"household"` on sale (`docs/qa/build-F4.md`). No test sends a lower-case enum name, so this is observed, not
+  pinned. Integers are refused (`JsonStringEnumConverter` with `allowIntegerValues: false`).

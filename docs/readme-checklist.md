@@ -1,15 +1,16 @@
 # README checklist
 
-Extracted in F0a (t17) by the main session, from every place a spec says the project README must state
-something. Agents never read specs, so F6's builder works from this list. **F6 ticks each item and links
-the file and section that satisfies it.** At F6 the README was shortened; the detail moved to
-`docs/design.md` and `infrastructure/README.md`, and every link below points there. The links are
-relative to `docs/`, where this file lives; the visible text gives the repo path. An item marked *if cut* applies only when that node or step is cut.
+Extracted in F0a (task t17 in `docs/plans/active/build.dag.yaml`) from every place a spec Contract says the
+project README must state something. Subagents never read the specs (requirements section 3), so the README
+builder works from this list. **F6 ticks each item and links the file and section that satisfies it.** At F6 the
+README was shortened; the detail moved to `docs/design.md` and `infrastructure/README.md`, and every link below
+points there. The links are relative to `docs/`, where this file lives; the visible text gives the repo path. An
+item marked *if cut* applies only when that node or step is cut.
 
-How it was extracted: every `README` mention in `.claude/specs/*.spec.md`, then the ones that bind the
-**project** README. Node and trail READMEs (`docs/trace/…`) are generated, not written, and are listed in
-section C. Each source is cited as `spec · section`, because some obligations sit in an accepted Decision
-or Recommendation rather than in the Contract text.
+How it was extracted: from the spec Contracts (section A) and from accepted Decisions and Recommendations that
+bind the **project** README (section B). Node and trail READMEs (`docs/trace/…`) are generated, not written, and
+are listed in section C. Each source is cited as `spec · section`, because some obligations sit in an accepted
+Decision or Recommendation rather than in the Contract text.
 
 ## A. From spec Contracts
 
@@ -18,7 +19,7 @@ or Recommendation rather than in the Contract text.
 | A1 | `main` is the integration branch: no `develop` branch and no integration agent. Feature and bug branches are cut from `origin/main`, rebased onto it before the PR, and merged by David with a **merge commit**, so every TDD commit and its SHA survives on `main`, and `git log --first-parent main` shows one line per feature. | orchestration · Contract (Branching) | ☑ | [docs/design.md#branching-and-merging](design.md#branching-and-merging) |
 | A2 | SQLite can't prove SQL Server-specific behaviour (unique-violation codes, migrations). The pre-push idempotent migration script proves the migrations generate; the rest is a known gap. | testing · Contract C5 | ☑ | [docs/design.md#what-sqlite-cannot-prove](design.md#what-sqlite-cannot-prove) |
 | A3 | The prod Approval check (environment `policies-prod`, approver: release manager, timeout 72 h) lives in the Azure DevOps UI, not the YAML, so the README is its only evidence. That's a platform limit, not a gap. (wording corrected at F6 to match F5 as built: the environment is `policies-prod`, not `uinsurepolicies-prod`) | deployment · Contract | ☑ | [infrastructure/README.md#prod-approval](../infrastructure/README.md#prod-approval) |
-| A4 | The one-time setup list, none of it done: (1) an ADO project and a pipeline from `infrastructure/pipelines/azure-pipelines.yml`; (2) three ARM service connections using workload identity federation, `sc-policies-dev\|test\|prod`, each authorised for this pipeline only; (3) each connection's identity given rights at subscription scope to its own subscription (Contributor, or a narrower custom role), because `main.bicep` creates the RG; (4) one Entra group per environment as the SQL admin (that environment's deploy identity plus a break-glass human), with its object ID in the variable group `policies-<env>` (the `.bicepparam` files hold a placeholder); (5) the environments `policies-dev`, `policies-test` and `policies-prod`, which aren't auto-created from YAML, with the Approval check on prod. (wording corrected at F6 to match F5 as built: connection names `sc-policies-*`, environment names `policies-*`, the group's object ID in the variable group) | deployment · Contract (One-time setup) | ☑ | [infrastructure/README.md#one-time-setup-none-of-it-done](../infrastructure/README.md#one-time-setup-none-of-it-done) |
+| A4 | The one-time setup list, none of it done: (1) an ADO project and a pipeline from `infrastructure/pipelines/azure-pipelines.yml`; (2) three ARM service connections using workload identity federation, `sc-policies-dev\|test\|prod`, each authorised for this pipeline only; (3) each connection's identity given rights at subscription scope to its own subscription (Contributor, or a narrower custom role), because `main.bicep` creates the RG; (4) one Entra group per environment as the SQL admin (that environment's deploy identity plus a break-glass human), with its object ID in the variable group `policies-<env>` (the `.bicepparam` files hold a placeholder); (5) the environments `policies-dev`, `policies-test` and `policies-prod`, which aren't auto-created from YAML, with the Approval check on prod. (wording corrected at F6 to match F5 as built: connection names `sc-policies-*`, environment names `policies-*`, the group's object ID in the variable group; the README also lists a sixth step, a main-only branch control check, which the spec did not ask for) | deployment · Contract (One-time setup) | ☑ | [infrastructure/README.md#one-time-setup-none-of-it-done](../infrastructure/README.md#one-time-setup-none-of-it-done) |
 | A5 | **Verbatim:** "**Never connected, never run.** This pipeline has never been connected to an Azure DevOps organisation or run. No service connections, environments or approvals exist. The Bicep is linted and built locally, and the YAML is schema-checked locally. Neither what-if nor a real pipeline compile was run, because both need Azure or Azure DevOps. The repo's real gate is its local git hooks (requirements §3, "No CI"). This pipeline shows how CI/CD would look at Uinsure." | deployment · Contract (README statement) | ☑ | [infrastructure/README.md](../infrastructure/README.md) |
 | A6 | *If the schema check is cut:* the YAML is "unvalidated". *Otherwise* the claim is exactly: "the YAML is valid against the schema; template expansion, `${{ }}` expressions, task inputs, service connections and environments are not checked". | deployment · Contract (schema check, cut order) | ☑ | [infrastructure/README.md#schema-check](../infrastructure/README.md#schema-check) (the check was not cut) |
 | A7 | **Status:** "The Bicep is linted and built locally and never deployed. what-if was not run, because it needs a signed-in subscription." | infrastructure · Contract, paragraph 1 | ☑ | [infrastructure/README.md#status](../infrastructure/README.md#status) |
