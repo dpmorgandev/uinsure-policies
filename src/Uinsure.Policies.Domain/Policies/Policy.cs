@@ -77,14 +77,6 @@ public sealed class Policy
         Cancellation? cancellation) =>
         new(reference, type, autoRenew, hasClaims, holders, property, terms, claims, cancellation);
 
-    public Result<IReadOnlyList<RefundCalculation>> QuoteCancellation(DateOnly? on, DateOnly today)
-    {
-        var quote = Quote(on, today);
-        return quote.IsSuccess
-            ? Result<IReadOnlyList<RefundCalculation>>.Success(quote.Value.Terms)
-            : Result<IReadOnlyList<RefundCalculation>>.Failure([.. quote.Violations]);
-    }
-
     // COULD-1: the cancel decision, read only. Cancel applies exactly this.
     public Result<CancellationQuote> Quote(DateOnly? on, DateOnly today)
     {

@@ -66,13 +66,13 @@ internal static partial class PolicyMappings
         result.QuotedOn);
 
     // A claim has no stored reference of its own: it is the policy's reference and the claim's place in its list.
-    // Any recorded claim means the policy has claims (COULD-2).
+    // HasClaims is the policy's own flag, read after the claim was recorded (COULD-2).
     public static RecordClaimResponse ToResponse(this RecordedClaim recorded, PolicyReference reference) => new(
         ClaimReference(reference, recorded.Number),
         reference.Value,
         recorded.Claim.ClaimDate,
         recorded.Claim.Description,
-        true);
+        recorded.HasClaims);
 
     private static string ClaimReference(PolicyReference policy, int claimNumber) => $"CLM-{policy.Value}-{claimNumber}";
 

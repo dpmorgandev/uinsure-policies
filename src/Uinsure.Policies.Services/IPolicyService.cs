@@ -13,11 +13,7 @@ public interface IPolicyService
 
     Task<Result<Cancellation>> Cancel(PolicyReference reference, DateOnly? on, CancellationToken ct);
 
-    Task<Result<IReadOnlyList<RefundCalculation>>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct);
-
     Task<Result<CancellationQuoteResult>> Quote(PolicyReference reference, DateOnly? on, CancellationToken ct);
 
     Task<Result<RecordedClaim>> RecordNumberedClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
-
-    Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
 }

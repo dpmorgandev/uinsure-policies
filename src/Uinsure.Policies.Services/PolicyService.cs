@@ -80,14 +80,6 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         return cancellation;
     }
 
-    public async Task<Result<IReadOnlyList<RefundCalculation>>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct)
-    {
-        var quote = await Quote(reference, on, ct);
-        return quote.IsSuccess
-            ? Result<IReadOnlyList<RefundCalculation>>.Success(quote.Value.Quote.Terms)
-            : Result<IReadOnlyList<RefundCalculation>>.Failure([.. quote.Violations]);
-    }
-
     public async Task<Result<CancellationQuoteResult>> Quote(PolicyReference reference, DateOnly? on, CancellationToken ct)
     {
         var today = UkCalendar.Today(clock);
@@ -102,14 +94,6 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         return quote.IsSuccess
             ? Result<CancellationQuoteResult>.Success(new CancellationQuoteResult(quote.Value, today))
             : Result<CancellationQuoteResult>.Failure([.. quote.Violations]);
-    }
-
-    public async Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
-    {
-        var recorded = await RecordNumberedClaim(reference, claimDate, description, ct);
-        return recorded.IsSuccess
-            ? Result<Claim>.Success(recorded.Value.Claim)
-            : Result<Claim>.Failure([.. recorded.Violations]);
     }
 
     public async Task<Result<RecordedClaim>> RecordNumberedClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
@@ -128,7 +112,7 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         }
 
         // The new claim is the last in the policy's list; its number is taken now, so a later claim cannot change it.
-        var recorded = new RecordedClaim(claim.Value, policy.Claims.Count);
+        var recorded = new RecordedClaim(claim.Value, policy.Claims.Count, policy.HasClaims);
         await repository.SaveChanges(ct);
         return Result<RecordedClaim>.Success(recorded);
     }
