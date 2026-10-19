@@ -53,7 +53,8 @@ internal static class ProblemAssert
         return problem;
     }
 
-    // The members every rule problem carries: type /problems/{rule-id lower-case}, title, status, detail,
+    // The members every rule problem carries: type /problems/{rule-id lower-case, "/" as "-", so RENEW-1/2 is
+    // /problems/renew-1-2}, title, status, detail,
     // instance (the request path: /policies for a sale, /policies/{reference} as sent for a GET), ruleId
     // and traceId.
     public static async Task<JsonElement> RuleProblem(HttpResponseMessage response, HttpStatusCode status, string ruleId, string title, string instance = "/policies")
@@ -62,7 +63,7 @@ internal static class ProblemAssert
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
 
         var problem = await response.ReadJson();
-        Assert.Equal($"/problems/{ruleId.ToLowerInvariant()}", problem.GetProperty("type").GetString());
+        Assert.Equal($"/problems/{ruleId.ToLowerInvariant().Replace('/', '-')}", problem.GetProperty("type").GetString());
         Assert.Equal(title, problem.GetProperty("title").GetString());
         Assert.Equal((int)status, problem.GetProperty("status").GetInt32());
         Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("detail").GetString()));
