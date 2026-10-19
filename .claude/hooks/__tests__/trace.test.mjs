@@ -285,6 +285,8 @@ test('completeness: a combined rule is complete only when each id it splits into
   assert.ok(completeness(t).reasons.some((x) => x.includes('rule RENEW-1/2 has no QA step')), 'a QA step for the row or one of its ids');
   t.qa = { 'RENEW-1/2': 2 };
   assert.ok(!completeness(t).reasons.some(renew), 'a QA step may name the combined row');
+  t.commits[0].rules = ['RENEW-1/2'];
+  assert.ok(!completeness(t).reasons.some(renew), 'a red commit trailered with the combined row covers each split id');
 });
 
 test('completeness: a green commit that under-declares a rule passes only when reconciled with evidence', () => {

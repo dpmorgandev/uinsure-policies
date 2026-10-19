@@ -230,7 +230,8 @@ export function ruleIds(id) {
   return m ? [`${m[1]}-${m[2]}`, `${m[1]}-${m[3]}`] : [id];
 }
 
-const commitIndex = (t, tdd, id) => t.commits.findIndex((c) => c.tdd === tdd && c.rules.includes(id));
+// A Rule trailer may name the combined row (Rule: RENEW-1/2), so it is split the same way.
+const commitIndex = (t, tdd, id) => t.commits.findIndex((c) => c.tdd === tdd && c.rules.flatMap(ruleIds).includes(id));
 
 // A green commit whose Rule trailer under-declares the rules it made pass (F3: one trailer per layer, though the
 // gate.green receipt shows every rule green) counts only when reconciled(green:<sha7>:<rule>) names a TDD: green
