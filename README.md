@@ -9,7 +9,7 @@ with TDD, one feature at a time. Every rule, its ID and the interpretation taken
 ## How to run it
 
 **Prerequisites:** the .NET 10 SDK (`global.json` pins 10.0.100 with `rollForward` set to `latestFeature`).
-The Postman CLI is only needed for the Postman collection.
+The Postman CLI or the Postman app is only needed for the Postman collection. Visual Studio is optional.
 
 **Run the API** (SQLite, schema created at start-up, nothing to configure):
 
@@ -37,6 +37,39 @@ and 67 architecture), 0 failed, 0 skipped.
 postman collection run tests/postman/Uinsure.Policies.postman_collection.json \
   -e tests/postman/local.postman_environment.json
 ```
+
+### In Visual Studio
+
+1. Open `Uinsure.Policies.slnx`. Besides `src` and `tests`, Solution Explorer shows solution folders for the
+   docs, the infrastructure, the Postman files and the root build files. For every folder on disk, use
+   **Switch Views → Folder View**.
+2. **Run the API:** set **Uinsure.Policies.Api** as the startup project, pick the **http** launch profile and
+   press **Ctrl+F5**. A browser opens on `/health/live` and shows `Healthy`. F5 also works, but a breakpoint
+   pauses every request behind it.
+3. **Run the tests:** **Test → Test Explorer**, then **Run All Tests** (Ctrl+R, A). The tests group by project.
+   Right-click a project, class or test to run just that. Tests for a rule carry a `Rule` trait with its ID,
+   so **Group By → Traits** lists them per rule.
+
+Only one process can listen on port 5080. Stop the API before running `dotnet run` from a terminal, or the second
+one fails with "address already in use".
+
+### In the Postman app
+
+1. Install Postman Desktop and sign in. The browser version can't reach `localhost` without Postman's Desktop
+   Agent.
+2. **Import** both files in `tests/postman/`: the collection and `local.postman_environment.json`.
+3. Pick the **local** environment in the top-right dropdown. It holds one variable,
+   `baseUrl = http://localhost:5080`.
+4. Start the API, then:
+   - **Everything:** on the collection, **⋯ → Run collection**, then **Run**. Expect 246 assertions to pass.
+   - **One feature:** **⋯ → Run folder** on a folder (`F1 Sell`, `F3 Cancel`, …) or on its `happy path` or
+     `rule violations` sub-folder.
+   - **One request:** open it, **Send**, then read the **Test Results** tab.
+
+Every request stands alone: a pre-request script makes a fresh reference and today's dates, and sells any policy
+it needs. So order doesn't matter, and nothing needs resetting between runs. The **F4 Renew → happy path** folder
+is empty on purpose: a successful renewal needs a term near its end, and Postman runs on the real clock, so those
+cases are covered by the acceptance tests, which inject the date.
 
 ## Assumptions
 
@@ -72,8 +105,14 @@ Where the brief was unclear I took a sensible view. The full list, one row per r
 
 ## Known limits
 
-- No authentication, so the reference is the only key. See the [security scope](docs/design.md#security-scope).
-- The Bicep sets no WAF, Front Door or IP restriction in front of the API.
+- No authentication, so the reference is the only key. Anyone who knows or guesses a reference can read the
+  policy, and can post a claim, which turns every later refund on it into £0 and can't be undone. See the
+  [security scope](docs/design.md#security-scope).
+- The Bicep sets no WAF, Front Door or IP restriction in front of the API, or in front of its Kudu (SCM) site.
+- `400` bodies pass on the JSON serialiser's messages, which name internal .NET types. Responses carry no
+  `Cache-Control: no-store` or `X-Content-Type-Options` headers.
+- The pipeline and the Azure resources have security gaps found in a review before publishing: see
+  [Known security gaps](infrastructure/README.md#known-security-gaps).
 - Rate limits are counted per instance. Claims are not idempotent and have no cap per policy.
 - The tests run on SQLite. No test runs against a SQL Server database; the pre-push hook generates the
   idempotent migration script.
@@ -90,3 +129,5 @@ The full lists are in [docs/design.md](docs/design.md#known-limits) and
 - [infrastructure/README.md](infrastructure/README.md): the Bicep and pipeline, networking, secrets, one-time
   setup and what the evidence does and does not prove.
 - [docs/requirements.md](docs/requirements.md): every rule with its agreed interpretation.
+- [docs/harness.md](docs/harness.md): the AI build harness that produced this repo, how a feature moves
+  through it, and where its audit trail lives. You don't need it to run or test the API.
