@@ -6,6 +6,78 @@ SQL Server when deployed), problem-details errors (RFC 9457) and OpenAPI with Sc
 with TDD, one feature at a time. Every rule, its ID and the interpretation taken for it are in
 [docs/requirements.md](docs/requirements.md).
 
+## The API
+
+| Route | What | Success |
+|---|---|---|
+| `POST /policies` | Sell a policy (SELL-1 to SELL-7) | `201` + `Location: /policies/{reference}` |
+| `GET /policies/{reference}` | Retrieve it, with its terms, payments, refunds, claims and cancellation (GET-1) | `200` |
+| `POST /policies/{reference}/cancellation` | Cancel, with a refund. The body is optional (`cancellationDate`) | `201` |
+| `GET /policies/{reference}/cancellation-quote?cancellationDate=yyyy-MM-dd` | Quote the refund without cancelling (COULD-1) | `200` |
+| `POST /policies/{reference}/claims` | Record a claim (`claimDate`, optional `description`) | `201` |
+| `POST /policies/{reference}/renewals` | Renew for another year (`amount`, optional `paymentMethod`) | `201` |
+
+Policy types are `Household` and `BuyToLet`, and payment methods are `Card`, `DirectDebit` and `Cheque`.
+
+**Sell a policy:**
+
+```http
+POST /policies
+Content-Type: application/json
+
+{
+  "reference": "HOME-8550",
+  "type": "Household",
+  "startDate": "2026-11-01",
+  "amount": 415.80,
+  "autoRenew": true,
+  "paymentMethod": "Card",
+  "policyholders": [{ "firstName": "Katherine", "lastName": "Johnson", "dateOfBirth": "1981-08-26" }],
+  "property": { "addressLine1": "48 Quay St", "addressLine2": null, "addressLine3": null, "postcode": "M3 4LZ" }
+}
+```
+
+It returns `201 Created` with `Location: /policies/HOME-8550`. `GET /policies/HOME-8550` then returns the policy.
+The end date is calculated, the status is derived from today, and the payment is recorded:
+
+```json
+{
+  "reference": "HOME-8550", "type": "Household", "status": "Pending", "currentTermNumber": 1,
+  "startDate": "2026-11-01", "endDate": "2027-10-31", "amount": 415.8, "hasClaims": false, "autoRenew": true,
+  "policyholders": [{ "firstName": "Katherine", "lastName": "Johnson", "dateOfBirth": "1981-08-26" }],
+  "property": { "addressLine1": "48 Quay St", "addressLine2": null, "addressLine3": null, "postcode": "M3 4LZ" },
+  "terms": [{ "termNumber": 1, "startDate": "2026-11-01", "endDate": "2027-10-31", "amount": 415.8,
+              "paymentReference": "PAY-0426a077e2b54726b6020e0afad57cdd" }],
+  "payments": [{ "reference": "PAY-0426a077e2b54726b6020e0afad57cdd", "type": "Card", "amount": 415.8 }],
+  "refunds": [], "claims": [], "cancellation": null
+}
+```
+
+**Errors** are RFC 9457 problem details:
+
+- `400`: the body has the wrong shape, with an `errors` map.
+- `404`: the reference is unknown.
+- `409`: a state conflict (a duplicate reference, cancelling twice, renewing a cancelled policy).
+- `422`: a broken business rule. Every broken rule is listed, not just the first. A sale backdated to 2020,
+  with no policyholders and an amount of 0, returns:
+
+```json
+{
+  "type": "/problems/sell-2", "title": "Start date outside the sale window", "status": 422,
+  "detail": "3 rules failed.", "instance": "/policies",
+  "traceId": "00-d8b267db53999aa53ea3bde9309ccf23-81cba93dc934447f-00", "ruleId": "SELL-2",
+  "violations": [
+    { "ruleId": "SELL-2", "detail": "The start date must be between 2026-10-19 and 2026-12-18." },
+    { "ruleId": "SELL-4", "detail": "A policy needs 1 to 3 policyholders." },
+    { "ruleId": "SELL-7", "detail": "The policy amount must be greater than 0." }
+  ]
+}
+```
+
+Each body has a `traceId`. The full contract (every status, the `429` rate limit, the `413` body cap, how
+validation keys are written) is in [docs/design.md](docs/design.md#endpoints). In Development, the OpenAPI
+document and the Scalar UI describe every route (see below).
+
 ## How to run it
 
 **Prerequisites:** the .NET 10 SDK (`global.json` pins 10.0.100 with `rollForward` set to `latestFeature`).
