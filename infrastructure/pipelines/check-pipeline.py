@@ -174,12 +174,42 @@ check("Microsoft.Network/networkSecurityGroups" in net, "A2/S1: network.bicep mu
 check(len(re.findall(r"networkSecurityGroup\s*:", net)) >= 2, "A2/S1: each subnet must be associated with a network security group")
 check(re.search(r"privateEndpointNetworkPolicies:\s*'Enabled'", net) is not None, "A2/S1: the private-endpoint subnet needs privateEndpointNetworkPolicies 'Enabled'")
 check(re.search(r"(?i)param\s+\w*agent\w*\s+string", net) is not None, "A2/S1: network.bicep needs an agent address-range parameter")
-check(re.search(r"destinationPortRange:\s*'1433'", net) is not None and re.search(r"access:\s*'Allow'", net) is not None,
-      "A2/S1: the SQL NSG must allow inbound 1433")
-check(re.search(r"(?s)access:\s*'Deny'.*?direction:\s*'Inbound'|direction:\s*'Inbound'.*?access:\s*'Deny'", net) is not None,
-      "A2/S1: the SQL NSG must deny all other inbound traffic")
-check(re.search(r"sourceAddressPrefix(es)?:[^\n]*(appIntegration|10\.20\.1\.0/24)", net) is not None,
-      "A2/S1: the 1433 allow rule must take its source from the app-integration subnet")
+
+
+# A2.2/R1: the rules are read from the NSG actually associated with the private-endpoint subnet.
+def resource_block(src, symbol):
+    m = re.search(rf"resource {re.escape(symbol)} '[^']*' = \{{(.*?)\n\}}", src, re.S)
+    return m.group(1) if m else None
+
+
+def rules_of(block):
+    return [chunk for chunk in re.split(r"\n\s*name:\s*'", block)[1:] if "priority:" in chunk]
+
+
+def field(rule, key):
+    m = re.search(rf"\b{key}:\s*(\[[^\]]*\]|[^\n]+)", rule)
+    return m.group(1).strip().strip("'") if m else None
+
+
+subnet = re.search(r"name:\s*'snet-private-endpoints'(.*?)\n\s{6}\}", net, re.S)
+nsg_ref = re.search(r"networkSecurityGroup:\s*\{\s*id:\s*(\w+)\.id\s*\}", subnet.group(1)) if subnet else None
+check(nsg_ref is not None, "A2.2/R1: the private-endpoint subnet must reference its NSG (networkSecurityGroup: { id: <nsg>.id })")
+sql_nsg = resource_block(net, nsg_ref.group(1)) if nsg_ref else None
+check(sql_nsg is not None, "A2.2/R1: the NSG referenced by snet-private-endpoints must be declared in network.bicep")
+sql_rules = rules_of(sql_nsg) if sql_nsg else []
+allows = [r for r in sql_rules if field(r, "direction") == "Inbound" and field(r, "access") == "Allow"
+          and field(r, "protocol") == "Tcp" and field(r, "destinationPortRange") == "1433"]
+check(len(allows) >= 1, "A2/S1: the SQL NSG (on snet-private-endpoints) must allow inbound Tcp 1433")
+check(any(re.search(r"appIntegrationPrefix|10\.20\.1\.0/24", field(r, "sourceAddressPrefixes") or "")
+          and "agentAddressPrefix" in (field(r, "sourceAddressPrefixes") or "") for r in allows),
+      "A2/S1: the SQL NSG's 1433 allow must take its sources from the app-integration prefix and agentAddressPrefix")
+denies = [r for r in sql_rules if field(r, "direction") == "Inbound" and field(r, "access") == "Deny"
+          and field(r, "sourceAddressPrefix") == "*" and field(r, "destinationPortRange") == "*"]
+check(len(denies) >= 1, "A2/S1: the SQL NSG (on snet-private-endpoints) must deny all other inbound traffic")
+allow_prios = [int(field(r, "priority")) for r in allows]
+deny_prios = [int(field(r, "priority")) for r in denies]
+check(bool(allow_prios) and bool(deny_prios) and min(deny_prios) > max(allow_prios),
+      "A2/S1: the SQL NSG's deny-all must have a higher priority number than the 1433 allow")
 # A2/R4 (comment wording about the leaked pipeline token) cannot be tested; the fix dispatch rewords it.
 
 if errors:
