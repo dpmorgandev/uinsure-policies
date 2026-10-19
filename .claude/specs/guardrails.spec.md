@@ -353,3 +353,67 @@ Still open:
 5. Resolved (David, 2026-10-17): yes. `guard-bash.mjs` denies `gh pr create` unless the latest reviewer and security verdicts for the current node are PASS and their `head_sha` equals HEAD (G14, with fixtures).
 6. Resolved (David, 2026-10-17): two files. The committed `.claude/hooks/privacy-denylist.txt` holds generic patterns only; a gitignored, optional `.githooks/privacy-denylist.local.txt` holds private terms; the `/save-context` check and the pre-commit hook read both (G10, context C6).
 7. Resolved (David, 2026-10-17): re-keyed to the OWASP LLM Top 10 2026 plus the OWASP Top 10 for Agentic Applications for 2026, both verified from OWASP's own PDFs (R-AI). The 2025 list stays in Research as history.
+
+---
+
+## Amendment A1 (2026-10-19): guards for the UI design slice. DRAFT; Decision pending (David)
+
+Settles the mechanical legs of `efficiency.spec.md` EFF-1, EFF-5, EFF-6 and EFF-13 for the `ui-designer`
+agent (`agents-skills.spec.md` Amendment A1). Delivered on a `harness/ui-design` branch by the G14
+harness route; David merges, then pulls into the main checkout at a point he chooses.
+
+### Research: what a merge risks for the build in flight (F3)
+
+The build's sessions run these hooks from the main checkout's working tree. A merge on GitHub reaches F3
+only when David pulls into the main checkout, and then at once (settings and agents reload live).
+
+- **Runtime errors fail closed** (`lib/io.mjs` `guarded`; `gate-subagent.mjs`'s catch): a bug that throws
+  inside a hook denies or blocks. F3 would stall loudly; nothing would slip through.
+- **Load-time errors fail open.** A syntax error or a bad import in a hook or `lib/` module crashes node
+  before `guarded` runs. A non-2 exit is a non-blocking error, so **the tool call proceeds unguarded**.
+  `lib/roles.mjs` is imported by `guard-agent.mjs` and `gate-subagent.mjs`, so a broken edit there would
+  silently disarm G1, G3 and G4 for every F3 agent. This is the real risk.
+- **A wrong deny blocks F3.** A new PreToolUse hook on the `Agent` tool sees every F3 dispatch; denying a
+  tester or builder dispatch by mistake would stop the loop.
+- **An invalid `settings.json`** would break every hook registration at once.
+
+### Decision: PENDING (David)
+
+### Contract additions
+
+**G1 (extended):** the role table gains `ui-designer`, with the allowlist `docs/ui/mockups/**`,
+`docs/ui/kit/**`, `docs/ui/screens/**`. Additive only: no existing role's list changes. G3 then checks its
+stop-time diff with no change to `gate-subagent.mjs`.
+
+| ID | Law | Mechanism | File | Test (fixture) |
+|---|---|---|---|---|
+| G15 | Design prompts are rendered, never hand-written (EFF-5) | PreToolUse, matcher `Agent\|Task`. **Exits 0 at once unless `tool_input.subagent_type` is `ui-designer`** (unparseable input that doesn't name ui-designer also passes, so the build loop can't be blocked). For ui-designer, the prompt's first line must be the render header `<!-- design-prompt v1 stage=<s> direction=<d> screen=<id> attempt=<n> sha256=<hex> -->`; the hook re-renders from the checked-in template and the named inputs (`.claude/scripts/design/render-prompt.mjs`) and denies unless the prompt is byte-identical. Any error denies, but only for ui-designer dispatches | `guard-dispatch.mjs` | tester dispatch → allow (no-op); ui-designer with a rendered prompt → allow; one byte changed → deny; header missing → deny; a mandate line deleted → deny; template missing → deny |
+| G16 | A design agent's message is a receipt, and its artifacts are clean (EFF-13) | SubagentStop, a **separate** hook from `gate-subagent.mjs`. **Exits 0 at once unless the role is `ui-designer`.** Validates the receipt schema, then for each listed file: exists, non-empty, inside the role's allowlist; `.html` starts with `<!doctype html>` (case-insensitive) and holds no markdown fence; `.md` starts with its required `# ` heading, with no preamble and no wrapping fence; `.json` parses. A failure blocks, using the existing restate-then-escalate cap | `gate-design.mjs` | reviewer stop → no-op; valid receipt and clean HTML → allow; prose before the JSON → block; HTML inside the message → block; HTML containing a markdown fence → block; a listed file missing → block; empty `files` with `status: written` → block (EFF-1: empty is FAIL) |
+| G17 | A ported skill reads this project only (EFF-6) | Self-test lint over every `.claude/skills/*/SKILL.md` whose frontmatter has `ported-from:` (native skills are out of scope). Its body opens with a `## Reads / Writes` bullet list: that list is the reviewed contract. Every repo path the body names must exist or fall under a path the list declares (declared Reads may live on another branch, e.g. `docs/ui/*` on `ui`). The denylist (`agentflow`, `projects/`, `~/`, a drive letter, `brief.md §`) must not match the body; provenance lives in the frontmatter's `ported-from:` | `lib/skills-lint.mjs`, `__tests__/design.test.mjs` | a foreign path → fail; the word agentflow in the body → fail; an undeclared missing path → fail; no Reads / Writes → fail; a clean ported skill and a native skill → pass; every ported skill in the repo → pass |
+| G13 (vi) | Every hook loads (closes the load-time fail-open gap) | The self-test imports, in a child process, every `.claude/hooks/*.mjs`, `lib/*.mjs` and `.claude/scripts/design/*.mjs` module and fails on any load error; `settings.json` must parse | `__tests__/design.test.mjs` | a fixture module with a syntax error → fail |
+
+**Tools, not guards** (run by the stage skill in the parent; results recorded in the stage's
+`loop.jsonl`): the design lint (EFF-12: no external URLs, tokens only, `data-theme` set, every `data-req`
+region of the screen present, from `screens.json`) and the screenshot review (EFF-8: each artifact at
+1440 and 390, light and dark, into `docs/ui/mockups/review.html`). They live in `.claude/scripts/design/`
+with a `package.json` pinning **Playwright 1.62.0**, chosen because its Chromium build (1234) is already in
+the machine's Playwright cache, so nothing is downloaded (1.64.1 wanted build 1248; checked 2026-10-19).
+`node_modules/` and `.out/` (rendered prompts) are gitignored. The lint ships known-bad fixtures (EFF-1);
+the screenshot script fails on a page error, a failed request or zero artifacts, and was smoke-tested in
+both themes at both widths.
+
+**Regeneration without editing a prompt** (EFF-4 under G15): attempt *n* > 1 is rendered with the lint
+output of attempt *n*−1, which the stage skill writes verbatim to
+`docs/trace/ui/<node>/feedback/<direction>-<screen>-<n>.txt`. The header carries `attempt=<n>`, so the
+guard re-renders the same text, and the feedback reaches the agent without anyone writing a prompt. A
+missing feedback file fails the render (closed).
+
+**Merge-safety rules for this PR** (from the Research above):
+1. `gate-subagent.mjs` and `guard-agent.mjs` are **not edited**. The only shared-file change is the
+   additive `ui-designer` entry in `lib/roles.mjs`.
+2. Each new hook exits 0 first for every role except ui-designer, with a no-op fixture proving it for
+   tester, builder, reviewer, security, investigator and git.
+3. G13 (vi) lands in the same PR, so a load-time error fails the self-test, which runs in pre-push.
+4. The PR description lists every changed file and the self-test output. David pulls it into the main
+   checkout **between F3 dispatches** (at a pause, or with no subagent running), never mid-dispatch.
+5. Rollback is one revert commit on `main` plus a pull. Nothing else depends on the slice.

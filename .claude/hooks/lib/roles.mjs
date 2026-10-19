@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import { parseYaml } from '../../skills/plan-dag/validate-dag.mjs';
 import { currentBranch, planNodeFromBranch } from './trace.mjs';
 
-export const ROLES = ['tester', 'builder', 'reviewer', 'security', 'investigator', 'git'];
+export const ROLES = ['tester', 'builder', 'reviewer', 'security', 'investigator', 'git', 'ui-designer'];
+
+// agents-skills Amendment A1: design artifacts only.
+const DESIGN = ['docs/ui/mockups/**', 'docs/ui/kit/**', 'docs/ui/screens/**'];
 
 const BUILD_FILES = ['*.slnx', 'global.json', '.editorconfig', 'Directory.Build.props', 'Directory.Packages.props', 'BannedSymbols.txt', '.gitattributes'];
 const BY_KIND = {
@@ -27,6 +30,7 @@ export function nodeKind(root) {
 export function allowlist(role, kind) {
   if (role === 'builder') return ['src/**', ...BUILD_FILES, ...(BY_KIND[kind] ?? [])];
   if (role === 'tester') return ['tests/**', 'docs/qa/**'];
+  if (role === 'ui-designer') return DESIGN;
   return [];
 }
 
