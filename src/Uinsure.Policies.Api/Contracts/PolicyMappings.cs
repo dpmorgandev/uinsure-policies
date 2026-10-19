@@ -55,26 +55,24 @@ internal static partial class PolicyMappings
         ToTerms(cancellation.Terms),
         [.. cancellation.Refunds.Select(refund => new CancellationRefundResponse(refund.Reference, ToDto(refund.Method), refund.Amount, refund.PaymentReference))]);
 
-    // A quote creates nothing, so its refunds are worked out by the cancel's own rule: a paid term whose
-    // calculation is above 0 (CANCEL-2, no £0 refund).
-    public static CancellationQuoteResponse ToQuote(this Policy policy, IReadOnlyList<RefundCalculation> terms, DateOnly cancellationDate, DateOnly quotedOn) => new(
-        policy.Reference.Value,
-        cancellationDate,
-        terms[policy.Terms.ToList().IndexOf(policy.CurrentTerm(cancellationDate))].RuleApplied,
-        terms.Sum(term => term.Amount),
-        ToTerms(terms),
-        [.. policy.Terms
-            .Select((term, index) => (term.Payment, terms[index].Amount))
-            .Where(refund => refund.Payment is not null && refund.Amount > 0)
-            .Select(refund => new QuoteRefundResponse(ToDto(refund.Payment!.Method), refund.Amount, refund.Payment.Reference))],
-        quotedOn);
+    // The decision (rule, total, refunds) is the domain's; this only maps it.
+    public static CancellationQuoteResponse ToResponse(this CancellationQuoteResult result, PolicyReference reference) => new(
+        reference.Value,
+        result.Quote.CancellationDate,
+        result.Quote.RuleApplied,
+        result.Quote.TotalRefund,
+        ToTerms(result.Quote.Terms),
+        [.. result.Quote.Refunds.Select(refund => new QuoteRefundResponse(ToDto(refund.Method), refund.Amount, refund.PaymentReference))],
+        result.QuotedOn);
 
     // A claim has no stored reference of its own: it is the policy's reference and the claim's place in its list.
-    public static RecordClaimResponse ToClaimResponse(this Policy policy, int claimNumber)
-    {
-        var claim = policy.Claims[claimNumber - 1];
-        return new RecordClaimResponse(ClaimReference(policy.Reference, claimNumber), policy.Reference.Value, claim.ClaimDate, claim.Description, policy.HasClaims);
-    }
+    // Any recorded claim means the policy has claims (COULD-2).
+    public static RecordClaimResponse ToResponse(this RecordedClaim recorded, PolicyReference reference) => new(
+        ClaimReference(reference, recorded.Number),
+        reference.Value,
+        recorded.Claim.ClaimDate,
+        recorded.Claim.Description,
+        true);
 
     private static string ClaimReference(PolicyReference policy, int claimNumber) => $"CLM-{policy.Value}-{claimNumber}";
 

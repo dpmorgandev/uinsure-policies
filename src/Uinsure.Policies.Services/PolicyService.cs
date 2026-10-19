@@ -82,33 +82,55 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
 
     public async Task<Result<IReadOnlyList<RefundCalculation>>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct)
     {
-        var today = UkCalendar.Today(clock);
-        var policy = await repository.GetByReference(reference, ct);
-        if (policy is null)
-        {
-            return Result<IReadOnlyList<RefundCalculation>>.Failure(NotFound(reference));
-        }
-
-        // COULD-1: a quote is read-only, so it never saves.
-        return policy.QuoteCancellation(on, today);
+        var quote = await Quote(reference, on, ct);
+        return quote.IsSuccess
+            ? Result<IReadOnlyList<RefundCalculation>>.Success(quote.Value.Quote.Terms)
+            : Result<IReadOnlyList<RefundCalculation>>.Failure([.. quote.Violations]);
     }
 
-    public async Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
+    public async Task<Result<CancellationQuoteResult>> Quote(PolicyReference reference, DateOnly? on, CancellationToken ct)
     {
         var today = UkCalendar.Today(clock);
         var policy = await repository.GetByReference(reference, ct);
         if (policy is null)
         {
-            return Result<Claim>.Failure(NotFound(reference));
+            return Result<CancellationQuoteResult>.Failure(NotFound(reference));
+        }
+
+        // COULD-1: a quote is read-only, so it never saves.
+        var quote = policy.Quote(on, today);
+        return quote.IsSuccess
+            ? Result<CancellationQuoteResult>.Success(new CancellationQuoteResult(quote.Value, today))
+            : Result<CancellationQuoteResult>.Failure([.. quote.Violations]);
+    }
+
+    public async Task<Result<Claim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
+    {
+        var recorded = await RecordNumberedClaim(reference, claimDate, description, ct);
+        return recorded.IsSuccess
+            ? Result<Claim>.Success(recorded.Value.Claim)
+            : Result<Claim>.Failure([.. recorded.Violations]);
+    }
+
+    public async Task<Result<RecordedClaim>> RecordNumberedClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct)
+    {
+        var today = UkCalendar.Today(clock);
+        var policy = await repository.GetByReference(reference, ct);
+        if (policy is null)
+        {
+            return Result<RecordedClaim>.Failure(NotFound(reference));
         }
 
         var claim = policy.RecordClaim(claimDate, description, today);
-        if (claim.IsSuccess)
+        if (!claim.IsSuccess)
         {
-            await repository.SaveChanges(ct);
+            return Result<RecordedClaim>.Failure([.. claim.Violations]);
         }
 
-        return claim;
+        // The new claim is the last in the policy's list; its number is taken now, so a later claim cannot change it.
+        var recorded = new RecordedClaim(claim.Value, policy.Claims.Count);
+        await repository.SaveChanges(ct);
+        return Result<RecordedClaim>.Success(recorded);
     }
 
     private static RuleViolation NotFound(PolicyReference reference) => Violation(
@@ -118,7 +140,7 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         reference);
 
     private static PolicyDetails Details(Policy policy, DateOnly today) =>
-        new(policy, policy.CurrentTerm(today), policy.StatusOn(today), today);
+        new(policy, policy.CurrentTerm(today), policy.StatusOn(today));
 
     private static RuleViolation DuplicateReference(PolicyReference reference) => Violation(
         RuleIds.Sell1,

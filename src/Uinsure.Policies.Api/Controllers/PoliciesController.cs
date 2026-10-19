@@ -60,18 +60,9 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
             return ValidationProblem();
         }
 
-        // The policy is read first: it answers the 404, and it supplies the payments and today for the response.
         var policyReference = PolicyReference.Normalise(reference);
-        var found = await service.Get(policyReference, cancellationToken);
-        if (!found.IsSuccess)
-        {
-            return this.ToProblem(found.Violations);
-        }
-
-        var quote = await service.QuoteCancellation(policyReference, date, cancellationToken);
-        return quote.IsSuccess
-            ? found.Value.Policy.ToQuote(quote.Value, date, found.Value.Today)
-            : this.ToProblem(quote.Violations);
+        var quote = await service.Quote(policyReference, date, cancellationToken);
+        return quote.IsSuccess ? quote.Value.ToResponse(policyReference) : this.ToProblem(quote.Violations);
     }
 
     [HttpPost("{reference}/claims")]
@@ -79,15 +70,13 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
     public async Task<ActionResult<RecordClaimResponse>> RecordClaim(string reference, RecordClaimRequest request, CancellationToken cancellationToken)
     {
         var policyReference = PolicyReference.Normalise(reference);
-        var recorded = await service.RecordClaim(policyReference, request.ClaimDate!.Value, request.Description, cancellationToken);
+        var recorded = await service.RecordNumberedClaim(policyReference, request.ClaimDate!.Value, request.Description, cancellationToken);
         if (!recorded.IsSuccess)
         {
             return this.ToProblem(recorded.Violations);
         }
 
-        // The new claim is the last in the policy's list.
-        var stored = await service.Get(policyReference, cancellationToken);
-        var response = stored.Value.Policy.ToClaimResponse(stored.Value.Policy.Claims.Count);
+        var response = recorded.Value.ToResponse(policyReference);
         return Created($"/policies/{response.PolicyReference}", response);
     }
 }

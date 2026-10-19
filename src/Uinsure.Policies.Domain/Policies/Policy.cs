@@ -73,43 +73,59 @@ public sealed class Policy
         IReadOnlyList<Policyholder> holders,
         Property property,
         IReadOnlyList<Term> terms,
-        IReadOnlyList<Claim>? claims = null,
-        Cancellation? cancellation = null) =>
-        new(reference, type, autoRenew, hasClaims, holders, property, terms, claims ?? [], cancellation);
+        IReadOnlyList<Claim> claims,
+        Cancellation? cancellation) =>
+        new(reference, type, autoRenew, hasClaims, holders, property, terms, claims, cancellation);
 
-    // COULD-1: the cancel calculation, read only.
     public Result<IReadOnlyList<RefundCalculation>> QuoteCancellation(DateOnly? on, DateOnly today)
     {
-        var date = ValidateCancellationDate(on, today);
-        return date.IsSuccess
-            ? Result<IReadOnlyList<RefundCalculation>>.Success(Calculate(date.Value))
-            : Result<IReadOnlyList<RefundCalculation>>.Failure([.. date.Violations]);
+        var quote = Quote(on, today);
+        return quote.IsSuccess
+            ? Result<IReadOnlyList<RefundCalculation>>.Success(quote.Value.Terms)
+            : Result<IReadOnlyList<RefundCalculation>>.Failure([.. quote.Violations]);
     }
 
-    public Result<Cancellation> Cancel(DateOnly? on, DateOnly today, Func<string> refundReference)
+    // COULD-1: the cancel decision, read only. Cancel applies exactly this.
+    public Result<CancellationQuote> Quote(DateOnly? on, DateOnly today)
     {
         var date = ValidateCancellationDate(on, today);
         if (!date.IsSuccess)
         {
-            return Result<Cancellation>.Failure([.. date.Violations]);
+            return Result<CancellationQuote>.Failure([.. date.Violations]);
         }
 
         var calculations = Calculate(date.Value);
 
         // No £0 refund: only a term with a payment and an amount above 0 is reversed (CANCEL-2).
-        var refunds = new List<Refund>();
+        var refunds = new List<QuotedRefund>();
         for (var i = 0; i < Terms.Count; i++)
         {
             if (calculations[i].Amount > 0 && Terms[i].Payment is { } payment)
             {
-                refunds.Add(new Refund(refundReference(), payment.Method, calculations[i].Amount, payment.Reference));
+                refunds.Add(new QuotedRefund(payment.Method, calculations[i].Amount, payment.Reference));
             }
         }
 
         // The top-level rule is the current term's.
         var currentIndex = Terms.ToList().IndexOf(CurrentTerm(date.Value));
+        return Result<CancellationQuote>.Success(new CancellationQuote(
+            date.Value, calculations[currentIndex].RuleApplied, calculations.Sum(c => c.Amount), calculations, refunds));
+    }
+
+    public Result<Cancellation> Cancel(DateOnly? on, DateOnly today, Func<string> refundReference)
+    {
+        var quote = Quote(on, today);
+        if (!quote.IsSuccess)
+        {
+            return Result<Cancellation>.Failure([.. quote.Violations]);
+        }
+
+        var decision = quote.Value;
+        var refunds = decision.Refunds
+            .Select(refund => new Refund(refundReference(), refund.Method, refund.Amount, refund.PaymentReference))
+            .ToList();
         var cancellation = new Cancellation(
-            date.Value, calculations[currentIndex].RuleApplied, calculations.Sum(c => c.Amount), calculations, refunds);
+            decision.CancellationDate, decision.RuleApplied, decision.TotalRefund, decision.Terms, refunds);
         Cancellation = cancellation;
         return Result<Cancellation>.Success(cancellation);
     }
