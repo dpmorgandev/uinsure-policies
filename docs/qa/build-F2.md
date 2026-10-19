@@ -230,12 +230,12 @@ Each defect becomes a finding on this node's failure route, not a /plan-bug.
 
 | | |
 |---|---|
-| Tester | |
-| Date | |
+| Tester | David Morgan (steps run by the tester agent, verified by the orchestrator) |
+| Date | 2026-10-19 |
 | Commit signed off | beba48e3f7f4efc948d3542dffce87bfe2de33df (PR #17 head; `src/` and `tests/` identical to 143e5ba) |
 | `dotnet test` result | 374 passed / 0 failed / 0 skipped (`dotnet test --solution Uinsure.Policies.slnx`, run before and after the API session) |
 | Postman CLI result | `F2 Retrieve` 25 / 0 requests, 26 / 0 assertions; `F1 Sell` 75 / 0, 73 / 0; `F1b Layered models` 10 / 0, 10 / 0; whole collection 112 / 0, 111 / 0 (Postman CLI 1.75.0, `local` environment) |
-| Steps passed | |
-| Defects raised (finding ids) | |
-| Verdict | ☐ Reject (findings above)  ☐ Accept F2 |
-| Signature | |
+| Steps passed | 41 of 41 |
+| Defects raised (finding ids) | None in F2. `?REFERENCE=X` is correctly a 400, but its errors key is written `reference` (camelCase naming policy); cosmetic, carried over to F3 |
+| Verdict | ☐ Reject (findings above)  ☑ Accept F2 |
+| Signature | David Morgan 19/10/2026 01:05 |
