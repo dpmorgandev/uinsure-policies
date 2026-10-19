@@ -181,13 +181,13 @@ above.
 
 | | |
 |---|---|
-| Tester | |
-| Date | |
-| Commit signed off | |
-| `dotnet test` result | __ passed / __ failed / __ skipped |
-| Postman CLI result | __ requests / __ assertions / __ failed |
-| SQLite file deleted and steps 2-4 re-run (note 1) | ☐ |
-| Steps passed | __ of 57 |
-| Defects raised (finding ids) | |
-| Verdict | ☐ Reject (findings above)  ☐ Accept F6 |
-| Signature | |
+| Tester | David Morgan |
+| Date | 2026-10-19 |
+| Commit signed off | 647b86c |
+| `dotnet test` result | 637 passed / 0 failed / 0 skipped |
+| Postman CLI result | n/a: docs node, no API change (gate.postman skipped) |
+| SQLite file deleted and steps 2-4 re-run (note 1) | ☑ |
+| Steps passed | 57 of 57 |
+| Defects raised (finding ids) | none (D1 steer applied before the PR) |
+| Verdict | ☐ Reject (findings above)  ☑ Accept F6 |
+| Signature | David Morgan 15:53 |
