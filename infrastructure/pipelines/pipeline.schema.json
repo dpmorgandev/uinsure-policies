@@ -57,9 +57,10 @@
     },
     "pool": {
       "type": "object",
-      "required": ["vmImage"],
-      "properties": { "vmImage": { "type": "string" } },
-      "additionalProperties": false
+      "oneOf": [
+        { "required": ["vmImage"], "properties": { "vmImage": { "type": "string" } }, "additionalProperties": false },
+        { "required": ["name"], "properties": { "name": { "type": "string" } }, "additionalProperties": false }
+      ]
     },
     "job": {
       "type": "object",

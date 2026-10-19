@@ -27,9 +27,6 @@ param sqlAdminGroupName string
 @description('Object id of the Entra group that administers the SQL server.')
 param sqlAdminGroupObjectId string
 
-@description('Entra tenant id.')
-param tenantId string
-
 var suffix = '${workload}-${environmentName}'
 var tags = {
   workload: workload
@@ -52,6 +49,16 @@ module monitoring 'modules/monitoring.bicep' = {
   }
 }
 
+module network 'modules/network.bicep' = {
+  scope: rg
+  name: 'network'
+  params: {
+    suffix: suffix
+    location: location
+    tags: tags
+  }
+}
+
 module sql 'modules/sql.bicep' = {
   scope: rg
   name: 'sql'
@@ -63,7 +70,8 @@ module sql 'modules/sql.bicep' = {
     skuTier: sqlSkuTier
     adminGroupName: sqlAdminGroupName
     adminGroupObjectId: sqlAdminGroupObjectId
-    tenantId: tenantId
+    vnetId: network.outputs.vnetId
+    privateEndpointSubnetId: network.outputs.privateEndpointSubnetId
   }
 }
 
@@ -78,6 +86,7 @@ module app 'modules/appservice.bicep' = {
     appInsightsConnectionString: monitoring.outputs.connectionString
     sqlServerFqdn: sql.outputs.serverFqdn
     sqlDatabaseName: sql.outputs.databaseName
+    appIntegrationSubnetId: network.outputs.appIntegrationSubnetId
   }
 }
 
@@ -86,3 +95,4 @@ output appName string = app.outputs.appName
 output appHostName string = app.outputs.hostName
 output sqlServerFqdn string = sql.outputs.serverFqdn
 output sqlDatabaseName string = sql.outputs.databaseName
+output identityClientId string = app.outputs.clientId

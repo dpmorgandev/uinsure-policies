@@ -5,22 +5,24 @@ param skuName string
 param skuTier string
 param adminGroupName string
 param adminGroupObjectId string
-param tenantId string
+param vnetId string
+param privateEndpointSubnetId string
 
 // Entra-only authentication: no administratorLogin or password exists, so there is no SQL secret.
+// No public endpoint and no Allow-Azure-services firewall rule: the server is reachable only through the private endpoint below.
 resource server 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: 'sql-${suffix}'
   location: location
   tags: tags
   properties: {
     minimalTlsVersion: '1.2'
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
     administrators: {
       administratorType: 'ActiveDirectory'
       principalType: 'Group'
       login: adminGroupName
       sid: adminGroupObjectId
-      tenantId: tenantId
+      tenantId: tenant().tenantId
       azureADOnlyAuthentication: true
     }
   }
@@ -37,13 +39,51 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   }
 }
 
-// Lets Azure-hosted services (the App Service) reach the server.
-resource allowAzureServices 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  parent: server
-  name: 'AllowAzureServices'
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
+  name: 'pe-sql-${suffix}'
+  location: location
+  tags: tags
   properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
+    subnet: { id: privateEndpointSubnetId }
+    privateLinkServiceConnections: [
+      {
+        name: 'sql'
+        properties: {
+          privateLinkServiceId: server.id
+          groupIds: ['sqlServer']
+        }
+      }
+    ]
+  }
+}
+
+resource dnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
+  name: 'privatelink.database.windows.net'
+  location: 'global'
+  tags: tags
+}
+
+resource dnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
+  parent: dnsZone
+  name: 'link-${suffix}'
+  location: 'global'
+  tags: tags
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: { id: vnetId }
+  }
+}
+
+resource dnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = {
+  parent: privateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'sql'
+        properties: { privateDnsZoneId: dnsZone.id }
+      }
+    ]
   }
 }
 

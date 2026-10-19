@@ -16,12 +16,18 @@ stages:
     jobs:
       - deployment: Deploy
         displayName: Deploy to ${{ parameters.environmentName }}
+        # SQL has no public endpoint, so the whole job runs on a self-hosted pool whose agents sit in a network
+        # that reaches the private endpoint and resolves privatelink.database.windows.net (peered to, or the
+        # same as, the VNet that infrastructure/modules/network.bicep creates). One pool per environment.
+        # The agent needs az, jq, go-sqlcmd (`sqlcmd`) and curl.
         pool:
-          vmImage: ubuntu-latest
+          name: policies-${{ parameters.environmentName }}-vnet
         # The environment carries the approval check; only policies-prod has one.
         environment: policies-${{ parameters.environmentName }}
         variables:
-          # Per-environment values (sqlAdminGroupObjectId, tenantId) live in a variable group, not in the repo.
+          # Per-environment values live in a variable group, not in the repo:
+          #   sqlAdminGroupObjectId  object id of the Entra group that is the server's Entra-only admin
+          #   sqlServiceConnection   name of the SQL service connection described below
           - group: policies-${{ parameters.environmentName }}
           - name: drop
             value: $(Pipeline.Workspace)/drop
@@ -29,6 +35,7 @@ stages:
           runOnce:
             deploy:
               steps:
+                # The ARM service connection (${{ parameters.azureServiceConnection }}) deploys resources only.
                 - task: AzureCLI@2
                   displayName: What-if
                   inputs:
@@ -41,7 +48,7 @@ stages:
                         --location ${{ parameters.location }} \
                         --template-file $(drop)/infrastructure/main.bicep \
                         --parameters $(drop)/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
-                        --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId) tenantId=$(tenantId)
+                        --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)
 
                 - task: AzureCLI@2
                   name: infra
@@ -56,21 +63,32 @@ stages:
                         --location ${{ parameters.location }} \
                         --template-file $(drop)/infrastructure/main.bicep \
                         --parameters $(drop)/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
-                        --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId) tenantId=$(tenantId) \
+                        --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId) \
                         --query properties.outputs --output json)
                       echo "##vso[task.setvariable variable=resourceGroupName]$(echo "$outputs" | jq -r .resourceGroupName.value)"
                       echo "##vso[task.setvariable variable=appName]$(echo "$outputs" | jq -r .appName.value)"
                       echo "##vso[task.setvariable variable=appHostName]$(echo "$outputs" | jq -r .appHostName.value)"
                       echo "##vso[task.setvariable variable=sqlServerFqdn]$(echo "$outputs" | jq -r .sqlServerFqdn.value)"
                       echo "##vso[task.setvariable variable=sqlDatabaseName]$(echo "$outputs" | jq -r .sqlDatabaseName.value)"
+                      echo "##vso[task.setvariable variable=identityClientId]$(echo "$outputs" | jq -r .identityClientId.value)"
+
+                # The two SQL steps use a separate SQL service connection ($(sqlServiceConnection)), not the ARM one.
+                # Its principal is a database-scoped user with db_owner on the policies database, and it is
+                # not a member of the server admin group, so a leaked pipeline token cannot administer the server.
+                # The server admin group stays the Entra-only administrator and is used by people, not by the pipeline.
+                # One-off bootstrap, run by a member of that admin group once per environment after the first
+                # infrastructure deployment, connected to the policies database (not master):
+                #   CREATE USER [<SQL service connection principal name>] FROM EXTERNAL PROVIDER;
+                #   ALTER ROLE db_owner ADD MEMBER [<SQL service connection principal name>];
+                # An admin can use FROM EXTERNAL PROVIDER because the admin's own sign-in resolves the name.
+                # The pipeline never does: the app's user is created from a SID below, which needs no directory lookup.
+                # The agent's network also needs to be allowed by the pool, since SQL has no public endpoint.
 
                 # Idempotent: the script from `dotnet ef migrations script --idempotent` skips applied migrations.
-                # The service principal signs in with its Entra token (it belongs to the SQL admin group); no SQL password exists.
-                # The agent needs go-sqlcmd (the `sqlcmd` on ubuntu-latest).
                 - task: AzureCLI@2
                   displayName: Apply migrations
                   inputs:
-                    azureSubscription: ${{ parameters.azureServiceConnection }}
+                    azureSubscription: $(sqlServiceConnection)
                     scriptType: bash
                     scriptLocation: inlineScript
                     inlineScript: |
@@ -78,16 +96,21 @@ stages:
                         --authentication-method ActiveDirectoryAzCli \
                         -b -i $(drop)/migrations.sql
 
+                # The app signs in with a user-assigned identity. Its database user is created from a SID built
+                # from the identity's client id (a GUID, byte-swapped to SQL Server's uniqueidentifier order),
+                # so Azure SQL needs no Microsoft Graph lookup and no Directory Readers role.
                 - task: AzureCLI@2
                   displayName: Grant the app's managed identity database access
                   inputs:
-                    azureSubscription: ${{ parameters.azureServiceConnection }}
+                    azureSubscription: $(sqlServiceConnection)
                     scriptType: bash
                     scriptLocation: inlineScript
                     inlineScript: |
+                      g=$(echo "$(identityClientId)" | tr -d '-' | tr 'a-f' 'A-F')
+                      sid="0x${g:6:2}${g:4:2}${g:2:2}${g:0:2}${g:10:2}${g:8:2}${g:14:2}${g:12:2}${g:16:16}"
                       sqlcmd -S "$(sqlServerFqdn)" -d "$(sqlDatabaseName)" \
                         --authentication-method ActiveDirectoryAzCli -b \
-                        -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '$(appName)') CREATE USER [$(appName)] FROM EXTERNAL PROVIDER; ALTER ROLE db_datareader ADD MEMBER [$(appName)]; ALTER ROLE db_datawriter ADD MEMBER [$(appName)];"
+                        -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = '$(appName)') CREATE USER [$(appName)] WITH SID = $sid, TYPE = E; ALTER ROLE db_datareader ADD MEMBER [$(appName)]; ALTER ROLE db_datawriter ADD MEMBER [$(appName)];"
 
                 - task: AzureCLI@2
                   displayName: Deploy app

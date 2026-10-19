@@ -35,7 +35,8 @@ stages:
 
           - script: |
               mkdir -p $(Build.ArtifactStagingDirectory)/drop
-              dotnet tool install --global dotnet-ef
+              # Pinned to the Microsoft.EntityFrameworkCore.Design version in Directory.Packages.props.
+              dotnet tool install --global dotnet-ef --version 10.0.13
               export PATH="$PATH:$HOME/.dotnet/tools"
               dotnet ef migrations script --idempotent \
                 --project src/Uinsure.Policies.Persistence \
