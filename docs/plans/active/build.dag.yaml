@@ -224,7 +224,7 @@ nodes:
       - {id: t14, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: done}
       - {id: t15, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: done}
       - {id: t16, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: done}
-      - {id: t17, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
+      - {id: t17, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: done}
   - id: F3
     title: Cancel (+ quote, + claims)
     kind: feature
@@ -233,10 +233,10 @@ nodes:
     rules: [CANCEL-1a, CANCEL-1b, CANCEL-1c, CANCEL-2, CANCEL-3, CANCEL-4, CANCEL-6, CANCEL-7, COULD-1, COULD-2, COULD-2a, COULD-2b, COULD-2c]
     cuttable: false
     budget: null
-    status: pending
-    attempt: 0
-    branch: null
-    worktree: null
+    status: in_progress
+    attempt: 1
+    branch: feature/build/F3
+    worktree: .claude/worktrees/build-F3
     pr: null
     qa: docs/qa/build-F3.md
     trace: docs/trace/build/F3/
