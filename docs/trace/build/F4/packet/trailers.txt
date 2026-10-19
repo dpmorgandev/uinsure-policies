@@ -1,0 +1,361 @@
+39241a5192bab09d19fbf9a5d08dfeb880924d5d chore(trace): F3 trail tail (merged)
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f2b9ca25ebfa88fcbcea6fdeddeab66c475e2227 docs(context): f3-done-merged
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+59bad9011ae24a7a3f83c802a33e95bd488607f1 plan(build/F4): pending → in_progress
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+892921778b229895e3f30a66c627f62ecbd0acdd plan(build/F4): tasks amended: F3 carry-overs
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f37f1e71cf8fcbf1587ab83bfeb5277b2b28ad7e test(RENEW-1/2): red: a renewal is allowed from the latest end - 30 days to the end date, inclusive
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-1/2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+8be8de9a2af7c8bb55566a025efbd6265d6f318a test(RENEW-3a): red: an auto-renewal is paid by the request's method, else the current term's
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-3a
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+0bf5fad7d3de56bc1fec92c64f4d80c7a41c2f52 test(RENEW-4): red: a renewal appends the next term from the day after the latest end, same reference
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-4
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f837a61b8d7971bfc7af061d218757e5a84417ba test(RENEW-5): red: a renewal amount must be above 0 (422), with at most 2 dp and 1,000,000.00 (400)
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-5
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e41502fd5eb0197d19d476ba16751881d09bc8f2 test(COULD-3): red: an auto-renewal cannot be paid by Cheque, sent or defaulted
+Agent: tester
+Plan: build
+Node: F4
+Rule: COULD-3
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+42eaed805defb4b4b99f1622803607fd94036613 test(RENEW-3b): red: renewing without auto-renew makes an unpaid term; a paymentMethod is 422
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-3b
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+a933319e79e8da24ae771cd95965c222343f65e4 test(RENEW-6): red: a cancelled policy cannot be renewed (409, alone)
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-6
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+4e5ba2b75e13a29aa7d4e893df658141ec9d612b test(CANCEL-5): red: cancelling a renewed policy ends it; current term by the normal rules, future term in full
+Agent: tester
+Plan: build
+Node: F4
+Rule: CANCEL-5
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+429190eea60d7c6a406aa8993a3713907d78e298 test(RENEW-1/2): red: every 422 rule a renewal breaks is listed, in rule-ID order
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-1/2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+43530c2875d1f15d8806b31473a2b9b6cd1c12ff test(F4): red: a renewal that loses a race is 409 concurrency and stores nothing
+Agent: tester
+Plan: build
+Node: F4
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c3af8320ab02f15c87befffa343c37a68dfe9b8d test(F4): red: Postman F4 Renew folder, the real-time rows
+Agent: tester
+Plan: build
+Node: F4
+Rule: none
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+164d163cad85e57474709d540865ee7a49124042 plan(build/F4): t1 pending → done
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+48ce40f6f8fb5d9086be6d92f2760415333f9592 feat(F4): stub controller
+Agent: builder
+Plan: build
+Node: F4
+Rule: RENEW-1, RENEW-2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5
+TDD: stub
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+ca162f2aac5d2330f12197b0fd99e0694af0514e plan(build/F4): in_progress → paused_acceptance
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+764b7c3d9d0acb527979481211a12bf2e2533fc8 plan(build/F4): paused_acceptance → in_progress
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+dd386870ba3b5c4ac0dba141f7dd4d92cb46e4c0 test(RENEW-1/2): red: domain renewal window, latest end - 30 to the end date, inclusive
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-1/2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+bf1a8fcb784583920b14e522f278a81adc8a5712 test(RENEW-3a): red: domain auto-renewal payment, by the method sent, else the current term's
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-3a
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7b5129db08d2d494030b18af41e20b1eebf71469 test(RENEW-4): red: domain renewal appends the next term from the day after the latest end
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-4
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+85154961027bb27f4acec30e5938f84eab4dafd2 test(RENEW-3b): red: domain renewal without auto-renew is unpaid; a method sent is 422
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-3b
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7b6b0db9326d4590c5105b2183dea54bcb061060 test(RENEW-5): red: domain renewal amount must be greater than 0
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-5
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+dd7049b9ec81b09366d2a269382a0c95dde3ac67 test(RENEW-6): red: domain renewal of a cancelled policy is a conflict, alone
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-6
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d3d668ee806986b7a3bdfc831b7ca5997953e78c test(COULD-3): red: domain auto-renewal cannot be paid by Cheque, sent or defaulted
+Agent: tester
+Plan: build
+Node: F4
+Rule: COULD-3
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+f8a1f5e2099c6b9648bc294a7d1ba2ee61e1cfb0 test(RENEW-1/2): red: domain renewal lists every 422 rule it breaks, in rule-ID order
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-1/2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7042d048e4b20d283a9b0eb8c330ccfa32db5ce3 test(CANCEL-5): red: domain cancel after a real renewal; current term by the normal rules, future term in full
+Agent: tester
+Plan: build
+Node: F4
+Rule: CANCEL-5
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d203cc9a4d79071054f63e7017acba0711834935 plan(build/F4): t4 pending → done
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+31d137a2acda143a82cd8151427ad2144b11d20d feat(RENEW-1/2): green: domain Policy.Renew appends the next term
+Agent: builder
+Plan: build
+Node: F4
+Rule: RENEW-1/2, RENEW-1, RENEW-2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+ac773bc0732eeafa31976e424973574035f131a9 plan(build/F4): t5 pending → done
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+3122bc417baf47182b10c6b12aed21a5f280c684 test(RENEW-1/2): red: service renewal window measured from UK today, read once
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-1/2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+433e573600d816c100fac0733c1e339ec9adf930 test(RENEW-3a): red: service renewal method defaults to the current term's
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-3a
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+fae5d09602e540fe286f26e94beee6ad2c7a16cd plan(build/F4): t6 pending → done
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c025985f8755c935c9ee6fa5be44644a0913498b feat(RENEW-1/2): green: services PolicyService.Renew with UK today and method default
+Agent: builder
+Plan: build
+Node: F4
+Rule: RENEW-1, RENEW-2, RENEW-3a
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+a5727344765f48ab6ae18a8a6f5ec11240323510 plan(build/F4): t7 pending → done
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+521fd7cf9f553ced50ebdde01bf42032314f7f92 feat(RENEW-4): green: persistence writes appended renewal terms
+Agent: builder
+Plan: build
+Node: F4
+Rule: RENEW-4, RENEW-3a, RENEW-3b
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+174d0557ca83615b07cf524bf233b58f21b76944 plan(build/F4): t8 pending → done
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+0c600d52c79b0c6e5e1369de8a4a8ca0b61e985a feat(RENEW-1): green: api real renewals endpoint over IPolicyService
+Agent: builder
+Plan: build
+Node: F4
+Rule: RENEW-1, RENEW-2, RENEW-3a, RENEW-3b, RENEW-4, RENEW-5, RENEW-6, COULD-3, CANCEL-5
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+ceeb36cd31df3362a13c3db11bc5932b1909d1f0 plan(build/F4): t9 pending → done
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+0d73fcd4ea999071c8051ec990b898e11836d07c plan(build/F4): t10, t11 pending → done
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e28851ed8dc4f0473539a39140039f4448e01633 test(RENEW-2): red: fix A1/R1
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-2
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+150fa27d3c491508e964d5a81ad2c6565747f6c8 test(RENEW-3b): red: fix A1/R2
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-3b
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+8f174d931b34538216b0a764b09f8947b774f82d test(RENEW-4): refactor: fix A1/R3, shape test name ends in _with_400
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-4
+TDD: refactor
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+ed44a602f6a0fbc33bcb0dd544053551bb5b9f69 feat(RENEW-1): green: services renew returns PolicyDetails, E6 reads today once (A1/R1); no extensions on the RENEW-3b violation (A1/R2)
+Agent: builder
+Plan: build
+Node: F4
+Rule: RENEW-1, RENEW-2, RENEW-3b
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+b0169c99def692f61529897d644865f3fa0f2e47 plan(build/F4): t12 pending → done
+Agent: main
+Plan: build
+Node: F4
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+821391d138b0647a8adcf4e462eb3904286cafda docs(F4): QA script
+Agent: tester
+Plan: build
+Node: F4
+Rule: none
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+d931d20fe6dea8e1f8bc026edc6058d6be6a81f9 test(RENEW-4): red: fix QA step 34
+Agent: tester
+Plan: build
+Node: F4
+Rule: RENEW-4
+TDD: red
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+b5ca22e9534a1081a6878d2d3e8e9aec4dfe0c19 fix(RENEW-4): green: api no-body renewal 400 keys errors by "amount"
+Agent: builder
+Plan: build
+Node: F4
+Rule: RENEW-4
+TDD: green
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+

@@ -1,0 +1,59 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T05:00:19Z",
+  "plan": "build",
+  "node": "F4",
+  "attempt": 1,
+  "agent": "security",
+  "agent_id": "ad11cbb87b170437d",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F4",
+    "attempt": 1,
+    "base_sha": "d477dbd5fad5f1e22147dc74ef5c6b9281057893",
+    "head_sha": "0d73fcd4ea999071c8051ec990b898e11836d07c",
+    "diff_fingerprint": "ff954c44fc9e0e7b04bc1567d3c5faf5020c9002",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red",
+      "gate.stub",
+      "gate.green",
+      "gate.refactor",
+      "gate.build",
+      "gate.test",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.vulnerable"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API7:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "API1:2023 n/a: no auth or tenancy, the reference is the only key.",
+      "API2:2023 n/a: authentication is out of scope.",
+      "API5:2023 n/a: no roles. POST /policies/{ref}/renewals would be a privileged or agent-only function in a real deployment.",
+      "API10:2023 n/a: no upstream APIs. Grep for HttpClient and WebRequest in src/ found nothing.",
+      "API3:2023 met: RenewPolicyRequest is a separate DTO with only amount and paymentMethod. Strict JSON (UnmappedMemberHandling.Disallow) means startDate, version, end date or payment reference are rejected with 400. The enum converter has allowIntegerValues:false, so an undefined PaymentMethod value cannot reach the Mapperly switch. The response is the existing PolicyResponse, which has no Version or internal ids. The Version token is Persistence-only: the mapper ignores it and it is not in Contracts/.",
+      "API4:2023 met: the renewals route has [EnableRateLimiting(\"writes\")]. The body is a small DTO under the server-wide 64 KB limit. The amount is shape-capped at 1,000,000.00 and 2 decimal places, matching the HasPrecision(18,2) columns. It adds no string fields, no collection and no list endpoint. An empty body gives 400, not 415 or 500.",
+      "API6:2023 met, double renewal: Policy.Renew measures the window from LatestTerm.End. After a renewal the latest term ends a year later, so a second renewal fails RENEW-1/2 until that term's own window. A cancelled policy returns RENEW-6 (409) alone.",
+      "API6:2023 met, concurrency: PolicyConfiguration marks Version as a concurrency token. UpdateTrackedRecords bumps Version whenever a term is appended (the changed set). A stale write throws DbUpdateConcurrencyException, which becomes PersistenceConflictException and then 409 /problems/concurrency. This covers concurrent renew vs renew and renew vs cancel.",
+      "API6:2023 met, payment integrity: the renewal Payment is built with the term's own amount (new Payment(ref, method, amount) and new Term(start, amount, payment)). It is a single decimal value, so payment.Amount equals term.Amount by construction. An unpaid term (no auto-renew) gets a null payment, and RENEW-3b rejects a client-supplied method. Cheque on auto-renew is rejected (COULD-3). The payment reference comes from the server-side generator.",
+      "API6:2023 met, renew-then-cancel: RefundCalculator.ForTerm refunds at most term.Amount per term (full amount for a future term, prorated for the current one, 0 for an unpaid term or a claim). Because each payment amount equals its term amount, the total refund is at most the sum of payments. Cancel is blocked after the first cancellation (CANCEL-4, 409), and Cancel7 checks against LatestTerm.End. The quote path does not call SaveChanges.",
+      "API8:2023 met: no new logging, no exception messages in ProblemDetails, and no developer exception page. UnexpectedExceptionHandler maps BadHttpRequestException and the concurrency conflict to fixed text. No secrets or connection strings in the diff.",
+      "API9:2023 met: the real E6 controller action replaces the stub. gate.stubs shows no NotImplementedException in src/, and gate.run shows Postman F4 Renew 54 requests with 0 failed. I did not inspect the OpenAPI document itself (light check).",
+      "NET: no raw SQL (grep for FromSqlRaw, ExecuteSqlRaw and SqlQueryRaw found nothing). Money is decimal throughout and no double or float appears. There are no DateTime.Now, UtcNow or Today calls; the service uses UkCalendar.Today(clock). gate.vulnerable reports 8 projects and none vulnerable. There are no package changes in the diff. The only logging call sites log method, path and status, with no personal data or bodies.",
+      "Observation, not a finding: Policy.Renew reads CurrentTerm(today).Payment!.Method when AutoRenew is true. That is safe today because every term of an auto-renewing policy is created with a payment. It would throw a NullReferenceException if stored data ever broke that invariant."
+    ]
+  }
+}

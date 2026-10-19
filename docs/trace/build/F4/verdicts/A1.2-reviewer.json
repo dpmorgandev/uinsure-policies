@@ -1,0 +1,76 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T05:27:11Z",
+  "plan": "build",
+  "node": "F4",
+  "attempt": 1,
+  "agent": "reviewer",
+  "agent_id": "aaa27a8dcbd32a26f",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F4",
+    "attempt": 1,
+    "base_sha": "d477dbd5fad5f1e22147dc74ef5c6b9281057893",
+    "head_sha": "ed44a602f6a0fbc33bcb0dd544053551bb5b9f69",
+    "diff_fingerprint": "115568611a4fdc669e5a6107c1e1b23ee8f06632",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.red@c3af8320ab02f15c87befffa343c37a68dfe9b8d",
+      "gate.stub@48ce40f6f8fb5d9086be6d92f2760415333f9592",
+      "gate.red@7042d048e4b20d283a9b0eb8c330ccfa32db5ce3",
+      "gate.green@31d137a2acda143a82cd8151427ad2144b11d20d",
+      "gate.red@433e573600d816c100fac0733c1e339ec9adf930",
+      "gate.green@c025985f8755c935c9ee6fa5be44644a0913498b",
+      "gate.green@521fd7cf9f553ced50ebdde01bf42032314f7f92",
+      "gate.green@0c600d52c79b0c6e5e1369de8a4a8ca0b61e985a",
+      "gate.run@0c600d52c79b0c6e5e1369de8a4a8ca0b61e985a",
+      "gate.refactor@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.test@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.stubs@ceeb36cd31df3362a13c3db11bc5932b1909d1f0",
+      "gate.finding-red@8f174d931b34538216b0a764b09f8947b774f82d",
+      "gate.green@ed44a602f6a0fbc33bcb0dd544053551bb5b9f69",
+      "gate.build@ed44a602f6a0fbc33bcb0dd544053551bb5b9f69",
+      "gate.test@ed44a602f6a0fbc33bcb0dd544053551bb5b9f69",
+      "gate.scope@ed44a602f6a0fbc33bcb0dd544053551bb5b9f69",
+      "gate.stubs@ed44a602f6a0fbc33bcb0dd544053551bb5b9f69",
+      "gate.run@ed44a602f6a0fbc33bcb0dd544053551bb5b9f69",
+      "gate.vulnerable@ed44a602f6a0fbc33bcb0dd544053551bb5b9f69"
+    ],
+    "rules_covered": [
+      "RENEW-1/2",
+      "RENEW-1",
+      "RENEW-2",
+      "RENEW-3a",
+      "RENEW-3b",
+      "RENEW-4",
+      "RENEW-5",
+      "RENEW-6",
+      "COULD-3",
+      "CANCEL-5"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "RENEW-1/2",
+        "severity": "P2",
+        "file": "tests/Uinsure.Policies.Services.Tests/PolicyServiceRenewWindowTests.cs",
+        "line": 109,
+        "what": "The tester's 05:21 retarget of two Services.Tests files was committed inside builder green ed44a60 (Agent: builder), not in its own commit, so no trailer separates the test change from the fix.",
+        "why": "requirements-trace, order and integrity: weakening is checked by comparing each test file at its red commit with HEAD, using the trailer log. activity.jsonl lines 430-434 show the edits were the tester's (agent af963aa8b), and the builder edited only src/ (lines 421-424). The packet has no red-commit copy of these files, so I could only judge them at HEAD. At HEAD the assertions are strong: literal Payment records, literal start and end dates, save, add and reference-call counts, the clock read once, plus new checks on the returned PolicyDetails (Same policy, current term 1, Active). The #25 signature change forced a joint commit, because the tester stub rule can't modify an existing signature. The commit message says so. Non-blocking, but the evidence trail is thinner than the loop requires.",
+        "route_to": "tester"
+      }
+    ],
+    "notes": [
+      "A1/R1 RESOLVED. PoliciesController.Renew (diff.patch 223-245) makes one service call and returns renewal.Value.ToResponse(). Nothing calls service.Get after it. PolicyService.Renew reads UkCalendar.Today once, uses that date for both policy.Renew and Details(policy, today), and returns Result<PolicyDetails>, as in signatures.md line 94 (PR #25). The test is Renewal_read_across_UK_midnight_is_checked_and_answered_on_one_UK_today. It sets FakeTimeProvider.AutoAdvanceAmount to 1h from 22:30Z on the end date, so a second read would fall on the next UK date. It asserts the 201 body and the GET in full (Active, currentTermNumber 1). gate.finding-red@8f174d9 shows it failed for the right reason (currentTermNumber 2, expected 1), and gate.green@ed44a60 shows it passing.",
+      "A1/R2 RESOLVED. The RENEW-3b violation in Policy.cs (diff.patch 326-331) now has no extensions, which matches api.md line 64 ('—'). The test Renewal_without_auto_renew_with_a_payment_method_is_rejected_with_no_extension_members checks the exact member set of the problem and of its single violation (ruleId, detail). It was red at 8f174d9 and is green at ed44a60.",
+      "A1/R3 RESOLVED. The test is renamed to Renewal_with_a_startDate_as_an_unknown_field_is_rejected_with_400. 8f174d9 is TDD: refactor, a name-only change: same body, same trait and the same $.startDate error key.",
+      "Fix-round order (trailers.txt): reds e28851e (RENEW-2) and 150fa27 (RENEW-3b), then refactor 8f174d9, then green ed44a60. In this round the builder touched only src/ (activity 421-424), and the Api.Tests edits were the tester's, before the red commits (404-411). Neither fix commit uses the fix(…) prefix, so the Fixes-Finding requirement doesn't strictly apply. The commit-msg G9 limitation (investigator IDs only) is a harness queue item, noted in gate.finding-red.",
+      "Whole node re-judged. The TDD order from the A1 verdict still holds: acceptance reds, then stub 48ce40f, then domain reds and green 31d137a, then services reds and green c025985, then persistence 521fd7c, then api 0c600d5. Every success row still goes through RenewAndReadBack. That asserts 201 + Location, then the full E6 body and GET read-back via RenewedPolicyAssert: contract shape, sold details, status, current term number and dates, every term, payments with distinct references, refunds and cancellation. Money is compared as raw JSON text. Each test sets its own literal amounts and dates. The builder default (603.27, no method) isn't the api.md example. CANCEL-5 refunds are hand-worked literals (17.36, 548.27, 570.35, 12.23, 12.00). In gate.stub, only the 10 400-shape tests passed.",
+      "Contract match: RENEW-6 is 409 on its own, ahead of the 422s. RENEW-1/2, 3b, 5 and COULD-3 are collected in RuleIds.Order and listed in violations[]. E6 GET-1 is 404. RENEW-1/2's type is /problems/renew-1-2. The RENEW-1/2 extensions are windowStart and windowEnd, RENEW-5's is amount, COULD-3's is paymentMethod, and RENEW-6's is cancellationDate (api.md 62-67). Policy.Renew is Result<Term> (signatures.md 64).",
+      "Leftovers: gate.stubs@ed44a60 found no NotImplementedException in src/. The diff uses no banned time or rounding API. 637/637 tests pass at ed44a60, including RuleCoverageTests, and Postman F4 Renew has 0 failures."
+    ]
+  }
+}
