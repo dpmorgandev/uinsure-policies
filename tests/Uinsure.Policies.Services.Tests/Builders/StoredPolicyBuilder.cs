@@ -27,7 +27,9 @@ public sealed class StoredPolicyBuilder(string reference)
         false,
         [Holder],
         Address,
-        [.. _termStarts.Select((start, index) => TermStarting(start, $"PAY-{reference}-{index + 1}"))]);
+        [.. _termStarts.Select((start, index) => TermStarting(start, $"PAY-{reference}-{index + 1}"))],
+        [],
+        null);
 
     private static Term TermStarting(DateOnly start, string paymentReference)
     {

@@ -85,5 +85,7 @@ public sealed class PolicyBuilder
         false,
         [.. _policyholders.Select(holder => holder.Build())],
         _property,
-        terms);
+        terms,
+        [],
+        null);
 }
