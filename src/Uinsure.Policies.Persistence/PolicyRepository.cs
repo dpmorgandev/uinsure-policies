@@ -74,6 +74,13 @@ internal sealed class PolicyRepository(PoliciesDbContext context) : IPolicyRepos
             record.AutoRenew = policy.AutoRenew;
             record.HasClaims = policy.HasClaims;
 
+            // RENEW-4: a renewal appends a term (with its payment, or none when unpaid, RENEW-3b); terms only grow.
+            foreach (var term in policy.Terms.Skip(record.Terms.Count))
+            {
+                record.Terms.Add(_mapper.ToRecord(term));
+                changed.Add(record);
+            }
+
             // Claims only ever grow, and a cancellation is written once.
             foreach (var claim in policy.Claims.Skip(record.Claims.Count))
             {

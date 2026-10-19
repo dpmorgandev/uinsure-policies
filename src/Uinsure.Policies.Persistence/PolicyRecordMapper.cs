@@ -35,7 +35,7 @@ internal sealed partial class PolicyRecordMapper
     private partial PropertyRecord ToRecord(Property property);
 
     [MapperIgnoreTarget(nameof(TermRecord.Id))]
-    private partial TermRecord ToRecord(Term term);
+    public partial TermRecord ToRecord(Term term);
 
     [MapperIgnoreTarget(nameof(PaymentRecord.Id))]
     private partial PaymentRecord ToRecord(Payment payment);
