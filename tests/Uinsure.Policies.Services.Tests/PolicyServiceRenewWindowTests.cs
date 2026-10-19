@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Time.Testing;
 using Uinsure.Policies.Domain.Common;
 using Uinsure.Policies.Domain.Policies;
+using Uinsure.Policies.Services.Commands;
 using Uinsure.Policies.Services.Tests.Builders;
 using Uinsure.Policies.Services.Tests.Support;
 using Xunit;
@@ -99,22 +100,26 @@ public sealed class PolicyServiceRenewWindowTests
         Assert.Equal(1, clock.UtcNowReads);
     }
 
-    private Task<Result<Term>> RenewAt(DateTimeOffset utcNow, StoredPolicyRepository repository, PolicyReference reference) =>
+    private Task<Result<PolicyDetails>> RenewAt(DateTimeOffset utcNow, StoredPolicyRepository repository, PolicyReference reference) =>
         new PolicyService(repository, _references, new FakeTimeProvider(utcNow))
             .Renew(reference, 563.19m, null, TestContext.Current.CancellationToken);
 
-    private Term AssertRenewedAndSaved(Result<Term> result, Policy policy, StoredPolicyRepository repository)
+    // The renewal appends term 2, the policy's latest term, and returns the renewed policy as of the UK date. Every
+    // accepted renewal here falls on a day of term 1's window, so term 1 is current and the policy is Active.
+    private Term AssertRenewedAndSaved(Result<PolicyDetails> result, Policy policy, StoredPolicyRepository repository)
     {
         Assert.True(result.IsSuccess, "The renewal was expected to succeed.");
         Assert.Equal(2, policy.Terms.Count);
-        Assert.Same(result.Value, policy.LatestTerm);
-        Assert.Equal(new Payment("PAY-SVC-1", PaymentMethod.DirectDebit, 563.19m), result.Value.Payment);
+        Assert.Equal(new Payment("PAY-SVC-1", PaymentMethod.DirectDebit, 563.19m), policy.LatestTerm.Payment);
+        Assert.Same(policy, result.Value.Policy);
+        Assert.Same(policy.Terms[0], result.Value.CurrentTerm);
+        Assert.Equal(PolicyStatus.Active, result.Value.Status);
         Assert.Equal(1, repository.SaveChangesCalls);
         Assert.Equal(0, repository.AddCalls);
-        return result.Value;
+        return policy.LatestTerm;
     }
 
-    private RuleViolation AssertRejectedAndNotSaved(Result<Term> result, Policy policy, StoredPolicyRepository repository)
+    private RuleViolation AssertRejectedAndNotSaved(Result<PolicyDetails> result, Policy policy, StoredPolicyRepository repository)
     {
         Assert.False(result.IsSuccess);
         var violation = Assert.Single(result.Violations);

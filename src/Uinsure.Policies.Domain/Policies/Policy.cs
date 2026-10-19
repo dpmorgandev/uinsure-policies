@@ -155,8 +155,7 @@ public sealed class Policy
         {
             violations.Add(Violation(
                 RuleIds.Renew3b,
-                "The policy does not auto-renew, so the renewal is unpaid and takes no payment method.",
-                ("paymentMethod", method)));
+                "The policy does not auto-renew, so the renewal is unpaid and takes no payment method."));
         }
 
         if (amount <= 0)

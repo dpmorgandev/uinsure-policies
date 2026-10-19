@@ -14,7 +14,7 @@ public interface IPolicyService
 
     Task<Result<CancellationQuoteResult>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct);
 
-    Task<Result<Term>> Renew(PolicyReference reference, decimal amount, PaymentMethod? method, CancellationToken ct);
+    Task<Result<PolicyDetails>> Renew(PolicyReference reference, decimal amount, PaymentMethod? method, CancellationToken ct);
 
     Task<Result<RecordedClaim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Time.Testing;
 using Uinsure.Policies.Domain.Common;
 using Uinsure.Policies.Domain.Policies;
+using Uinsure.Policies.Services.Commands;
 using Uinsure.Policies.Services.Tests.Builders;
 using Uinsure.Policies.Services.Tests.Support;
 using Xunit;
@@ -85,17 +86,21 @@ public sealed class PolicyServiceRenewPaymentTests
         Assert.Equal(0, _references.PaymentCalls);
     }
 
-    private Task<Result<Term>> RenewAt(StoredPolicyRepository repository, PolicyReference reference, decimal amount, PaymentMethod? method) =>
+    private Task<Result<PolicyDetails>> RenewAt(StoredPolicyRepository repository, PolicyReference reference, decimal amount, PaymentMethod? method) =>
         new PolicyService(repository, _references, new FakeTimeProvider(InTheWindow))
             .Renew(reference, amount, method, TestContext.Current.CancellationToken);
 
-    private static Term AssertRenewedAndSaved(Result<Term> result, Policy policy, StoredPolicyRepository repository)
+    // The renewal appends term 2, the policy's latest term, and returns the renewed policy as of UK today,
+    // 2027-10-20: still inside term 1 (to 2027-11-07), so term 1 is current and the policy is Active.
+    private static Term AssertRenewedAndSaved(Result<PolicyDetails> result, Policy policy, StoredPolicyRepository repository)
     {
         Assert.True(result.IsSuccess, "The renewal was expected to succeed.");
         Assert.Equal(2, policy.Terms.Count);
-        Assert.Same(result.Value, policy.LatestTerm);
+        Assert.Same(policy, result.Value.Policy);
+        Assert.Same(policy.Terms[0], result.Value.CurrentTerm);
+        Assert.Equal(PolicyStatus.Active, result.Value.Status);
         Assert.Equal(1, repository.SaveChangesCalls);
         Assert.Equal(0, repository.AddCalls);
-        return result.Value;
+        return policy.LatestTerm;
     }
 }

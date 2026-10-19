@@ -101,10 +101,6 @@ public sealed class PoliciesController(IPolicyService service) : ControllerBase
             return this.ToProblem(renewal.Violations);
         }
 
-        // E6 answers with the whole policy, so it is read back after the renewal is saved.
-        var policy = await service.Get(policyReference, cancellationToken);
-        return policy.IsSuccess
-            ? Created($"/policies/{policyReference.Value}", policy.Value.ToResponse())
-            : this.ToProblem(policy.Violations);
+        return Created($"/policies/{policyReference.Value}", renewal.Value.ToResponse());
     }
 }
