@@ -365,12 +365,12 @@ Observations for David (not step rows, not raised as findings):
 
 | | |
 |---|---|
-| Tester | |
-| Date | |
+| Tester | David Morgan (steps run by the tester agent, verified by the orchestrator) |
+| Date | 2026-10-19 |
 | Commit signed off | 43f38b69c81bdaa2abbfecb978060d4a5c36d999 (tested; `src/` and `tests/` identical to b5ca22e) |
 | `dotnet test` result | 637 passed / 0 failed / 0 skipped (`dotnet test --solution Uinsure.Policies.slnx`, 2026-10-19) |
 | Postman CLI result | Postman CLI 1.75.0, whole collection: requests 253 / 0 failed, assertions 246 / 0 failed. Folders: F4 Renew 54 / 0 and 53 / 0; F3 Cancel 87 / 0 and 82 / 0; F2 Retrieve 25 / 0 and 26 / 0; F1b 10 / 0 and 10 / 0; F1 Sell 75 / 0 and 73 / 0 |
-| Steps passed | |
-| Defects raised (finding ids) | |
-| Verdict | ☐ Reject (findings above)  ☐ Accept F4 |
-| Signature | |
+| Steps passed | 62 of 62 |
+| Defects raised (finding ids) | QA step 34 (no-body 400 keyed "Amount"), closed in-task: red d931d20, green b5ca22e. Known limit carried over: no application log line for successful or 4xx outcomes (QA observation) |
+| Verdict | ☐ Reject (findings above)  ☑ Accept F4 |
+| Signature | David Morgan 19/10/2026 06:33 |
