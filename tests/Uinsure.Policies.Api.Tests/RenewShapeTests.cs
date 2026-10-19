@@ -108,7 +108,9 @@ public sealed class RenewShapeTests : IClassFixture<PoliciesApiFactory>
 
         using var response = await client.PostRenewalWithNoBody(reference);
 
-        await ProblemAssert.ValidationErrors(response, RenewalActions.RenewalsPath(reference));
+        var errors = await ProblemAssert.ValidationErrors(response, RenewalActions.RenewalsPath(reference));
+        // QA step 34: one entry, keyed camelCase as every other E6 shape error ("amount", not "Amount").
+        Assert.Equal(["amount"], errors.EnumerateObject().Select(entry => entry.Name).ToArray());
         PolicyStateAssert.ReadsBackUnchanged(await client.ReadBack(reference), sold, reference, DefaultEnd, "Pending");
     }
 
