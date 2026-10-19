@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Uinsure.Policies.Services.Tests;
 
-// COULD-2a at the layer that knows the clock: PolicyService.RecordNumberedClaim reads today once, in Europe/London, and
+// COULD-2a at the layer that knows the clock: PolicyService.RecordClaim reads today once, in Europe/London, and
 // checks the claim date against it. A claim dated UK today is recorded and saved; one dated after it is 422 and
 // nothing is saved. The domain's own boundaries are proven in Domain.Tests.
 //   At 23:30 UTC on 30 June 2027 (BST) the UK date is already 1 July; at 23:30 UTC on 15 January 2027 (GMT) it
@@ -81,7 +81,7 @@ public sealed class PolicyServiceClaimDateTests
         var clock = new CountingTimeProvider(TestClock.Now);
         var service = new PolicyService(new StoredPolicyRepository(policy), new SequentialReferenceGenerator(), clock);
 
-        var result = await service.RecordNumberedClaim(policy.Reference, TestClock.Today, Description, TestContext.Current.CancellationToken);
+        var result = await service.RecordClaim(policy.Reference, TestClock.Today, Description, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess, "The claim was expected to be recorded.");
         Assert.Equal(1, clock.UtcNowReads);
@@ -89,7 +89,7 @@ public sealed class PolicyServiceClaimDateTests
 
     private static Task<Result<RecordedClaim>> RecordAt(DateTimeOffset utcNow, StoredPolicyRepository repository, PolicyReference reference, DateOnly claimDate) =>
         new PolicyService(repository, new SequentialReferenceGenerator(), new FakeTimeProvider(utcNow))
-            .RecordNumberedClaim(reference, claimDate, Description, TestContext.Current.CancellationToken);
+            .RecordClaim(reference, claimDate, Description, TestContext.Current.CancellationToken);
 
     private static void AssertRecordedAndSaved(Result<RecordedClaim> result, Policy policy, StoredPolicyRepository repository, DateOnly expectedDate)
     {

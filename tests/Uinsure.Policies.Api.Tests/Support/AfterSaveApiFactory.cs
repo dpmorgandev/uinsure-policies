@@ -46,7 +46,7 @@ public sealed class AfterSaveApiFactory : PoliciesApiFactory
     private static async Task RecordFromAnotherRequest(IServiceProvider provider, PolicyReference reference, OtherClaim claim, CancellationToken ct)
     {
         using var other = provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-        var recorded = await other.ServiceProvider.GetRequiredService<IPolicyService>().RecordNumberedClaim(reference, claim.ClaimDate, claim.Description, ct);
+        var recorded = await other.ServiceProvider.GetRequiredService<IPolicyService>().RecordClaim(reference, claim.ClaimDate, claim.Description, ct);
         if (!recorded.IsSuccess)
         {
             throw new InvalidOperationException($"The other request's claim on '{reference.Value}' was expected to be recorded.");
