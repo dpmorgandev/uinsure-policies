@@ -19,7 +19,8 @@ with TDD, one feature at a time. Every rule, its ID and the interpretation taken
 
 Policy types are `Household` and `BuyToLet`, and payment methods are `Card`, `DirectDebit` and `Cheque`.
 
-**Sell a policy:**
+**Sell a policy.** These examples were captured on 2026-10-19. To run one yourself, set `startDate` to a date
+from today to today + 60 days (SELL-2). An earlier or later date returns a `422`.
 
 ```http
 POST /policies
@@ -82,6 +83,10 @@ document and the Scalar UI describe every route (see below).
 
 **Prerequisites:** the .NET 10 SDK (`global.json` pins 10.0.100 with `rollForward` set to `latestFeature`).
 The Postman CLI or the Postman app is only needed for the Postman collection. Visual Studio is optional.
+
+**On Windows, clone to a short path** such as `C:\src\uinsure-policies`. The SQLite native library is copied
+deep under each test project's `bin` folder. From a clone path of about 130 characters, its full path passes
+Windows' 260-character limit, and two architecture tests fail with "The filename or extension is too long".
 
 **Run the API** (SQLite, schema created at start-up, nothing to configure):
 
