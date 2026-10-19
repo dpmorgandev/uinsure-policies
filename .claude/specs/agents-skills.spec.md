@@ -344,3 +344,38 @@ lock, one JSON object as the final message.
 **Design-stage branches** (Option B): `feature/ui/DM` (mockups, G2), `feature/ui/DK` (kit and stylesheet,
 G3), `feature/ui/DS` (screens, G4), each in `.claude/worktrees/ui-<stage>`, PR into `ui`, David merges.
 Main-session commits carry `Agent: main`, `Plan: ui`, `Node: <stage>`.
+
+## Amendment A3 (2026-10-19): the creative director (round 2, stage 2). Approved by David ("yes build it")
+
+**Why.** Round 1's three directions were written by the main session from its own summary of the
+research, so no designer ever read the research. The round-2 brief (G0) puts a creative-direction stage
+between research and mockups, as agentflow does: an agent that reads the research files itself and writes
+cited, divergent territories (`ui-research.spec.md` R7 and its stage 2 contract). David chose an agent
+over a skill on `ui-designer` because the output contract differs (JSON with citations, not HTML).
+
+**Roster row:**
+
+| Agent | Model / effort | Tools | Writes | Preloaded skill | Dispatched by |
+|---|---|---|---|---|---|
+| `creative-director` | opus / high | Read, Grep, Glob, Write (no Edit, Bash, Agent, Skill, web) | `docs/ui/directions.json` only | `creative-direction` | `/directions` (main session), once per attempt |
+
+Opus because this is one dispatch per round whose output steers every later design stage: the
+dispatch budget is 1 to 3, not 6.
+
+**Skills:**
+
+| Skill | Kind | What it is |
+|---|---|---|
+| `creative-direction` | preloaded, `ported-from:` agentflow's creative-director agent and craft checklist | concept first and layout derived; divergence; excludes; one signature move per half; derived palette with computed contrast; citations; the application-surface craft conditions and restraint. **Left out:** the narrative-spine model (agentflow's own rule calls it "a category error on interior application screens", and every Docket screen is one), the wireframe digest, the concept ledger and captured palettes |
+| `/directions` | stage skill, `ported-from:` agentflow's creative-director skill | setup on `feature/ui/DC`; render and dispatch (G15); validate in the parent (`validate-directions.mjs`), up to 2 regenerations with verbatim feedback; commit; David reads the territories; sign-off and PR into `ui` |
+
+**Inputs, deliberately:** the brief, the six research files and the three catalogs. **Not** round 1's
+`styles.md`: its three directions are archived, and reading them would anchor the new territories to the
+direction already tried (the same reason the mood sentence was made metaphor-free at G1).
+
+**A change to the round-2 stage 2 contract:** `styles.md` is **not** regenerated from the territories.
+The mockups stage renders each territory straight from `docs/ui/directions.json`, so there is one source,
+not a derived copy that can drift. `styles.md` stays as round 1's archive.
+
+**Design-stage branches** gain `feature/ui/DC` (creative direction). Round 2's mockups run on
+`feature/ui/DM2`.

@@ -43,11 +43,31 @@ export function feedbackFile(root, node, direction, screen, attempt) {
   return join(root, 'docs', 'trace', 'ui', node, 'feedback', `${direction}-${screen}-${attempt}.txt`);
 }
 
+// The directions stage (agents-skills Amendment A3): one dispatch for the whole set, so its header names
+// direction=all screen=all. The prompt carries the brief's sections verbatim and names the research files
+// the creative director must read itself; each must exist, or the render fails (closed).
+function directionsFill(root, inputs, { direction, screen, attempt }) {
+  if (direction !== 'all' || screen !== 'all') throw new Error('the directions stage renders one prompt: direction=all screen=all');
+  const brief = readText(join(root, 'docs', 'ui-requirements.md'));
+  for (const f of inputs.reads) if (!existsSync(join(root, f))) throw new Error(`missing source: ${f}`);
+  return {
+    output: inputs.output,
+    brief: inputs.brief.map((h) => section(brief, h)).join('\n\n'),
+    reads: inputs.reads.map((f) => `- \`${f}\``).join('\n'),
+    feedback: attempt === 1
+      ? 'None: this is the first attempt.'
+      : `Attempt ${attempt - 1} failed these checks; fix every one:\n\n\`\`\`text\n${readText(feedbackFile(root, inputs.node, direction, screen, attempt)).trimEnd()}\n\`\`\``,
+  };
+}
+
 export function renderPrompt({ root, stage, direction, screen, attempt = 1 }) {
   if (!Number.isInteger(attempt) || attempt < 1) throw new Error(`bad attempt: ${attempt}`);
   const dir = join(HARNESS, '.claude', 'skills', stage);
   const inputs = JSON.parse(readText(join(dir, 'inputs.json')));
   const template = readText(join(dir, 'template.md'));
+  if (inputs.kind === 'directions') {
+    return finish(template, { stage, direction, screen, attempt: String(attempt), ...directionsFill(root, inputs, { direction, screen, attempt }) }, { stage, direction, screen, attempt });
+  }
   const heading = inputs.directions[direction];
   if (!heading) throw new Error(`unknown direction: ${direction}`);
   const spec = inputs.screens[screen];
@@ -72,6 +92,10 @@ export function renderPrompt({ root, stage, direction, screen, attempt = 1 }) {
       ? 'None: this is the first attempt.'
       : `Attempt ${attempt - 1} failed these checks; fix every one:\n\n\`\`\`text\n${readText(feedbackFile(root, inputs.node, direction, screen, attempt)).trimEnd()}\n\`\`\``,
   };
+  return finish(template, fill, { stage, direction, screen, attempt });
+}
+
+function finish(template, fill, { stage, direction, screen, attempt }) {
   const body = template.replace(/\{\{(\w+)\}\}/g, (_, k) => {
     if (!(k in fill)) throw new Error(`template placeholder has no value: ${k}`);
     return fill[k];

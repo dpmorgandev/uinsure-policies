@@ -77,10 +77,38 @@ function sameAsMain(root, path) {
   }
 }
 
+// guardrails Amendment A3: paths changed since the agent started only by the main session's own commits
+// (`Agent: main` trailer), and not changed again in the working tree, are the main session's work, not
+// the agent's. Without this, the main session committing in a worktree while an agent ran there blocked
+// the agent's stop on files it never touched. Uncommitted main-session edits are still attributed to the
+// agent: the stage skills forbid editing a worktree while an agent runs in it.
+export function mainOnlyPaths(root, start) {
+  const byMain = new Set();
+  const byOthers = new Set();
+  let commits;
+  try {
+    commits = git(['rev-list', `${start}..HEAD`], root).split('\n').filter(Boolean);
+  } catch {
+    return byMain;
+  }
+  for (const sha of commits) {
+    const agent = git(['log', '-1', '--format=%(trailers:key=Agent,valueonly)', sha], root).trim();
+    const files = git(['diff-tree', '--no-commit-id', '--name-only', '-r', '--root', sha], root).split('\n').filter(Boolean);
+    for (const f of files) (agent === 'main' ? byMain : byOthers).add(f);
+  }
+  const dirty = new Set([
+    ...git(['diff', '--name-only', 'HEAD'], root).split('\n'),
+    ...git(['ls-files', '--others', '--exclude-standard'], root).split('\n'),
+  ].filter(Boolean));
+  return new Set([...byMain].filter((f) => !byOthers.has(f) && !dirty.has(f)));
+}
+
 export function scopeViolations(root, role, start, preexisting = {}) {
+  const ownedByMain = mainOnlyPaths(root, start);
   const changed = new Set(changedSince(root, start)
     .filter((p) => !matchesAny(p, TRACE))
     .filter((p) => !(p in preexisting && preexisting[p] === hashOf(root, p)))
+    .filter((p) => !ownedByMain.has(p))
     .filter((p) => !sameAsMain(root, p)));
   const kind = nodeKind(root);
   const out = [];
