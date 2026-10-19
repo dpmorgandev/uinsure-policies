@@ -22,6 +22,62 @@ namespace Uinsure.Policies.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.CancellationRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("CancellationDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("PolicyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RuleApplied")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("TotalRefund")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PolicyId")
+                        .IsUnique();
+
+                    b.ToTable("Cancellation", (string)null);
+                });
+
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.ClaimRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("ClaimDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PolicyId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PolicyId");
+
+                    b.ToTable("Claim", (string)null);
+                });
+
             modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PaymentRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -160,6 +216,79 @@ namespace Uinsure.Policies.Persistence.Migrations
                     b.ToTable("Property", (string)null);
                 });
 
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.RefundCalculationRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CancellationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RuleApplied")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TermDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UnusedDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsedDays")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CancellationId");
+
+                    b.ToTable("RefundCalculation", (string)null);
+                });
+
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.RefundRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CancellationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PaymentReference")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CancellationId");
+
+                    b.ToTable("Refund", (string)null);
+                });
+
             modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -188,6 +317,24 @@ namespace Uinsure.Policies.Persistence.Migrations
                     b.ToTable("Term", (string)null);
                 });
 
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.CancellationRecord", b =>
+                {
+                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
+                        .WithOne("Cancellation")
+                        .HasForeignKey("Uinsure.Policies.Persistence.Records.CancellationRecord", "PolicyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.ClaimRecord", b =>
+                {
+                    b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
+                        .WithMany("Claims")
+                        .HasForeignKey("PolicyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PaymentRecord", b =>
                 {
                     b.HasOne("Uinsure.Policies.Persistence.Records.TermRecord", null)
@@ -213,6 +360,24 @@ namespace Uinsure.Policies.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.RefundCalculationRecord", b =>
+                {
+                    b.HasOne("Uinsure.Policies.Persistence.Records.CancellationRecord", null)
+                        .WithMany("Terms")
+                        .HasForeignKey("CancellationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.RefundRecord", b =>
+                {
+                    b.HasOne("Uinsure.Policies.Persistence.Records.CancellationRecord", null)
+                        .WithMany("Refunds")
+                        .HasForeignKey("CancellationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Uinsure.Policies.Persistence.Records.TermRecord", b =>
                 {
                     b.HasOne("Uinsure.Policies.Persistence.Records.PolicyRecord", null)
@@ -222,8 +387,19 @@ namespace Uinsure.Policies.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Uinsure.Policies.Persistence.Records.CancellationRecord", b =>
+                {
+                    b.Navigation("Refunds");
+
+                    b.Navigation("Terms");
+                });
+
             modelBuilder.Entity("Uinsure.Policies.Persistence.Records.PolicyRecord", b =>
                 {
+                    b.Navigation("Cancellation");
+
+                    b.Navigation("Claims");
+
                     b.Navigation("Policyholders");
 
                     b.Navigation("Property")
