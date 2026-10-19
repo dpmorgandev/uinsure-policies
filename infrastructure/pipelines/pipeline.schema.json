@@ -70,7 +70,9 @@
           "properties": {
             "job": { "type": "string" },
             "displayName": { "type": "string" },
+            "dependsOn": { "type": ["string", "array"] },
             "pool": { "$ref": "#/$defs/pool" },
+            "variables": { "type": "array", "items": { "$ref": "#/$defs/variable" } },
             "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } }
           },
           "additionalProperties": false
@@ -80,6 +82,7 @@
           "properties": {
             "deployment": { "type": "string" },
             "displayName": { "type": "string" },
+            "dependsOn": { "type": ["string", "array"] },
             "pool": { "$ref": "#/$defs/pool" },
             "environment": { "type": "string" },
             "variables": { "type": "array", "items": { "$ref": "#/$defs/variable" } },
@@ -119,6 +122,11 @@
         {
           "required": ["publish", "artifact"],
           "properties": { "publish": { "type": "string" }, "artifact": { "type": "string" }, "displayName": { "type": "string" } },
+          "additionalProperties": false
+        },
+        {
+          "required": ["download", "artifact"],
+          "properties": { "download": { "enum": ["current"] }, "artifact": { "type": "string" }, "displayName": { "type": "string" } },
           "additionalProperties": false
         },
         {

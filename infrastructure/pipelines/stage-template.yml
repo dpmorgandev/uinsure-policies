@@ -16,8 +16,35 @@ stages:
     displayName: Deploy ${{ parameters.environmentName }}
     dependsOn: ${{ parameters.dependsOn }}
     jobs:
+      # The what-if is a regular job with no environment, so it runs before any approval is asked for. The approver
+      # reviews this job's output before approving the gated Deploy job below. It needs only the ARM connection,
+      # so a Microsoft-hosted pool is enough.
+      - job: WhatIf
+        displayName: What-if ${{ parameters.environmentName }}
+        pool:
+          vmImage: ubuntu-latest
+        variables:
+          - group: policies-${{ parameters.environmentName }}
+        steps:
+          - download: current
+            artifact: drop
+          - task: AzureCLI@2
+            displayName: What-if
+            inputs:
+              azureSubscription: ${{ parameters.azureServiceConnection }}
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az deployment sub what-if \
+                  --name policies-${{ parameters.environmentName }}-$(Build.BuildId) \
+                  --location ${{ parameters.location }} \
+                  --template-file $(Pipeline.Workspace)/drop/infrastructure/main.bicep \
+                  --parameters $(Pipeline.Workspace)/drop/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
+                  --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)
+
       - deployment: Deploy
         displayName: Deploy to ${{ parameters.environmentName }}
+        dependsOn: WhatIf
         # SQL has no public endpoint, so the whole job runs on a self-hosted pool whose agents sit in a network
         # that reaches the private endpoint and resolves privatelink.database.windows.net (peered to, or the
         # same as, the VNet that infrastructure/modules/network.bicep creates), with the agents' address range inside
@@ -38,20 +65,6 @@ stages:
             deploy:
               steps:
                 # The ARM service connection (${{ parameters.azureServiceConnection }}) deploys resources only.
-                - task: AzureCLI@2
-                  displayName: What-if
-                  inputs:
-                    azureSubscription: ${{ parameters.azureServiceConnection }}
-                    scriptType: bash
-                    scriptLocation: inlineScript
-                    inlineScript: |
-                      az deployment sub what-if \
-                        --name policies-${{ parameters.environmentName }}-$(Build.BuildId) \
-                        --location ${{ parameters.location }} \
-                        --template-file $(drop)/infrastructure/main.bicep \
-                        --parameters $(drop)/infrastructure/params/${{ parameters.environmentName }}.bicepparam \
-                        --parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)
-
                 - task: AzureCLI@2
                   name: infra
                   displayName: Deploy infrastructure
