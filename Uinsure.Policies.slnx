@@ -8,6 +8,7 @@
   <Folder Name="/docs/">
     <File Path="README.md" />
     <File Path="docs/design.md" />
+    <File Path="docs/harness.md" />
     <File Path="docs/readme-checklist.md" />
     <File Path="docs/requirements.md" />
   </Folder>

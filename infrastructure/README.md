@@ -162,6 +162,27 @@ None of this exists and none of it can be checked from the repo.
   same address range. That has not been tried. The QA script `docs/qa/build-F5.md` (observation O4) says one agent
   network can't be peered to more than one of them.
 
+## Known security gaps
+
+A security review before the repo was published found these. They are gaps, not accepted risks, and none is
+fixed here:
+
+- **An unquoted variable in the inline scripts.** Both AzureCLI steps pass
+  `sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)` (`stage-template.yml`). Azure DevOps substitutes the
+  macro into the bash text before bash runs, so a value containing `;` or `$(…)` would run as a command. It would
+  run with the subscription-scope ARM connection, in the what-if stage, which has no approval. So edit rights on
+  the `policies-<env>` variable group are as good as prod Contributor. The fix: pass the value through the step's
+  `env:`, quote it, check that it is a GUID, and lock down who can edit the variable groups.
+- **No auditing or threat detection.** `sql.bicep` sets no auditing and no Defender for SQL, and no resource
+  has diagnostic settings. The Log Analytics workspace receives only Application Insights data. For a store of
+  personal data, nothing would record who read or changed it.
+- **The web app and its Kudu (SCM) site are public.** `appservice.bicep` sets no `ipSecurityRestrictions` or
+  `scmIpSecurityRestrictions`. Basic publishing credentials are off, but anyone holding an Entra token with rights
+  on the app could still reach Kudu from the internet. The SQL side is private; the front end is not.
+- **Smaller items:** there is no exclusive-lock check on the environments, so two runs could deploy at once, and
+  an approved what-if can go stale before its deploy. There is no `CanNotDelete` lock on prod. Application Insights
+  accepts local (connection-string) auth.
+
 ## Known limits of the evidence
 
 The offline checker proves structure, not runtime. A green check means the files are shaped as described. It

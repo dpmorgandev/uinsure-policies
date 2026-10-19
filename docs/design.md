@@ -205,6 +205,17 @@ to it. The API's own protections against volume are the per-client, per-instance
 body cap. Nothing has been deployed, so this is read from the Bicep and has not been observed on a running
 service.
 
+Two consequences are worth stating plainly:
+
+- **A claim costs the policyholder their refund, permanently.** `POST /policies/{reference}/claims` sets the
+  policy's claim flag, and from then on every cancellation refunds £0.00 on every paid term (COULD-2), including
+  inside cooling-off. There is no endpoint to remove a claim, and a cancellation can't be undone. So an
+  anonymous caller who guesses a reference can take a refund away from its holder. A `404` against a `200`
+  tells a caller whether a guessed reference exists, at up to 100 requests per minute per client.
+- **The Kudu (SCM) site is public too.** The Bicep turns off basic publishing credentials for SCM and FTP
+  (`appservice.bicep`), but sets no `scmIpSecurityRestrictions`. The SCM site stays reachable from the
+  internet for anyone holding an Entra token with rights on the web app.
+
 ## Known limits
 
 - **Rate limits are per instance.** The limiter is the built-in in-memory fixed window, per client IP. Each
@@ -225,6 +236,15 @@ service.
   unhandled exception (Error). Their templates carry the method, path, status or reason, and no call passes a
   name, date of birth, address, postcode or request body. The bad-request and unhandled-exception calls also
   pass the exception object, whose content this code does not control.
+- **`400` bodies name internal types.** `AllowInputFormatterExceptionMessages` is left at its default, so a
+  JSON error passes on the serialiser's message, for example `could not be converted to
+  System.Nullable`1[Uinsure.Policies.Api.Contracts.PaymentMethod]`, with line and byte positions. That helps a
+  client fix its request, and it also fingerprints the stack.
+- **No caching or sniffing headers.** No middleware sets `Cache-Control: no-store` or
+  `X-Content-Type-Options: nosniff`, so a shared cache could keep a `GET /policies/{reference}` response with
+  names, dates of birth and the address.
+- **`/health/ready` is not rate-limited** and checks the database on every call (`.DisableRateLimiting()` in
+  `Program.cs`, `AddDbContextCheck`), so a flood of it opens a database connection per request.
 - **SQLite versus SQL Server:** see [What SQLite cannot prove](#what-sqlite-cannot-prove).
 - **`Policy.Renew` assumes an auto-renewing term has a payment.** On auto-renew it reads
   `CurrentTerm(today).Payment!.Method` when the request sends no method. A term of an auto-renewing policy gets
