@@ -1,7 +1,6 @@
 namespace Uinsure.Policies.Api.Contracts;
 
-// The full PolicyResponse of the API contract (GET-1). PolicyMappings fills it from the stored policy and
-// lists there which members are still canned.
+// The full PolicyResponse of the API contract (GET-1). PolicyMappings fills every member from the stored policy.
 public sealed record PolicyResponse(
     string Reference,
     PolicyType Type,

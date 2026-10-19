@@ -5,8 +5,8 @@ using Uinsure.Policies.Persistence.Records;
 
 namespace Uinsure.Policies.Persistence;
 
-// Compile-time mapping between the Domain model and the stored records. Version and Restore are hand-written
-// because they are not field copies: Version is Persistence's own, and Restore must run no rule.
+// Compile-time mapping between the Domain model and the stored records. Restore is hand-written because it
+// must run no rule, and Version is not mapped because it is Persistence's own, set by PolicyRepository.
 [Mapper(RequiredMappingStrategy = RequiredMappingStrategy.Target)]
 internal sealed partial class PolicyRecordMapper
 {
