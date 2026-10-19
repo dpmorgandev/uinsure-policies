@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T09:41:34Z",
+  "plan": "build",
+  "node": "F6",
+  "attempt": 3,
+  "agent": "security",
+  "agent_id": "ab8376714cfb54fc9",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F6",
+    "attempt": 3,
+    "base_sha": "275fc8437d7f036dddc6c88c35a04e8c67edea64",
+    "head_sha": "daa487636ec9748c0c3aac5f54a28f159a9a3677",
+    "diff_fingerprint": "381cc102769bcf41a3ecd74a027ef3ac4ada5afc",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.vulnerable",
+      "gate.scope",
+      "gate.build",
+      "gate.test",
+      "gate.write",
+      "gate.links"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET-SQL",
+      "NET-MONEY",
+      "NET-PACKAGES",
+      "NET-SECRETS",
+      "NET-LOGGING"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "Scope: docs-only diff (README.md, docs/design.md, infrastructure/README.md, docs/readme-checklist.md, plus the F5 trail tail, docs/context, dag.yaml and inv-003). No src/ change; the gate.scope receipt at HEAD shows 0 paths outside the allowed set.",
+      "Previous S1 (internet exposure): RESOLVED. docs/design.md now has an 'Exposure if deployed' paragraph under Security scope. It says there is no ipSecurityRestrictions and no Front Door, WAF or gateway. It says anyone who knows or guesses a reference could read names, dates of birth and address, and post claims, cancellations or renewals. It says it is read from the Bicep, not observed. README Known limits repeats it. I confirmed with grep: infrastructure/*.bicep has no ipSecurityRestrictions, Front Door or WAF. appservice.bicep sets only httpsOnly, minTlsVersion 1.2 and ftpsState Disabled. The text does not understate the risk. It does not name POST /policies as an abuse route, which is a trivial omission.",
+      "Previous S2 (forwarded-header caveat in design.md): RESOLVED. design.md Known limits now says forwarded headers are 'configured, not tested on App Service'. It names the three private ranges. It states that if App Service connects from outside them the headers are ignored, so every client shares one rate-limit partition and every non-health request outside Development would get the HTTPS 400. This matches Program.cs:21-31,83 and :131-133. infrastructure/README.md keeps the fuller caveat, including the unchecked ASPNETCORE_FORWARDEDHEADERS_ENABLED behaviour.",
+      "Publishing check: grep of the four docs and claims.json for absolute local paths, personal emails, the user name, key or password markers, and GUIDs found nothing. Object-ID and address values are placeholders (all-zero ID, 10.x ranges, <env> names). The F5 activity.jsonl lines in the diff use the sanitised ~/AppData/.../C--Users-<user>-... form. Nothing unpublishable.",
+      "Accuracy re-checked against src and Bicep: 64 KiB cap (Program.cs:19); 100/10 per minute outside Development and 10,000/1,000 in Development (appsettings*.json); writes policy on four POST actions (PoliciesController.cs:18,39,69,84); KnownIPNetworks limited to 10/8, 172.16/12 and 192.168/16 with the defaults cleared; sql publicNetworkAccess Disabled; httpsOnly true; basic-auth publishing off. Log calls (ClientAbortLoggingMiddleware.cs:16; UnexpectedExceptionHandler.cs:26,45,61) pass only method, path, status or reason, and the exception object. The docs state the exception-object caveat. Minor: the logged path includes the client-chosen policy reference, which the docs do not mention. It is not one of the personal fields, so I raise no finding.",
+      "claims.json: 256-entry trace. The four code-reading-only claims are flagged 'by the code' in the docs. I found no secret, personal data or private path in it.",
+      "The known limits and accepted risks stay honest. They cover per-instance limits, claims not idempotent with no cap, the unapproved what-if sharing the ARM connection, the ARM connection able to rewrite the SQL admin, httpsOnly and forwarded headers untested, SQL connection policy Default, one shared VNet range, the checker gaps, and never deployed. None is understated.",
+      "Gate receipts at HEAD daa4876: gate.vulnerable reports 8 projects with no vulnerable packages. gate.build and gate.test are green (637/637). gate.write and gate.links report 66 links, 0 broken.",
+      "Out items, n/a: API1:2023 (no auth or tenancy; the reference is the only key; the docs state this); API2:2023 (auth out of scope); API5:2023 (no roles; POST /claims would be an admin function; stated in design.md); API7:2023 (no outbound URL fetching, no HttpClient in src); API10:2023 (no upstream APIs; pricing is client-supplied)."
+    ]
+  }
+}

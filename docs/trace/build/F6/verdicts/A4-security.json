@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T10:37:46Z",
+  "plan": "build",
+  "node": "F6",
+  "attempt": 4,
+  "agent": "security",
+  "agent_id": "aac9c0c1cf9e13f06",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F6",
+    "attempt": 4,
+    "base_sha": "275fc8437d7f036dddc6c88c35a04e8c67edea64",
+    "head_sha": "46b175ecf5983580463e1b7e4674608eedf3fe64",
+    "diff_fingerprint": "5ab09ed9b896a8756d2efca834f71eed0601fb03",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.vulnerable",
+      "gate.scope",
+      "gate.build",
+      "gate.test",
+      "gate.write",
+      "gate.links",
+      "gate.doc-numbers"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET-SQL",
+      "NET-MONEY",
+      "NET-PACKAGES",
+      "NET-SECRETS",
+      "NET-LOGGING"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "Scope: the diff is docs-only (README.md, docs/design.md, infrastructure/README.md, docs/readme-checklist.md, plus the F5 trail tail, docs/context, dag.yaml, inv-003 and claims.json). gate.scope at HEAD 46b175e shows 0 paths outside the allowed set, so no src/ or Bicep change. For API3, API4, API6, API8, API9 and the .NET extras there is no code in the diff to fail. I re-checked the doc claims against src and the Bicep.",
+      "A3 to A4 rewrite, nothing unpublishable added: I grepped the four docs and claims.json for absolute local paths, the user name, personal emails, password or key markers, GUIDs and AppData. Only one hit: claims.json line 2210 quotes the all-zero placeholder object ID from the .bicepparam files. The docs name no personal data. claims.json mentions the repo owner only through a CLAUDE.md anchor, as the repo's own files already do. The F5 activity.jsonl lines use the sanitised ~/AppData/.../C--Users-<user>-... form. The claims.json method and limits text discusses the spec folder only as a restriction. It quotes no spec content.",
+      "Security limits and risk statements, retained and unchanged: (1) design.md 'Exposure if deployed' (no ipSecurityRestrictions, no Front Door, WAF or gateway; guessable references; read, claim, cancel and renew exposure; read from the Bicep, not observed). I confirmed with grep that the Bicep has no ipSecurityRestrictions or Front Door, and that appservice.bicep sets only httpsOnly, TLS 1.2 and ftps Disabled. (2) The per-instance rate-limit statement. (3) The note that forwarded headers are configured and untested on App Service. (4) No cap on claims, and claims not idempotent. (5) The what-if stage sharing the deploy ARM connection. (6) The ARM connection able to rewrite the SQL admin. (7) The privileged agent hosts and setup step 6, the branch control. (8) A narrow agentAddressPrefix, with the narrowness resting on review. (9) The checker gaps and the 'proves structure, not runtime' caveat. (10) 'Never deployed or run'. README Known limits still repeats the no-WAF, no-auth and per-instance points.",
+      "Removed or reworded untested predictions (listed in claims.json): the multiplied-across-instances rate limit, every request getting the HTTPS 400, NullReferenceException on a missing payment, claims recorded twice, App Service answering plain HTTP, SQL connection policy Default, and Azure peering with overlapping ranges. None of these removals weakens a limit. Each underlying risk is still stated in measured form. Rate limits are per instance, each instance counts on its own, and the limiter is partitioned by the connecting address (Program.cs:131-133, tested). Headers from outside the three private ranges are ignored. Whether App Service connects from those ranges is untested. Policy.Renew still states that it uses a null-forgiving ! on Payment with no check. A second claim is still stated as added after the first (tested). The SQL connection policy is now 'not set; other ports not checked', which is more cautious than the earlier 'Default'.",
+      "P2 observation, below the finding bar: the A3 text spelled out the consequence of the forwarded-header gap, namely that every client would share one rate-limit partition and non-health requests would get the HTTPS 400. The A4 rewrite dropped that sentence as untested. The premise is still stated: untested whether App Service connects from the private ranges, and other addresses are ignored. The rate-limit partitioning is stated as tested. A reader can infer the consequence, and the A3 PASS did not rely on that sentence. I raise no finding.",
+      "Accuracy re-checked against src: 64 KiB cap (Program.cs:19); KnownIPNetworks cleared and set to 10/8, 172.16/12 and 192.168/16 (Program.cs:27-30); UseForwardedHeaders (Program.cs:83); the global limiter partitioned on RemoteIpAddress (Program.cs:43,131-133); /health/* with DisableRateLimiting (Program.cs:126-127); writes policy on four POST actions (PoliciesController.cs:18,39,69,84); no HttpClient in src; Bicep sql publicNetworkAccess Disabled, no administratorLogin or password, httpsOnly true, minTlsVersion 1.2, ftpsState Disabled. All are consistent with the docs.",
+      "Gate receipts at HEAD 46b175e: gate.vulnerable (8 projects, none vulnerable), gate.build 0 warnings, gate.test 637/637, gate.scope 0 outside allowed paths, gate.write and gate.links (66 links, 0 broken, privacy clean). gate.doc-numbers at 16cadfe backs the test counts the docs state (173, 65, 332, 67).",
+      "Out items, n/a: API1:2023 (no auth or tenancy; the reference is the only key; the docs say so). API2:2023 (auth out of scope). API5:2023 (no roles; POST /claims would be an admin function; stated in design.md). API7:2023 (no outbound URL fetching, no HttpClient in src). API10:2023 (no upstream APIs; pricing is client-supplied). None was failed for out-of-scope auth."
+    ]
+  }
+}

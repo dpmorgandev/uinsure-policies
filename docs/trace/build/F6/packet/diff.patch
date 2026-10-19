@@ -1,0 +1,1020 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..222720b
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,92 @@
++# Uinsure Policies API
++
++A C# REST API for home insurance policies: sell a policy, retrieve it, cancel it (with a refund and a refund
++quote), record claims and renew it. It is a .NET 10 ASP.NET Core controller API with EF Core (SQLite locally,
++SQL Server when deployed), problem-details errors (RFC 9457) and OpenAPI with Scalar. It was built outside-in
++with TDD, one feature at a time. Every rule, its ID and the interpretation taken for it are in
++[docs/requirements.md](docs/requirements.md).
++
++## How to run it
++
++**Prerequisites:** the .NET 10 SDK (`global.json` pins 10.0.100 with `rollForward` set to `latestFeature`).
++The Postman CLI is only needed for the Postman collection.
++
++**Run the API** (SQLite, schema created at start-up, nothing to configure):
++
++```sh
++dotnet build Uinsure.Policies.slnx -warnaserror
++dotnet run --project src/Uinsure.Policies.Api --launch-profile http
++```
++
++It listens on `http://localhost:5080`. In Development only, the OpenAPI document is at
++`http://localhost:5080/openapi/v1.json` and the Scalar UI is at `http://localhost:5080/scalar`.
++Health checks are at `/health/live` and `/health/ready`.
++
++**Run the tests:**
++
++```sh
++dotnet test --solution Uinsure.Policies.slnx
++```
++
++Measured with that command on this branch on 2026-10-19: 637 tests (173 domain, 65 services, 332 API acceptance
++and 67 architecture), 0 failed, 0 skipped.
++
++**Run the Postman collection** (109 requests; start the API first):
++
++```sh
++postman collection run tests/postman/Uinsure.Policies.postman_collection.json \
++  -e tests/postman/local.postman_environment.json
++```
++
++## Assumptions
++
++Where the brief was unclear I took a sensible view. The full list, one row per rule, is in
++[docs/requirements.md](docs/requirements.md). The ones worth knowing:
++
++- **"Today" is Europe/London**, read from an injected clock, never from `DateTime.Now`. See
++  [section 2](docs/requirements.md#2-functional-requirements).
++- **The client chooses the policy reference.** It is trimmed and upper-cased (`abc-1` = `ABC-1`), and a
++  duplicate is a `409` (SELL-1, [Sell](docs/requirements.md#sell-must-1)).
++- **Sold up to 60 days ahead, no backdating** (SELL-2). Start date is today to today + 60, inclusive.
++- **A policy is one year, calculated:** the end date is start + 1 year - 1 day. A 29 February start ends on
++  28 February the next year (SELL-3).
++- **16 or older on the start date** passes SELL-5.
++- **The amount is supplied by the client** and must be above zero (SELL-7, RENEW-5). Pricing is out of scope.
++- **Cooling-off runs to start + 14 days, inclusive** (CANCEL-1b). After that the refund is pro-rata over the
++  actual days in the term (365 or 366), and the cancellation day counts as used (CANCEL-1c, [Cancel](docs/requirements.md#cancel-should-1)).
++- **Money is rounded to 2 dp, away from zero**, in one place (CANCEL-6).
++- **Cancelling:** the date is optional and defaults to today, past dates are refused (CANCEL-3), and it must be
++  on or before the end of cover (CANCEL-7). Cancelling twice is a `409` (CANCEL-4).
++- **A renewal adds a term** to the same policy, starting the day after the current end (RENEW-4,
++  [Renew](docs/requirements.md#renew-should-2)). The window runs from 30 days before the latest term's end date to the end date, both inclusive (31 calendar days). For a term ending 16 October 2027, that is 16 September to 16 October 2027.
++- **Renewing with auto-renew off creates an unpaid term**, and sending a payment method with it is a `422`
++  (RENEW-3b). A cancelled policy cannot be renewed (`409`, RENEW-6).
++- **A claim means a £0 refund** (COULD-2, [Could-haves](docs/requirements.md#could-haves-all-in-scope)). Claims
++  are recorded with `POST /policies/{reference}/claims`.
++- **No £0 Refund record is created.** The cancellation response still lists every term, including those with `refundAmount` 0.00.
++- **Status is derived** from today (Pending, Active, Expired, Cancelled) and never stored.
++- **Errors:** `400` for shape, `404` unknown reference, `409` state conflicts, and `422` for the rules that can be
++  broken (SELL-2, SELL-4, SELL-5, SELL-7, RENEW-1/2, RENEW-3b, RENEW-5, CANCEL-3, CANCEL-7, COULD-2a, COULD-2b,
++  COULD-3). A `422` lists every broken rule together. Unknown JSON fields and query parameters are a `400`.
++- **No authentication** (out of scope). `Location` on renewals and claims points at the policy.
++
++## Known limits
++
++- No authentication, so the reference is the only key. See the [security scope](docs/design.md#security-scope).
++- The Bicep sets no WAF, Front Door or IP restriction in front of the API.
++- Rate limits are counted per instance. Claims are not idempotent and have no cap per policy.
++- The tests run on SQLite. No test runs against a SQL Server database; the pre-push hook generates the
++  idempotent migration script.
++- The Bicep and Azure DevOps pipeline were never deployed or run. See
++  [infrastructure/README.md](infrastructure/README.md).
++
++The full lists are in [docs/design.md](docs/design.md#known-limits) and
++[docs/design.md](docs/design.md#behaviours-of-the-renewal-and-input-handling).
++
++## More detail
++
++- [docs/design.md](docs/design.md): endpoints, errors, tests, design decisions, security scope, known limits and
++  behaviours of the renewal and input handling.
++- [infrastructure/README.md](infrastructure/README.md): the Bicep and pipeline, networking, secrets, one-time
++  setup and what the evidence does and does not prove.
++- [docs/requirements.md](docs/requirements.md): every rule with its agreed interpretation.
+diff --git a/docs/context/20261019-083752-f5-done-merged.md b/docs/context/20261019-083752-f5-done-merged.md
+new file mode 100644
+index 0000000..e3ba670
+--- /dev/null
++++ b/docs/context/20261019-083752-f5-done-merged.md
+@@ -0,0 +1,69 @@
++---
++timestamp: 2026-10-19T08:37:52Z
++previous-context: 20261019-064330-f4-done-merged.md
++checkpoint: true
++status: in-progress
++plan: build
++node: F5
++phase: merge
++step: null
++attempt: 3
++branch: main
++worktree: null
++head: 275fc84
++tests: 637/637
++next-action: /feature build F6 (README); SETUP commits the F5 trail tail and this snapshot, and places the carry-overs
++open-decisions: 0
++---
++
++## Summary
++F5 (IaC + pipeline evidence, never deployed) is merged (PR #34, merge commit 275fc84) at attempt 3. A1 FAILed on a
++P1 (the SQL grant needed a Graph lookup) and the SID route closed it. David had every P2 fixed across A2 to A2.2.
++QA found the prod approval preceding the what-if. The job-level fix FAILed A2.4, inv-002 traced that to the
++orchestrator restating QA O1, and a two-stage fix passed A3. QA was signed 33/33. Worktree and branch removed.
++
++## Completed since last snapshot
++- F5 infrastructure: Bicep, three param files, pipeline and offline checker (7131a01, pre-rebase SHAs below too)
++- A1 route: SID-based SQL user, private networking, NSGs, separate SQL connection, pinned dotnet-ef (2c0b4e7, 4012f0e, c4032df, 88ff4bb)
++- inv-002 (bac560a, decided d0292ab): accept 1, 2, 4; reject 3, 5; two-stage fix (5defb7f red, a14af3f green)
++- QA 33/33 re-run, sign-off, integrate onto 6b5a6a2, PR #34 merged (275fc84)
++
++## Current state
++On main at 275fc84, tests 637/637. Two files are uncommitted in the main checkout: the F5 trail tail
++(docs/trace/build/F5/loop.jsonl with merged(275fc84); activity.jsonl with the post-trail lines). F6 SETUP commits
++them. Nothing is blocked.
++
++## Next action
++/feature build F6, the README (docs node). F7 (the pitch deck) is cut if it has not started by 12:00 UK.
++F6 t1 already carries the README items from F3 and F4; the F5 items below join it at SETUP.
++
++## Carry-overs
++- README (F6): out-of-repo prerequisites (policies-<env>-vnet agent pools, the ARM and SQL service connections, the SQL admin group, the one-off database bootstrap, agent network peering, a narrow agentAddressPrefix); the agent hosts are privileged — F5 security A2-A3
++- README (F6): accepted risk, the unapproved what-if stage shares the deploy ARM connection (inv-002 rec 3 rejected); first run fails at migrations until the bootstrap — F5 review A2, inv-002
++- README (F6): httpsOnly and App Service forwarded headers vs the API's private-range-only forwarded-header trust; SQL connection policy Default (1433 only; Redirect would need 11000-11999); one VNet range for all environments — F5 security A1-A2, review A2.2-A3
++- README (F6) known limits of the evidence: the offline checker proves structure, not runtime; carried checker P2s (A2.3 R1 extra 1433 allow rule not rejected, A3 R1 what-if step inputs unchecked, A3 R2 redundant order asserts) — F5 review
++- Lessons required at archive: F2 (attempt 3, inv-001) and F5 (attempt 3, inv-002: a finding restated when handed on changed its meaning) — planning.spec Lessons
++- Harness items (next harness PR, from the main checkout):
++  - evidence nodes: the tester cannot write infrastructure/**, so the builder writes the reds (F5 A1)
++  - commit-msg G9: Fixes-Finding id forms for reviewer, security and QA findings (A2/R2, QA step 34); a TDD value for coverage and retarget commits
++  - guard: git grep can print .claude/specs/ lines to a subagent (F5 QA); the activity hook re-dirties a worktree after a discard, which blocks cleanup
++  - pr-body: refactor column prints undefined; the Attempts line repeats rounds without naming them; an empty Rules line on rule-less nodes
++  - gate.postman(pass|skipped) rejected by the event grammar; signoff can't take source: david
++  - a sanctioned tester commit for a test retarget a signature change forces (F4 A1.2 R1)
++  - dotnet-ef tool manifest 10.0.13 (pre-push restore is a no-op; the pipeline pins it inline)
++  - earlier items: pin-at-red tests; docs/qa integrate exemption; git.md no-escape; render rewriting the matrix for a timestamp; PR-body attribution and dev-db delete guard blocks; ClientAbortLoggingMiddleware in the architecture tree; H6 wording; reconciled events in the README
++- Schedule: F7 is cut if not started by 12:00 Monday 2026-10-19 — build.plan.md
++
++## Open decisions
++(none)
++
++## Decisions made
++- F5 review P2s: fix all (David, A1, A2, A2.2); P2s at the final rounds carried (rule 3)
++- docs/plans/active/inv-002.plan.md#recommendations (accept 1, 2, 4; reject 3, 5)
++- docs/plans/active/inv-001.plan.md#recommendations (rule 3)
++- Node order F5 → F6 → F7, file order (David, 2026-10-19)
++
++## Pointers
++- docs/plans/active/build.dag.yaml (F5 lines 307-336), docs/plans/active/inv-002.plan.md
++- docs/trace/build/F5/ (walkthrough.md, verdicts A1-A3, findings A1 and A2.4), docs/qa/build-F5.md
++- PR #34 (F5)
+diff --git a/docs/design.md b/docs/design.md
+new file mode 100644
+index 0000000..d91df93
+--- /dev/null
++++ b/docs/design.md
+@@ -0,0 +1,253 @@
++# Design notes
++
++Reference material for the [project README](../README.md). The rules and the interpretation agreed for each
++are in [requirements.md](requirements.md). Deployment is in
++[infrastructure/README.md](../infrastructure/README.md).
++
++Contents: [Running locally](#running-locally) · [Endpoints](#endpoints) · [Errors](#errors) ·
++[Tests](#tests) · [Branching and merging](#branching-and-merging) · [Design decisions](#design-decisions) ·
++[Security scope](#security-scope) · [Known limits](#known-limits) ·
++[Behaviours of the renewal and input handling](#behaviours-of-the-renewal-and-input-handling)
++
++## Running locally
++
++- Launch profiles: `http` (`http://localhost:5080`, used for development and Postman) and `https`
++  (`https://localhost:7080;http://localhost:5080`). Both set `ASPNETCORE_ENVIRONMENT=Development`.
++- Locally the app uses SQLite (`Database:Provider` = `Sqlite`, file `policies.development.db`). With SQLite it
++  creates the schema at start-up with `EnsureCreated()`. It never calls `Database.Migrate()`.
++- The Bicep sets the provider to `SqlServer` with an app setting. The one migration set is SQL Server only
++  (`src/Uinsure.Policies.Persistence/Migrations`).
++- In Development only: the OpenAPI 3.1 document at `/openapi/v1.json` and the Scalar UI at `/scalar`.
++- Health: `/health/live` runs no checks. `/health/ready` runs the checks tagged `ready` (the database).
++- Application Insights is wired only when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set.
++
++## Endpoints
++
++Policy routes are on `PoliciesController`.
++
++| Route | What | Success |
++|---|---|---|
++| `POST /policies` | Sell a policy (SELL-1 to SELL-7) | `201` + `Location: /policies/{reference}` |
++| `GET /policies/{reference}` | Retrieve it (GET-1) | `200` |
++| `POST /policies/{reference}/cancellation` | Cancel. The body is optional (`cancellationDate`) | `201`, no `Location` |
++| `GET /policies/{reference}/cancellation-quote?cancellationDate=yyyy-MM-dd` | Quote a refund without cancelling (COULD-1) | `200` |
++| `POST /policies/{reference}/claims` | Record a claim (`claimDate`, optional `description`) | `201` + `Location: /policies/{reference}` |
++| `POST /policies/{reference}/renewals` | Renew (`amount`, optional `paymentMethod`) | `201` + `Location: /policies/{reference}` |
++
++Policy types are `Household` and `BuyToLet`. Payment methods are `Card`, `DirectDebit` and `Cheque`. The
++client chooses the reference. It is trimmed and upper-cased, so `abc-1` and `ABC-1` are the same policy.
++
++Input is strict. A malformed body, a wrong type, a missing field, an unknown JSON field, an integer where an
++enum is expected and an unknown query parameter are all a `400`. A request body is capped at 65,536 bytes
++(`413` over that).
++
++"Today" is today in Europe/London, taken from the injected `TimeProvider` in Services and passed to the domain
++as a `DateOnly`. The code never uses `DateTime.Now`, `UtcNow` or `Today`; an analyser bans them
++(`BannedSymbols.txt`). Money is rounded only in `Money.Round` (2 dp, away from zero).
++
++## Errors
++
++A rule violation (the `404` for GET-1, a `409` rule conflict, a `422`) is RFC 9457 problem details with `type`
++(`/problems/{rule-id}`, lower-case, `/` written as `-`), `title`, `status`, `detail`, `instance`, `ruleId` and
++`traceId`. The other problems have no `ruleId`: the `400` shape error, the concurrency `409`
++(`/problems/concurrency`), the `429` (`/problems/rate-limited`), the HTTPS `400` (`/problems/https-required`) and
++the `500`. Rule problems, transport problems (`429`, HTTPS `400`, `413`) and the `400` shape error all carry
++`instance` (the request path) and `traceId`, and the tests assert both. The `500` carries a `traceId`, which a test
++also asserts.
++
++| Status | When |
++|---|---|
++| `400` | Shape: `errors` map, no `ruleId`. A `400` short-circuits before the rules are evaluated |
++| `404` | GET-1: unknown reference. A `404` short-circuits before the rules are evaluated |
++| `409` | Rule conflicts (SELL-1, CANCEL-4, RENEW-6, COULD-2c), which short-circuit before the rules are evaluated. A database concurrency conflict is also a `409`, without a `ruleId` |
++| `422` | The rules that can be broken: SELL-2, SELL-4, SELL-5, SELL-7, RENEW-1/2, RENEW-3b, RENEW-5, CANCEL-3, CANCEL-7, COULD-2a, COULD-2b, COULD-3. All broken rules are collected in `violations[]`; `ruleId` is the first of them |
++| `429` | Rate limit, with `Retry-After` |
++| `500` | A generic `detail` and a `traceId`. The full details go to the logs only, and never a stack trace outside Development |
++
++Two details that surprise people:
++
++- **Validation error keys.** For a body or model error, the API lower-cases the first letter of each dot-separated segment of the key (`ValidationProblems.cs`); for example, the key for a policyholder’s date of birth is `policyholders[0].dateOfBirth`. A query key that the action does not bind from the query string is a `400`, with `Unknown query parameter.` under that key in `errors`. A key named after a route parameter is one of these: `GET /policies/{reference}?reference=X` is a `400` keyed `reference`. No test sends a query key in upper case, so the key returned for one is not specified. The renewal endpoint with no body writes its key, `amount`, by hand in the controller.
++- Outside Development the API rejects plain HTTP with a `400` (`/problems/https-required`) instead of
++  redirecting. `/health/*` is exempt. There is no `UseHttpsRedirection()`.
++
++## Tests
++
++```sh
++dotnet test --solution Uinsure.Policies.slnx
++```
++
++Result measured on this branch on 2026-10-19: **637 passed, 0 failed, 0 skipped.**
++
++| Project | Tests | What it proves |
++|---|---|---|
++| `Uinsure.Policies.Domain.Tests` | 173 | Rule and boundary tests, with `DateOnly today` passed in |
++| `Uinsure.Policies.Services.Tests` | 65 | Orchestration and `UkCalendar` (including the BST boundary) |
++| `Uinsure.Policies.Api.Tests` | 332 | The acceptance suite over HTTP: `WebApplicationFactory`, SQLite in memory, `FakeTimeProvider` |
++| `Uinsure.Policies.Architecture.Tests` | 67 | Layering (NetArchTest) and rule coverage |
++
++- xUnit v3 on Microsoft.Testing.Platform, plain `Assert`.
++- A rule test carries `[Trait("Rule", "<id>")]`. `RuleCoverageTests` fails if a rule ID in
++  `docs/requirements.md` has no unit trait or no integration trait, unless it is listed in
++  `tests/rule-coverage.pending.txt` (empty at the moment). Run one rule: `dotnet test --solution Uinsure.Policies.slnx -- --filter-trait "Rule=SELL-2"`.
++- Postman: `tests/postman/Uinsure.Policies.postman_collection.json` (109 requests, in six folders from `F0b Walking skeleton` to `F4 Renew`)
++  with the `local` environment (`baseUrl` = `http://localhost:5080`). Run it against a running API with the
++  Postman CLI:
++
++  ```sh
++  postman collection run tests/postman/Uinsure.Policies.postman_collection.json \
++    -e tests/postman/local.postman_environment.json
++  ```
++
++  No git hook runs Postman. The collection holds the rows that can run in real time
++  (the convention in requirements section 3). Rows that need a fake clock are covered by the integration tests.
++- Manual QA scripts are in `docs/qa/`.
++
++### What SQLite cannot prove
++
++The tests run on SQLite. SQLite cannot prove SQL Server-specific behaviour: unique-violation error codes and
++the migrations themselves. The pre-push idempotent migration script
++(`dotnet ef migrations script --idempotent`) proves the migrations generate. The rest is a known gap.
++
++### Local git hooks
++
++The repository has no CI for the code: the pipeline in `infrastructure/` was never connected (see
++[infrastructure/README.md](../infrastructure/README.md)). The local gate is the hooks in `.githooks/`:
++
++- `pre-commit`: refuses a commit on `main` once the `main-locked` marker exists, then a privacy scan of staged
++  files, then `dotnet build -warnaserror`.
++- `commit-msg`: on `feature/*` and `bug/*` branches, checks the `Agent`, `Plan` and `Node` trailers (and `Rule`, plus
++  `TDD` unless the subject starts `docs(`, on tester and builder commits), and that `Plan` and `Node` match the
++  branch.
++- `pre-push`: refuses a push to `main` once it is locked, then a Release build, the full test suite, the
++  idempotent migration script, and the harness self-test.
++
++## Branching and merging
++
++`main` is the integration branch. There is no `develop` branch and no integration agent. Feature and bug
++branches are rebased onto `origin/main` before the pull request, and merged by the repository owner
++in the GitHub UI with a **merge commit**. That is the practice followed, not something the repo enforces: the
++merge method is a GitHub setting. With a merge commit the branch's commits (as rebased) stay on `main`, and
++`git log --first-parent main` shows one `Merge pull request` line per merged pull request.
++
++On feature and bug branches, tester and builder commits carry the trailers `Agent`, `Plan`, `Node` and `Rule`, and a
++`TDD` trailer (`scaffold`, `red`, `stub`, `green` or `refactor`) unless the subject starts `docs(`. A rule's red and
++green commits can be found through its `Rule` trailer.
++
++## Design decisions
++
++### Layers
++
++`Api` → `Services` → `Domain`, and `Persistence` → `Services`. Domain has no packages and no references.
++Services orchestrates: load, today, domain, save. GET-1 and SELL-1 are produced in `PolicyService`: GET-1
++when the repository finds no policy, and SELL-1 (uniqueness) through the repository. There is one model per
++layer (API DTOs, domain, persistence records). Interfaces exist at the layer seams only
++(`IPolicyService`, `IPolicyRepository`, `IReferenceGenerator`). There is no generic repository and no unit of
++work. Architecture tests enforce these references.
++
++Considered and rejected: domain events, caching, CQRS or MediatR, Key Vault (there are no secrets), and
++authentication.
++
++### Authentication
++
++Authentication is out of scope by requirement. No authentication is configured. `UseAuthorization()` is in
++the pipeline, ready for it.
++
++### `Location` on renewals and claims
++
++`201` on `POST /policies/{reference}/renewals` and `POST /policies/{reference}/claims` returns
++`Location: /policies/{reference}`: the policy, not a sub-resource. That is a deliberate deviation. A renewal
++adds a term and a claim adds a claim, and the client reads both through the policy.
++
++### No API versioning
++
++There is no versioning. A breaking change would mean `/v2` or an `api-version` parameter (`Asp.Versioning`).
++
++### Idempotency
++
++`POST /policies` is safe to retry: a repeated reference gets `409` (SELL-1). **Claims are not idempotent**, and
++there is no `Idempotency-Key`. `Policy.RecordClaim` has no duplicate check, and a second claim is added after the
++first (tested).
++
++### No refunds of zero
++
++A cancellation creates a Refund only for an amount above £0. If the policy has a claim (COULD-2), none of its
++paid terms gets a Refund record; an unpaid renewal term (RENEW-3b) gets none either. Their calculations are
++still in the response, with `ruleApplied` `COULD-2` or `UNPAID-TERM` and `refundAmount` 0.00.
++
++### Terms
++
++A policy has terms. A renewal appends the next term under the same reference (RENEW-4). Policy-level
++`startDate`, `endDate` and `amount` describe the current term. `terms[]` holds the history. The status is
++derived from today and never stored.
++
++## Security scope
++
++The development loop includes a security review against the OWASP API Security Top 10 2023 (requirements
++section 3). These items are out of scope, stated rather than skipped:
++
++- **API1 (broken object-level authorisation):** there is no auth or tenancy. The reference is the only key,
++  and references are client-chosen and guessable.
++- **API2 (broken authentication):** authentication is out of scope.
++- **API5 (broken function-level authorisation):** there are no roles. In real life `POST /claims` would be an
++  admin function.
++- **API7 (SSRF):** the API makes no outbound URL fetches.
++- **API10 (unsafe consumption of APIs):** there are no upstream APIs. Pricing is supplied by the client.
++
++In scope and built: resource limits (a 64 KiB body cap, a per-IP rate limit), strict input, no passwords in the
++Bicep (the app signs in to SQL with a managed identity), log calls that name no personal field, and a generic 500
++body. Rate limits are described under [Known limits](#known-limits).
++
++**Exposure if deployed.** The Bicep sets no IP restriction on the web app (`appservice.bicep` has no
++`ipSecurityRestrictions`), and its 16 resources include no Front Door, WAF or API gateway. With no
++authentication and client-chosen, guessable references, anyone who reaches the host and knows or guesses a
++reference could read that policy (names, dates of birth, address) and post claims, cancellations or renewals
++to it. The API's own protections against volume are the per-client, per-instance rate limits and the request
++body cap. Nothing has been deployed, so this is read from the Bicep and has not been observed on a running
++service.
++
++## Known limits
++
++- **Rate limits are per instance.** The limiter is the built-in in-memory fixed window, per client IP. Each
++  instance counts on its own: the limiter holds its counts in memory and the code uses no shared store. Defaults
++  outside Development: 100 requests per minute globally and 10 per minute on every `POST` (the `writes` policy).
++  Development: 10,000 and 1,000. Both come from the `RateLimiting` configuration section.
++- **Forwarded headers are configured, not tested on App Service.** The code honours `X-Forwarded-For` and
++  `X-Forwarded-Proto` only from 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16, and tests cover that with a
++  simulated proxy address. Whether App Service's front end connects from those ranges has not been tested. A
++  request from any other address has its forwarded headers ignored. Outside Development, a plain-HTTP request
++  that sends `X-Forwarded-Proto: https` from such an address gets the HTTPS `400`, and the rate limiter counts
++  by the connecting address, not by `X-Forwarded-For` (both tested).
++- **No cap on claims per policy.** Each claim POST appends a claim, and `GET` returns them all. There is no
++  cap. The per-client, per-instance write rate limit applies to the claims route. No rule in the requirements asks
++  for a cap.
++- **Few application log lines.** There is no log line for a successful or a 4xx rule outcome. The log calls in
++  `src/` are a client abort (Information), a bad request (Warning), a persistence conflict (Warning) and an
++  unhandled exception (Error). Their templates carry the method, path, status or reason, and no call passes a
++  name, date of birth, address, postcode or request body. The bad-request and unhandled-exception calls also
++  pass the exception object, whose content this code does not control.
++- **SQLite versus SQL Server:** see [What SQLite cannot prove](#what-sqlite-cannot-prove).
++- **`Policy.Renew` assumes an auto-renewing term has a payment.** On auto-renew it reads
++  `CurrentTerm(today).Payment!.Method` when the request sends no method. A term of an auto-renewing policy gets
++  a payment when it is created (SELL-6 on sale, RENEW-3a on renewal). The code does not check for a missing
++  payment: it uses the null-forgiving `!` on `Payment`.
++
++## Behaviours of the renewal and input handling
++
++These are behaviours the written rules do not fully fix.
++
++- **Renewal detail texts are the code's wording.** RENEW-1/2 says "A policy can be renewed from W to E."
++  RENEW-6 says "The policy was cancelled on T, so it cannot be renewed." COULD-3 says "An auto-renewing policy
++  cannot be renewed by Cheque. Use Card or DirectDebit." for both a sent and a defaulted Cheque. These differ
++  from the example texts in the API contract written before the build (noted in `docs/qa/build-F4.md`). The
++  requirement only asks that the COULD-3 `detail` asks for another method. The dates are also in the
++  `windowStart`, `windowEnd` and `cancellationDate` extensions.
++- **A multi-violation 422 has no top-level rule extensions.** With two or more violations the top level
++  carries no `windowStart`, `windowEnd`, `amount` or `paymentMethod`. A `violations[]` entry carries only
++  `ruleId` and `detail` (`ResultExtensions.cs`). The extensions are copied to the top level only for a single
++  violation.
++- **A `null` `paymentMethod` counts as none.** On a policy that does not auto-renew, `"paymentMethod": null`
++  is not RENEW-3b, because the rule says a request that "sends" a method gets 422. Observed by hand
++  (`docs/qa/build-F4.md`); no test pins this.
++- **Enum names were accepted in lower case when tried by hand.** `"card"` was accepted as `Card` on renewal and
++  `"household"` on sale (`docs/qa/build-F4.md`). No test sends a lower-case enum name, so this is observed, not
++  pinned. Integers are refused (`JsonStringEnumConverter` with `allowIntegerValues: false`).
+diff --git a/docs/plans/active/build.dag.yaml b/docs/plans/active/build.dag.yaml
+index 3fd0d7f..e858e9f 100644
+--- a/docs/plans/active/build.dag.yaml
++++ b/docs/plans/active/build.dag.yaml
+@@ -342,21 +342,22 @@ nodes:
+     rules: []
+     cuttable: false
+     budget: null
+-    status: pending
+-    attempt: 0
+-    branch: null
+-    worktree: null
++    status: in_progress
++    attempt: 4
++    branch: feature/build/F6
++    worktree: .claude/worktrees/build-F6
+     pr: null
+     qa: docs/qa/build-F6.md
+     trace: docs/trace/build/F6/
+     acceptance:
+-      - "Every item in docs/readme-checklist.md is ticked and links to the README section that satisfies it; F5's items say 'cut' if F5 was cut"
++      - "README.md is short: what it is, how to run it (API, tests, Postman) and the assumptions taken where the brief was unclear, each in a line (assessor's ask, 2026-10-19); reference material lives in docs/design.md and infrastructure/README.md, which the README links to (David: short README + separate docs)"
++      - "Every item in docs/readme-checklist.md is ticked and links to the README section, or the docs/design.md or infrastructure/README.md section, that satisfies it; F5's items say 'cut' if F5 was cut"
+     tasks:
+-      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "README.md covering every docs/readme-checklist.md item, each ticked with a link to its section; states that the rate limits are per instance and that validation error keys are camelCase (an unknown query key ?REFERENCE is reported as reference); known limits: no cap on claims per policy (David), and no application log line for successful or 4xx outcomes; F4 behaviours for David's review: E6 detail texts differ from the contract examples (RENEW-1/2, RENEW-6, COULD-3), a multi-violation 422 has no top-level rule extensions, a null paymentMethod counts as none, enum names are case-insensitive; design note: Policy.Renew relies on every auto-renewing term being paid (F4 security)", status: pending}
+-      - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "Every checklist item ticked and linked; links resolve; build and tests still green", status: pending}
+-      - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: pending}
+-      - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F6.md", status: pending}
+-      - {id: t5, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: pending}
++      - {id: t1, role: builder, step: write, layer: null, rules: [], title: "A short README.md (what it is, how to run it, assumptions) plus docs/design.md and infrastructure/README.md for the reference material; every docs/readme-checklist.md item ticked with a link to its section. The reader is an outside assessor: no internal finding ids, no notes addressed to the author. Every factual sentence is traced to a file:line, a test or a QA measurement; anything untraceable is removed or marked observed/untested (inv-003). Topics: rate limits are per instance; how error keys are reported (as the code does it; the casing of client-sent keys is not pinned, inv-003 rec 4); known limits: no cap on claims per policy (David), no application log line for successful or 4xx outcomes, the deployed app would be internet-facing with no edge protection; behaviours stated with their reasons: E6 detail texts differ from the contract examples (RENEW-1/2, RENEW-6, COULD-3), a multi-violation 422 has no top-level rule extensions, a null paymentMethod counts as none, lower-case enum names observed accepted (not pinned); design note: Policy.Renew relies on every auto-renewing term being paid; deployment notes: out-of-repo prerequisites (policies-<env>-vnet agent pools, ARM and SQL service connections, the SQL admin group, the one-off database bootstrap, agent network peering, a narrow agentAddressPrefix) and that the agent hosts are privileged; accepted risk that the unapproved what-if stage shares the deploy ARM connection; the first run fails at migrations until the bootstrap; httpsOnly and forwarded headers on App Service untested; SQL connection policy Default (1433 only); one VNet range for all environments; known limits of the evidence: the offline checker proves structure, not runtime, and three known checker gaps described by what they miss (brief rewritten per inv-003 rec 2)", status: done}
++      - {id: t2, role: orchestrator, step: gates, layer: null, rules: [], title: "Every checklist item ticked and linked; links resolve; build and tests still green", status: done}
++      - {id: t3, role: review, step: review, layer: null, rules: [], title: "Reviewer and security verdicts PASS for HEAD", status: done}
++      - {id: t4, role: tester, step: qa, layer: null, rules: [], title: "QA script docs/qa/build-F6.md", status: done}
++      - {id: t5, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: done}
+       - {id: t6, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md and README; chore(trace) commit; completeness check passes", status: pending}
+       - {id: t7, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
+       - {id: t8, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: sign-off from walkthrough.md and the QA script", status: pending}
+diff --git a/docs/plans/active/inv-003.plan.md b/docs/plans/active/inv-003.plan.md
+new file mode 100644
+index 0000000..9027686
+--- /dev/null
++++ b/docs/plans/active/inv-003.plan.md
+@@ -0,0 +1,56 @@
++---
++plan_id: inv-003
++kind: investigation
++title: F6 docs state claims the repo does not prove
++created: 2026-10-19
++dag: null
++parent: build/F6
++---
++# inv-003: F6 docs state claims the repo does not prove
++## Question
++Why does the reviewer FAIL build/F6 at attempt 2 (A2), and is each cause in the docs' sources, the builder's method, or the orchestrator's briefs?
++## Hypothesis
++The builder carried statements over from secondary sources (QA notes, the first long draft) without checking each
++claim against the code, and the orchestrator's briefs asked for numbers to be checked but not causal or control
++claims, and never said to drop author-facing notes and internal finding ids. Disproved if the claims were checked
++against code, or if the briefs required that.
++## Evidence
++- docs/trace/build/F6/verdicts/A2-reviewer.json: FAIL, P1 R1 (design.md states a JSON-naming-policy cause for the ?REFERENCE key that the code contradicts), P2 R2-R4
++- docs/trace/build/F6/verdicts/A2-security.json: PASS, P2 S1 (no internet-exposure statement), S2 (forwarded-header caveat missing from design.md)
++- docs/qa/build-F2.md: the ?REFERENCE cause began as a guess ("That looks like…"), then the F2 sign-off row and the F2 snapshot stated it as fact
++- docs/plans/active/build.dag.yaml F6 t1 title: tells the builder to state the camelCase/?REFERENCE claim, frames items "for David's review", names internal finding ids
++- docs/trace/build/F6/activity.jsonl: one builder took causes from QA and verdict notes; the rewrite builder read no code before writing all three docs; the A1 fix read no code
++- docs/trace/build/F6/loop.jsonl: the F6 gates check links, URLs, build, tests and scope, nothing about claims
++## Findings
++Yes. The cause is in all three places, and one missing step ties them together.
++Findings: [findings/A2.md](../../trace/build/F6/findings/A2.md).
++- I1 (R1, new): docs/design.md:64-65 states an unproven cause for the ?REFERENCE key; the repo proves the 400, not the key's casing or its cause (sources hardened a QA guess; the brief asked for it; the builder copied it).
++- I2 (new): "validation error keys are camelCase" overclaims; ValidationProblems.cs:25-26 only lower-cases each segment's first letter.
++- I3 (R2): design.md:50 widens requirements.md:121 from "every rule violation" to "every problem"; the same class as A1 I4, fixed one line lower but not here.
++- I4 (R3): infrastructure/README.md:110 "only merged code reaches them", copied from an F5 security note; no branch control exists.
++- I5 (R4): author-facing notes and internal ids in assessor docs, from the brief.
++- I6 (S1), I7 (S2), I8: no exposure statement; forwarded-header and "never reached" runtime claims untested on App Service.
++- I9-I13 (new, unflagged): an inverted pool-per-environment rationale; an unconditional "cannot administer"; an unpinned enum-case claim; a merge-commit guarantee the repo can't enforce; "bounded only by" the write rate.
++- I14 (method, recurring across A1 and A2): no step traces each factual sentence to a file:line, test or measurement, so each round fixed only its cited lines. Hypothesis confirmed with two corrections: the guess was already stated as fact in the F2 records before F6, and R2 came from widening a requirement, not a QA note. The brief's exact text can't be cited (dispatch prompts aren't in the trail).
++## Recommendations
++```yaml recommendations
++- {kind: amend-node, target: build/F6, reason: "Claim trace: before writing, the builder lists every factual sentence with its source (file:line, test or QA measurement); anything untraceable is removed or marked observed/untested; the reviewer checks the table. Sentences turning on because/only/never/every/cannot get the closest check", status: accepted}
++- {kind: amend-node, target: build/F6, reason: "Rewrite the F6 brief (t1 title): the reader is an outside assessor; no internal finding ids or author-facing notes; drop the ?REFERENCE/camelCase instruction; state each F4 behaviour as a behaviour with its reason", status: accepted}
++- {kind: amend-node, target: build/F6, reason: "Fix I1-I13 per findings/A2.md: state only what the repo proves (drop the ?REFERENCE cause; narrow key casing, every-problem, merged-only, never-reached, cannot-administer, bounded-only); add the internet-exposure statement; correct the pool rationale; mark the enum case as observed", status: accepted}
++- {kind: bug, target: null, rule: GET-1, reason: "Pin error-key casing with tests (?REFERENCE and ?COLOUR, and lower-case enum names), and decide the wanted key, before any doc states it", status: accepted}
++```
++## Why
++The attempt-3 stop on build/F6: reviewer FAIL A2 after the A1 route (gate.write FAIL on the checklist links).
++## Approach
++Read-only: the F6 trail (loop, activity, verdicts A2, findings A1), the four docs, the F2 and F4 QA records and the
++cited src files; one investigator dispatch. Time box 30m from 09:14Z; it held (diagnosis by 09:23Z).
++## Rejected alternatives
++- Fix only the four reviewer findings: the investigation found nine more unproven claims of the same kind; a narrow fix invites a fourth round.
++- Correct the F2 QA sign-off row and snapshot that first stated the guess as fact: they are signed or committed records of what was believed then; F6's docs should state the truth, not rewrite history.
++- Pin the key casing in F6 itself: a test change is outside a docs node's scope; it belongs in a bug plan (recommendation 4).
++## Prior work consulted
++docs/plans/active/inv-002.plan.md: the same lesson in another form (a finding restated when handed on changed its meaning). docs/plans/active/inv-001.plan.md: rule 3. docs/qa/build-F2.md, docs/qa/build-F4.md.
++## Attempt log
++- attempt 1 · gate.write FAIL (loop.jsonl) · checklist links written repo-root style resolved under docs/
++- attempt 2 · verdicts/A2-reviewer.json FAIL · design.md states a QA guess as the cause; claims not traced to the repo
++## Completion record
+diff --git a/docs/qa/build-F6.md b/docs/qa/build-F6.md
+new file mode 100644
+index 0000000..fa1c41f
+--- /dev/null
++++ b/docs/qa/build-F6.md
+@@ -0,0 +1,193 @@
++# QA script — build / F6 — README
++
++Rule IDs: none (F6 is a docs node; the step rows carry `—` in the Rule column and name the acceptance item they prove)
++Branch: feature/build/F6   Worktree: .claude/worktrees/build-F6
++Commit under test: c841ae4 (HEAD when this script was run. The docs were last changed at 46b175e, where the A4 reviewer and security verdicts are PASS; c841ae4 changes only `docs/plans/active/build.dag.yaml`. This script's own commit changes only this file. Record the SHA you test in the sign-off)
++API URL: http://localhost:5080   Environment: local (`http` launch profile, Development, SQLite file)
++
++F6 rewrites the project `README.md` as a short answer to the assessor (what it is, how to run it, the assumptions
++taken), moves the reference material to `docs/design.md` and `infrastructure/README.md`, and ticks
++`docs/readme-checklist.md`. F6 changes nothing in `src/` or `tests/` (step 57). The steps below follow the README
++exactly as written, open every link, compare each assumption with its requirements row, and check the checklist.
++
++## Acceptance items (from `docs/plans/active/build.dag.yaml`, node F6)
++
++| Tag | Acceptance item |
++|---|---|
++| AC1 | `README.md` is short: what it is, how to run it (API, tests, Postman) and the assumptions taken where the brief was unclear, each in a line. Reference material lives in `docs/design.md` and `infrastructure/README.md`, which the README links to |
++| AC2 | Every item in `docs/readme-checklist.md` is ticked and links to the README, `docs/design.md` or `infrastructure/README.md` section that satisfies it; F5's items say "cut" if F5 was cut |
++
++## Preconditions
++
++- [x] .NET SDK on `PATH`. Run with: 10.0.402 (`global.json` pins 10.0.100, `rollForward: latestFeature`).
++- [x] Postman CLI on `PATH`. Run with: 1.75.0. No login is needed for a local run.
++- [x] Nothing listening on port 5080 before step 2 (`netstat -ano`, no match).
++- [ ] **Clean SQLite file:** delete `src/Uinsure.Policies.Api/policies.development.db*` before step 2. **Not done in
++      this run** (note 1). The run used the existing, git-ignored files (`.gitignore` lines 7 and 9).
++
++Commands are for PowerShell or Git Bash, run from the worktree root. Steps 1, 2, 7 and 8 are the README's commands
++copied verbatim (README lines 17, 18, 28, 37-38).
++
++## Steps
++
++### A. "How to run it", followed as written (AC1)
++
++| # | Rule | Check | Steps / input | Expected | Actual | Pass/Fail |
++|---|---|---|---|---|---|---|
++| 1 | — | AC1 · build | `dotnet build Uinsure.Policies.slnx -warnaserror` | `Build succeeded.`, 0 warnings, 0 errors, exit 0 | `Build succeeded.` `0 Warning(s)` `0 Error(s)`, exit 0 | PASS |
++| 2 | — | AC1 · run the API | `dotnet run --project src/Uinsure.Policies.Api --launch-profile http` (leave it running) | `Now listening on: http://localhost:5080`, `Hosting environment: Development`, with nothing to configure | `Using launch settings from src\Uinsure.Policies.Api\Properties\launchSettings.json...`, then `Now listening on: http://localhost:5080`, `Application started`, `Hosting environment: Development`. The only SQL logged was EnsureCreated's `SELECT COUNT(*) FROM "sqlite_master" …`, because the file already existed (note 1) | PASS |
++| 3 | — | AC1 · liveness | `curl -i http://localhost:5080/health/live` | `200`, body `Healthy` | `HTTP/1.1 200 OK`, `Content-Type: text/plain`, body `Healthy` | PASS |
++| 4 | — | AC1 · readiness (the database) | `curl -i http://localhost:5080/health/ready` | `200`, body `Healthy` | `HTTP/1.1 200 OK`, `Content-Type: text/plain`, body `Healthy` | PASS |
++| 5 | — | AC1 · OpenAPI document (Development only) | `curl -s http://localhost:5080/openapi/v1.json`; read `openapi`, `info.title` and the `paths` keys | `200`, JSON, OpenAPI 3.1, the policy routes | `200 application/json;charset=utf-8`, 25,426 bytes. `openapi` `3.1.1`, title `Uinsure.Policies.Api \| v1`, six paths: `/policies`, `/policies/{reference}`, `/policies/{reference}/cancellation`, `/policies/{reference}/cancellation-quote`, `/policies/{reference}/claims`, `/policies/{reference}/renewals` | PASS |
++| 6 | — | AC1 · Scalar UI (Development only) | Open `http://localhost:5080/scalar` (or `curl -L`) | The Scalar page loads | `302` to `http://localhost:5080/scalar/`, which answers `200 text/html` | PASS |
++| 7 | — | AC1 · run the tests | `dotnet test --solution Uinsure.Policies.slnx` (the API from step 2 still running) | The figures in README lines 31-32: 637 tests (173 domain, 65 services, 332 API acceptance, 67 architecture), 0 failed, 0 skipped | `total: 637`, `failed: 0`, `succeeded: 637`, `skipped: 0`; all four test projects passed. Run one by one (each project's test executable), the per-project totals are Domain 173, Services 65, Api 332, Architecture 67, each with 0 failed and 0 skipped. No file lock from the running API | PASS |
++| 8 | — | AC1 · run the Postman collection | `postman collection run tests/postman/Uinsure.Policies.postman_collection.json -e tests/postman/local.postman_environment.json` (the API still running) | README line 34: 109 requests. Every assertion passes | Summary: iterations 1 / 0 failed; requests 253 / 0; test-scripts 109 / 0; prerequest-scripts 114 / 0; assertions 246 / 0; exit 0. The collection holds 109 request items in six folders (F0b Walking skeleton, F1 Sell, F1b Layered models, F2 Retrieve, F3 Cancel, F4 Renew). The 253 executed requests include each item's own setup calls and read-backs (note 3). The CLI ends with "Postman credentials are required for publishing run details to Postman cloud", which is only about publishing | PASS |
++| 9 | — | AC1 · stop the API | Ctrl+C in the terminal from step 2. Then `curl -s -o /dev/null -w "%{http_code}" http://localhost:5080/health/live` | Nothing listens on 5080; curl prints `000` | The API ran with no interactive console here, so I stopped it with `taskkill /PID <pid of Uinsure.Policies.Api.exe> /T /F` (note 2). Then `netstat` showed nothing on 5080, and curl printed `000` | PASS |
++
++### B. Every link in `README.md` resolves (AC1)
++
++There are 14 links on 11 targets. Each anchor was checked against the target's headings, using GitHub's
++heading-to-anchor rule (lower-case, punctuation dropped, spaces to hyphens), and outside code fences.
++
++| # | Rule | Check | Steps / input | Expected | Actual | Pass/Fail |
++|---|---|---|---|---|---|---|
++| 10 | — | AC1 · link | README 7, 44, 92: `docs/requirements.md` | The file exists | Exists | PASS |
++| 11 | — | AC1 · link | README 47: `docs/requirements.md#2-functional-requirements` | A heading with that anchor | `## 2. Functional requirements` (requirements.md 45) | PASS |
++| 12 | — | AC1 · link | README 49: `docs/requirements.md#sell-must-1` | A heading with that anchor | `### Sell (MUST-1)` (53) | PASS |
++| 13 | — | AC1 · link | README 56: `docs/requirements.md#cancel-should-1` | A heading with that anchor | `### Cancel (SHOULD-1)` (72) | PASS |
++| 14 | — | AC1 · link | README 61: `docs/requirements.md#renew-should-2` | A heading with that anchor | `### Renew (SHOULD-2)` (86) | PASS |
++| 15 | — | AC1 · link | README 64: `docs/requirements.md#could-haves-all-in-scope` | A heading with that anchor | `### Could-haves (all in scope)` (97) | PASS |
++| 16 | — | AC1 · link | README 75: `docs/design.md#security-scope` | A heading with that anchor | `## Security scope` (design.md 183) | PASS |
++| 17 | — | AC1 · link | README 81, 90: `infrastructure/README.md` | The file exists | Exists | PASS |
++| 18 | — | AC1 · link | README 83: `docs/design.md#known-limits` | A heading with that anchor | `## Known limits` (208) | PASS |
++| 19 | — | AC1 · link | README 84: `docs/design.md#behaviours-of-the-renewal-and-input-handling` | A heading with that anchor | `## Behaviours of the renewal and input handling` (234) | PASS |
++| 20 | — | AC1 · link | README 88: `docs/design.md` | The file exists | Exists | PASS |
++
++### C. Each README assumption says what its requirements row says (AC1)
++
++One row per bullet in README "Assumptions" (lines 46-71). The requirements citation is to `docs/requirements.md`
++at the line.
++
++| # | Rule | Check | Steps / input | Expected | Actual | Pass/Fail |
++|---|---|---|---|---|---|---|
++| 21 | — | AC1 · assumption | README 46-47 (today is Europe/London, injected clock) vs requirements 51 | Same meaning | Requirements 51: "today in Europe/London", from the injected `TimeProvider`, passed to the domain as a `DateOnly`. Same | PASS |
++| 22 | — | AC1 · assumption | README 48-49 (client chooses the reference; trimmed, upper-cased; duplicate `409`, SELL-1) vs 57 | Same meaning | SELL-1: client supplies it, trimmed and upper-cased, `abc-1` = `ABC-1`, duplicate 409. Same. The README omits the pattern and its 400, which sit in the "Errors" bullet's "400 for shape" | PASS |
++| 23 | — | AC1 · assumption | README 50 (SELL-2: today to today + 60 inclusive, no backdating) vs 58 | Same meaning | SELL-2: "between today and today + 60, inclusive. No backdating". Same | PASS |
++| 24 | — | AC1 · assumption | README 51-52 (SELL-3: start + 1 year − 1 day; 29 Feb start ends 28 Feb) vs 59 | Same meaning | SELL-3: "start + 1 year − 1 day … A 29 Feb start ends on 28 Feb". Same | PASS |
++| 25 | — | AC1 · assumption | README 53 (SELL-5: 16 or older on the start date) vs 61 | Same meaning | SELL-5: "16 or older on the start date (a 16th birthday on the start date passes)". Same | PASS |
++| 26 | — | AC1 · assumption | README 54 (amount supplied by the client, above zero, SELL-7, RENEW-5; pricing out of scope) vs 63, 94, 119 | Same meaning | SELL-7 "greater than 0", RENEW-5 "client supplies … greater than 0", 119 "Out of scope: … pricing". Same | PASS |
++| 27 | — | AC1 · assumption | README 55-56 (CANCEL-1b cooling-off to start + 14 inclusive; CANCEL-1c pro-rata over 365 or 366 days, cancellation day used) vs 77-78 | Same meaning | CANCEL-1b "start + 14 days, inclusive"; CANCEL-1c "actual days in the term (365 or 366). The cancellation day counts as used". Same | PASS |
++| 28 | — | AC1 · assumption | README 57 (CANCEL-6: 2 dp, away from zero, one place) vs 83 | Same meaning | CANCEL-6: "2dp, `MidpointRounding.AwayFromZero`, applied in one place". Same | PASS |
++| 29 | — | AC1 · assumption | README 58-59 (date optional, defaults to today, no past dates CANCEL-3; on or before end of cover CANCEL-7; twice is `409` CANCEL-4) vs 80, 84, 81 | Same meaning | CANCEL-3 "Optional, defaults to today … No past dates (422)"; CANCEL-7 "on or before the latest term's end"; CANCEL-4 "409". Same ("end of cover" = the latest term's end) | PASS |
++| 30 | — | AC1 · assumption | README 60-61 (RENEW-4 adds a term from the day after the current end; window 30 days before the latest end to the end, inclusive, 31 days; example term ending 16 Oct 2027 → 16 Sep to 16 Oct 2027) vs 90, 93 | Same meaning; the example's arithmetic holds | RENEW-1/2 "end − 30 days to the end date, inclusive, measured from the latest term's end"; RENEW-4 "starting the day after the current end date, under the same reference". 16 Oct 2027 − 30 days = 16 Sep 2027 (30 days in September); 16 Sep to 16 Oct inclusive is 31 days. Same | PASS |
++| 31 | — | AC1 · assumption | README 62-63 (auto-renew off → unpaid term; a payment method with it → `422` RENEW-3b; cancelled → `409` RENEW-6) vs 92, 95 | Same meaning | RENEW-3b "created unpaid … sends a `paymentMethod` anyway gets 422"; RENEW-6 "409". Same | PASS |
++| 32 | — | AC1 · assumption | README 64-65 (COULD-2: a claim means a £0 refund; `POST /policies/{reference}/claims`) vs 102 | Same meaning | COULD-2: "A claim means a £0 refund … recorded with `POST /policies/{reference}/claims`". Same. The README says "a claim", the row says "the policy has a claim": see O3 for the same scope point in design.md | PASS |
++| 33 | — | AC1 · assumption | README 66 (no £0 Refund record; response still lists every term with `refundAmount` 0.00) vs 108 | Same meaning | Requirements 108: "still lists every term, with `refundAmount` 0.00 and `ruleApplied` `COULD-2` or `UNPAID-TERM`". The README drops the `ruleApplied` qualifier, so "every term with 0.00" can be read as all terms at 0.00. This is the carried A4 R4 (O4), recorded as an observation | PASS |
++| 34 | — | AC1 · assumption | README 67 (status derived from today, never stored) vs 70 | Same meaning | Status row: "Derived from today, never stored: Pending, Active, Expired, or Cancelled". Same | PASS |
++| 35 | — | AC1 · assumption | README 68-70 (400 shape, 404 unknown reference, 409 conflicts, 422 list; a 422 lists every broken rule; unknown JSON fields and query parameters are 400) vs 122-124 | Same meaning, the same twelve 422 rules | Requirements 122 lists the same twelve 422 rules in the same order (SELL-2, SELL-4, SELL-5, SELL-7, RENEW-1/2, RENEW-3b, RENEW-5, CANCEL-3, CANCEL-7, COULD-2a, COULD-2b, COULD-3), 409 for state conflicts, 404 for GET-1; 123 "A 422 lists every broken rule"; 124 unknown JSON field or query parameter → 400. Same | PASS |
++| 36 | — | AC1 · assumption | README 71 (no authentication; `Location` on renewals and claims points at the policy) vs 119 | Same meaning | 119 "Out of scope: authentication". Same. The `Location` half has no requirements row: it is the API-contract decision stated at `docs/design.md` 155-159 ("`Location: /policies/{reference}`: the policy, not a sub-resource"), checklist B3. Same meaning there (note 4) | PASS |
++
++### D. `docs/readme-checklist.md`: every item ticked, every link resolves (AC2)
++
++Every row has `☑` in Done. Links in this file are relative to `docs/`; the resolved path is given.
++
++| # | Rule | Check | Steps / input | Expected | Actual | Pass/Fail |
++|---|---|---|---|---|---|---|
++| 37 | — | AC2 · A1 branching | checklist 19 → `docs/design.md#branching-and-merging` | ☑; the anchor resolves | ☑; `## Branching and merging` (design.md 124) | PASS |
++| 38 | — | AC2 · A2 SQLite gap | 20 → `docs/design.md#what-sqlite-cannot-prove` | ☑; resolves | ☑; `### What SQLite cannot prove` (105) | PASS |
++| 39 | — | AC2 · A3 prod approval | 21 → `infrastructure/README.md#prod-approval` | ☑; resolves | ☑; `## Prod approval` (infrastructure/README.md 86) | PASS |
++| 40 | — | AC2 · A4 one-time setup | 22 → `infrastructure/README.md#one-time-setup-none-of-it-done` | ☑; resolves | ☑; `## One-time setup (none of it done)` (96) | PASS |
++| 41 | — | AC2 · A5 "never connected, never run" | 23 → `infrastructure/README.md` | ☑; the file holds the verbatim statement | ☑; the statement is the opening quote block, lines 3-7, starting "**Never connected, never run.**" | PASS |
++| 42 | — | AC2 · A6 schema-check claim | 24 → `infrastructure/README.md#schema-check` | ☑; resolves | ☑; `## Schema check` (72); the claim is at 74-75. See O2 (A4 R2) | PASS |
++| 43 | — | AC2 · A7 status | 25 → `infrastructure/README.md#status` | ☑; resolves | ☑; `## Status` (12); the sentence is at 14 | PASS |
++| 44 | — | AC2 · A8 shape | 26 → `infrastructure/README.md#shape` | ☑; resolves | ☑; `## Shape` (17) | PASS |
++| 45 | — | AC2 · A9 no secrets | 27 → `infrastructure/README.md#no-secrets` | ☑; resolves | ☑; `## No secrets` (33) | PASS |
++| 46 | — | AC2 · A10 networking | 28 → `infrastructure/README.md#networking` | ☑; resolves | ☑; `## Networking` (42) | PASS |
++| 47 | — | AC2 · A11 runtime | 29 → `infrastructure/README.md#runtime` | ☑; resolves | ☑; `## Runtime` (53); `DOTNETCORE\|10.0` "inferred from the documented pattern and a Nov 2025 Q&A" at 55 | PASS |
++| 48 | — | AC2 · A12 if F5 cut | 30 → `infrastructure/README.md` | ☑; F5's items say "cut" only if F5 was cut | ☑; the row says "F5 was not cut, so this item does not apply". F5 is `status: done` in the DAG (build.dag.yaml 315), so no A3-A11 row is marked "cut" | PASS |
++| 49 | — | AC2 · B1 security scope | 36 → `docs/design.md#security-scope` | ☑; resolves | ☑; `## Security scope` (183) | PASS |
++| 50 | — | AC2 · B2 authentication | 37 → `docs/design.md#authentication` | ☑; resolves | ☑; `### Authentication` (150) | PASS |
++| 51 | — | AC2 · B3 `Location` | 38 → `docs/design.md#location-on-renewals-and-claims` | ☑; resolves | ☑; ``### `Location` on renewals and claims`` (155) | PASS |
++| 52 | — | AC2 · B4 versioning | 39 → `docs/design.md#no-api-versioning` | ☑; resolves | ☑; `### No API versioning` (161) | PASS |
++| 53 | — | AC2 · B5 idempotency | 40 → `docs/design.md#idempotency` | ☑; resolves | ☑; `### Idempotency` (165) | PASS |
++| 54 | — | AC2 · B6 no £0 refunds | 41 → `docs/design.md#no-refunds-of-zero` | ☑; resolves | ☑; `### No refunds of zero` (171). See O3 (A4 R3) | PASS |
++
++Totals: 18 item rows (A1-A12, B1-B6), 18 ticked, 18 links, 0 broken. Section C of the checklist lists the trail
++and node READMEs as not for the project README, so they carry no tick.
++
++### E. Read-throughs and scope
++
++| # | Rule | Check | Steps / input | Expected | Actual | Pass/Fail |
++|---|---|---|---|---|---|---|
++| 55 | — | AC1 · README is short | `wc -l README.md`; read it | A short page: what it is, how to run it, assumptions, with detail linked out | 92 lines. Sections: intro (3-7), How to run it (9-39), Assumptions (41-71), Known limits (73-84), More detail (86-92). Reference material is linked to `docs/design.md` and `infrastructure/README.md` | PASS |
++| 56 | — | AC1 · no internal ids or author notes | `grep -nE '\b(F0a\|F0b\|F1b?\|F[2-7]\|inv-[0-9]+\|t[0-9]{1,2}\|R[0-9]\|I[0-9]\|O[0-9]\|TODO\|FIXME\|XXX\|TBD\|attempt\|finding\|verdict\|orchestrator\|subagent\|tester\|builder\|reviewer\|\.claude\|claims\.json\|NOTE)\b' README.md`, then read it | No match; no note addressed to the author or the agents | No match. Read through: no plan, node, task, finding or verdict ids, no agent names, no local paths or emails. The only `http://` strings are the `localhost:5080` URLs | PASS |
++| 57 | — | regression · F6 touches no app code | `git merge-base HEAD main`, then `git diff --stat <that sha> HEAD -- src tests` | The diff prints nothing | Merge base `275fc84`; the diff printed nothing. The branch's diff is 9 files, all docs: `README.md`, `docs/design.md`, `infrastructure/README.md`, `docs/readme-checklist.md`, `build.dag.yaml`, `inv-003.plan.md`, one context file and the F5 trail tail (`activity.jsonl`, `loop.jsonl`) | PASS |
++
++## Exploratory notes / defects
++
++### Run, 2026-10-19 (tester agent, t4, at c841ae400af3e55cdec6301dbc9eb809ffc00f7c)
++
++**57 of 57 step rows PASS, 0 FAIL.** No defect raised. One precondition was not met (note 1).
++
++1. **The SQLite file was not deleted, before or after.** The brief asked for
++   `src/Uinsure.Policies.Api/policies.development.db*` to be deleted before step 2 and after step 9. The harness
++   guard denies a tester any `src/` change made through Bash (G2), and these are binary files, so I could not
++   delete them through Edit or Write either. I did not work around the guard. So step 2 started on an existing
++   database: EnsureCreated found the tables and created nothing. Every step still passed, but the README's
++   first-run path (schema created at start-up on an empty file) was **not** exercised by this run. Because step 9
++   killed the process, the `-wal` file was left at 3,984,072 bytes. The files are git-ignored and untracked, and
++   `git status` shows only `docs/trace/build/F6/`. **To do before sign-off:** delete the three files, run steps 2-4
++   again, and check that `/health/ready` is `Healthy` on the new file.
++2. **Stopping the API.** The README says how to start the API, but not how to stop it. Ctrl+C in its terminal is
++   the usual way. I had no interactive console, so I used `taskkill /T /F` on `Uinsure.Policies.Api.exe`. A forced
++   kill skips the SQLite checkpoint, which is why the `-wal` file stayed large (note 1). Ctrl+C would close it
++   cleanly.
++3. **"109 requests" is the item count, not the CLI's request count.** README line 34 says 109 requests, which is the
++   collection's item count (and the CLI's 109 test-scripts). The CLI summary prints `requests 253`, because items
++   also send their own setup calls and read-backs. An assessor who compares the two numbers may think one is wrong.
++4. **Order.** Steps 1-9 ran in README order, with the tests (step 7) and Postman (step 8) against the running API.
++   Then steps 10-57. Commands ran in Git Bash. The per-project counts in step 7 came from running each test
++   project's executable alone after the `dotnet test` run. Step 36's `Location` half and step 30's 31-day example
++   are not requirements rows, so I checked them against `docs/design.md` and by calendar arithmetic.
++5. **Not run.** I did not open the Scalar page in a browser (step 6 checks the HTTP answer only). I did not run the
++   `https` profile.
++
++Observations for David (not step rows, not raised as findings). O1-O4 are the four P2s the A4 reviewer carried
++(`docs/trace/build/F6/verdicts/A4-reviewer.json`, R1-R4). The A4 verdict is PASS, and none of them blocks a step
++above.
++
++- **O1 (A4 R1). An Azure DevOps claim with no source in the repo.** `infrastructure/README.md` 107, setup step 5,
++  says the environments "aren't auto-created from YAML". Nothing in the repo proves it, and the reviewer recalls
++  that a YAML deployment job naming a missing environment can create it. Following step 5 works either way. Only
++  the stated reason is at risk. Suggested fix: drop the clause or mark it unverified. This is spec wording, so it
++  may need your ruling.
++- **O2 (A4 R2). The schema-check sentence is contradicted two lines later.** `infrastructure/README.md` 74-75 says
++  task inputs, service connections and environments "are not checked". Lines 77-79 and 83 say the checker asserts
++  the AzureCLI@2 inputs, the `azureSubscription` form and the environment name `policies-<env>`. 77-79 adds "It
++  does not validate those values against Azure DevOps", so a careful reader gets there, but 74-75 reads as false
++  on its own. That sentence is the A6 wording the checklist requires word for word (step 42). Suggested fix: say
++  "not checked against Azure DevOps", or rule on the verbatim spec text.
++- **O3 (A4 R3). design.md reads COULD-2 as per term.** `docs/design.md` 173: "A term with a claim (COULD-2) …
++  gets no Refund record". The code applies COULD-2 to every paid term of a policy that has any claim, including a
++  future renewal term: `HasClaims` is policy-level, and requirements 102 says "No refund if the policy has a
++  claim". Suggested fix: "every paid term of a policy with a claim (COULD-2)".
++- **O4 (A4 R4). "every term with `refundAmount` 0.00" in the README.** `README.md` 66 can be read as every term
++  being 0.00. Requirements 108 qualifies it with `ruleApplied` `COULD-2` or `UNPAID-TERM`, and design.md 174 has
++  the right scope. Step 33 records it. Suggested fix: "still lists each such term, with `refundAmount` 0.00".
++- **O5. One unwrapped line.** `README.md` 61 is 239 characters, where the rest of the file wraps at about 115. It
++  renders fine on GitHub; it only shows in a plain-text read.
++
++## Sign-off
++
++| | |
++|---|---|
++| Tester | |
++| Date | |
++| Commit signed off | |
++| `dotnet test` result | __ passed / __ failed / __ skipped |
++| Postman CLI result | __ requests / __ assertions / __ failed |
++| SQLite file deleted and steps 2-4 re-run (note 1) | ☐ |
++| Steps passed | __ of 57 |
++| Defects raised (finding ids) | |
++| Verdict | ☐ Reject (findings above)  ☐ Accept F6 |
++| Signature | |
+diff --git a/docs/readme-checklist.md b/docs/readme-checklist.md
+index acb3883..d1367d7 100644
+--- a/docs/readme-checklist.md
++++ b/docs/readme-checklist.md
+@@ -1,47 +1,50 @@
+ # README checklist
+ 
+-Extracted in F0a (t17) by the main session, from every place a spec says the project README must state
+-something. Agents never read specs, so F6's builder works from this list. **F6 ticks each item and links
+-the README section that satisfies it.** An item marked *if cut* applies only when that node or step is cut.
+-
+-How it was extracted: every `README` mention in `.claude/specs/*.spec.md`, then the ones that bind the
+-**project** README. Node and trail READMEs (`docs/trace/…`) are generated, not written, and are listed in
+-section C. Each source is cited as `spec · section`, because some obligations sit in an accepted Decision
+-or Recommendation rather than in the Contract text.
++Extracted in F0a (task t17 in `docs/plans/active/build.dag.yaml`) from every place a spec Contract says the
++project README must state something. Subagents never read the specs (requirements section 3), so the README
++builder works from this list. **F6 ticks each item and links the file and section that satisfies it.** At F6 the
++README was shortened; the detail moved to `docs/design.md` and `infrastructure/README.md`, and every link below
++points there. The links are relative to `docs/`, where this file lives; the visible text gives the repo path. An
++item marked *if cut* applies only when that node or step is cut.
++
++How it was extracted: from the spec Contracts (section A) and from accepted Decisions and Recommendations that
++bind the **project** README (section B). Node READMEs (`docs/trace/…`) are generated, not written, the F0a trail README was written by hand, and
++both are listed in section C. Each source is cited as `spec · section`, because some obligations sit in an accepted
++Decision or Recommendation rather than in the Contract text.
+ 
+ ## A. From spec Contracts
+ 
+-| # | The README states… | Source | Done | README section |
++| # | The README states… | Source | Done | Where it is now |
+ |---|---|---|---|---|
+-| A1 | `main` is the integration branch: no `develop` branch and no integration agent. Feature and bug branches are cut from `origin/main`, rebased onto it before the PR, and merged by David with a **merge commit**, so every TDD commit and its SHA survives on `main`, and `git log --first-parent main` shows one line per feature. | orchestration · Contract (Branching) | ☐ | |
+-| A2 | SQLite can't prove SQL Server-specific behaviour (unique-violation codes, migrations). The pre-push idempotent migration script proves the migrations generate; the rest is a known gap. | testing · Contract C5 | ☐ | |
+-| A3 | The prod Approval check (environment `uinsurepolicies-prod`, approver: release manager, timeout 72 h) lives in the Azure DevOps UI, not the YAML, so the README is its only evidence. That's a platform limit, not a gap. | deployment · Contract | ☐ | |
+-| A4 | The one-time setup list, none of it done: (1) an ADO project and a pipeline from `infrastructure/pipelines/azure-pipelines.yml`; (2) three ARM service connections using workload identity federation, `sc-uinsurepolicies-dev\|test\|prod`, each authorised for this pipeline only; (3) each connection's identity given rights at subscription scope to its own subscription (Contributor, or a narrower custom role), because `main.bicep` creates the RG; (4) one Entra group per environment as the SQL admin (that environment's deploy identity plus a break-glass human), with its object ID and name in `<env>.bicepparam`; (5) the environments `uinsurepolicies-dev`, `-test` and `-prod`, which aren't auto-created from YAML, with the Approval check on prod. | deployment · Contract (One-time setup) | ☐ | |
+-| A5 | **Verbatim:** "**Never connected, never run.** This pipeline has never been connected to an Azure DevOps organisation or run. No service connections, environments or approvals exist. The Bicep is linted and built locally, and the YAML is schema-checked locally. Neither what-if nor a real pipeline compile was run, because both need Azure or Azure DevOps. The repo's real gate is its local git hooks (requirements §3, "No CI"). This pipeline shows how CI/CD would look at Uinsure." | deployment · Contract (README statement) | ☐ | |
+-| A6 | *If the schema check is cut:* the YAML is "unvalidated". *Otherwise* the claim is exactly: "the YAML is valid against the schema; template expansion, `${{ }}` expressions, task inputs, service connections and environments are not checked". | deployment · Contract (schema check, cut order) | ☐ | |
+-| A7 | **Status:** "The Bicep is linted and built locally and never deployed. what-if was not run, because it needs a signed-in subscription." | infrastructure · Contract, paragraph 1 | ☐ | |
+-| A8 | **Shape:** subscription scope, 6 resources per environment, 3 modules, 3 `.bicepparam` files, plus the sizing table. | infrastructure · Contract, paragraph 2 | ☐ | |
+-| A9 | **No secrets:** a system-assigned managed identity connects to Entra-only SQL, so there are no passwords. **Key Vault was considered and rejected**: there's nothing to store. It arrives with the first real secret, such as a payment API key. | infrastructure · Contract, paragraph 3 | ☐ | |
+-| A10 | **Next step, networking:** a private endpoint for SQL, VNet integration for the app, public network access off, and a self-hosted or Managed DevOps Pool agent in the VNet. (Today: a public endpoint plus the Azure-services rule.) | infrastructure · Contract, paragraph 4; Decision | ☐ | |
+-| A11 | **.NET 10 runtime:** "`DOTNETCORE\|10.0` is inferred from the documented pattern and a Nov 2025 Q&A. It wasn't confirmed with `az webapp list-runtimes`." | infrastructure · Contract, paragraph 5 | ☐ | |
+-| A12 | *If F5 is cut:* the README says so and keeps A9 (no secrets, Key Vault rejected) as the design intent. A3–A11 are then marked "cut". | infrastructure · Contract (cut order) | ☐ | |
++| A1 | `main` is the integration branch: no `develop` branch and no integration agent. Feature and bug branches are cut from `origin/main`, rebased onto it before the PR, and merged by David with a **merge commit**, so every TDD commit and its SHA survives on `main`, and `git log --first-parent main` shows one line per feature. (wording corrected at F6 to match what `docs/design.md` states and the repo shows: branches are rebased onto `origin/main` before the PR, not "cut from" it; the commits stay on `main` as rebased, so their SHAs are the rebased ones; and `--first-parent` shows one line per merged pull request, not one per feature) | orchestration · Contract (Branching) | ☑ | [docs/design.md#branching-and-merging](design.md#branching-and-merging) |
++| A2 | SQLite can't prove SQL Server-specific behaviour (unique-violation codes, migrations). The pre-push idempotent migration script proves the migrations generate; the rest is a known gap. | testing · Contract C5 | ☑ | [docs/design.md#what-sqlite-cannot-prove](design.md#what-sqlite-cannot-prove) |
++| A3 | The prod Approval check (environment `policies-prod`, approver: release manager, timeout 72 h) lives in the Azure DevOps UI, not the YAML, so the README is its only evidence. That's a platform limit, not a gap. (wording corrected at F6 to match F5 as built: the environment is `policies-prod`, not `uinsurepolicies-prod`) | deployment · Contract | ☑ | [infrastructure/README.md#prod-approval](../infrastructure/README.md#prod-approval) |
++| A4 | The one-time setup list, none of it done: (1) an ADO project and a pipeline from `infrastructure/pipelines/azure-pipelines.yml`; (2) three ARM service connections using workload identity federation, `sc-policies-dev\|test\|prod`, each authorised for this pipeline only; (3) each connection's identity given rights at subscription scope to its own subscription (Contributor, or a narrower custom role), because `main.bicep` creates the RG; (4) one Entra group per environment as the SQL admin (that environment's deploy identity plus a break-glass human), with its object ID in the variable group `policies-<env>` (the `.bicepparam` files hold a placeholder); (5) the environments `policies-dev`, `policies-test` and `policies-prod`, with the Approval check on prod. (wording corrected at F6 to match F5 as built: connection names `sc-policies-*`, environment names `policies-*`, the group's object ID in the variable group; the README also lists a sixth step, a main-only branch control check, which the spec did not ask for; the spec clause "which aren't auto-created from YAML" was dropped, because it is Azure DevOps behaviour that no repo file proves and the pipeline never ran) | deployment · Contract (One-time setup) | ☑ | [infrastructure/README.md#one-time-setup-none-of-it-done](../infrastructure/README.md#one-time-setup-none-of-it-done) |
++| A5 | **Verbatim:** "**Never connected, never run.** This pipeline has never been connected to an Azure DevOps organisation or run. No service connections, environments or approvals exist. The Bicep is linted and built locally, and the YAML is schema-checked locally. Neither what-if nor a real pipeline compile was run, because both need Azure or Azure DevOps. The repo's real gate is its local git hooks (requirements §3, "No CI"). This pipeline shows how CI/CD would look at Uinsure." | deployment · Contract (README statement) | ☑ | [infrastructure/README.md](../infrastructure/README.md) |
++| A6 | *If the schema check is cut:* the YAML is "unvalidated". *Otherwise* the claim is exactly: "the YAML is valid against the schema; template expansion, `${{ }}` expressions, task inputs, service connections and environments are not checked against Azure DevOps" (wording corrected at F6: "against Azure DevOps" added, because check-pipeline.py asserts the AzureCLI@2 input keys, that every azureSubscription is a template parameter, and the environment name, but never contacts Azure DevOps). | deployment · Contract (schema check, cut order) | ☑ | [infrastructure/README.md#schema-check](../infrastructure/README.md#schema-check) (the check was not cut) |
++| A7 | **Status:** "The Bicep is linted and built locally and never deployed. what-if was not run, because it needs a signed-in subscription." | infrastructure · Contract, paragraph 1 | ☑ | [infrastructure/README.md#status](../infrastructure/README.md#status) |
++| A8 | **Shape:** subscription scope, the resource group plus 16 resources per environment, 4 modules, 3 `.bicepparam` files, plus the sizing table. (wording corrected at F6 to match F5 as built: it said 6 resources and 3 modules) | infrastructure · Contract, paragraph 2 | ☑ | [infrastructure/README.md#shape](../infrastructure/README.md#shape) |
++| A9 | **No secrets:** a user-assigned managed identity connects to Entra-only SQL, so there are no passwords. **Key Vault was considered and rejected**: there's nothing to store. It arrives with the first real secret, such as a payment API key. (wording corrected at F6 to match F5 as built: the identity is user-assigned, not system-assigned) | infrastructure · Contract, paragraph 3 | ☑ | [infrastructure/README.md#no-secrets](../infrastructure/README.md#no-secrets) |
++| A10 | **Networking:** a private endpoint for SQL, VNet integration for the app, no public SQL endpoint, and self-hosted deployment agents in a network that reaches the VNet. This is built, not future work. (wording corrected at F6 to match F5 as built: it said "next step" and described a public endpoint plus the Azure-services rule as today's state) | infrastructure · Contract, paragraph 4; Decision | ☑ | [infrastructure/README.md#networking](../infrastructure/README.md#networking) |
++| A11 | **.NET 10 runtime:** "`DOTNETCORE\|10.0` is inferred from the documented pattern and a Nov 2025 Q&A. It wasn't confirmed with `az webapp list-runtimes`." | infrastructure · Contract, paragraph 5 | ☑ | [infrastructure/README.md#runtime](../infrastructure/README.md#runtime) |
++| A12 | *If F5 is cut:* the README says so and keeps A9 (no secrets, Key Vault rejected) as the design intent. A3–A11 are then marked "cut". | infrastructure · Contract (cut order) | ☑ | [infrastructure/README.md](../infrastructure/README.md) (F5 was not cut, so this item does not apply) |
+ 
+ ## B. From accepted Decisions and Recommendations
+ 
+-| # | The README states… | Source | Done | README section |
++| # | The README states… | Source | Done | Where it is now |
+ |---|---|---|---|---|
+-| B1 | Security scope, OWASP API Top 10 2023. These are stated as out of scope: **API1** (no auth or tenancy; the reference is the only key, and references are client-chosen and guessable), **API2** (authentication is out of scope), **API5** (no roles; `POST /claims` would be an admin function in real life), **API7** (no outbound URL fetching), **API10** (no upstream APIs; pricing is client-supplied). | agents-skills · Research R6 (adopted by the owasp-api-security skill) | ☐ | |
+-| B2 | **Authentication is out of scope** by requirement. `UseAuthorization()` stays in the pipeline at its usual position, ready for it. | architecture · Recommendation (Auth); Contract C6 | ☐ | |
+-| B3 | **`Location` on renewals and claims** is `/policies/{reference}` (the policy), not a sub-resource. That's a deliberate deviation. | api-contract · Decision D4 (O5b) | ☐ | |
+-| B4 | **No API versioning.** A breaking change would mean `/v2` or an `api-version` parameter (`Asp.Versioning`). | api-contract · Decision D10 (O10a) | ☐ | |
+-| B5 | **Idempotency:** `POST /policies` is safe to retry, because a repeated reference gets 409 (SELL-1). **Claims are not idempotent**, and there's no `Idempotency-Key`. | api-contract · Recommendation 6 (accepted with the D-list) | ☐ | |
+-| B6 | **No £0 refunds:** a cancellation creates a Refund only for an amount above £0. A term with a claim (COULD-2) or an unpaid renewal term (RENEW-3b) gets no Refund record, but its calculation is still returned, with `ruleApplied` `COULD-2` or `UNPAID-TERM` and 0.00. | architecture · Open question 1 (resolved); api-contract · Contract | ☐ | |
++| B1 | Security scope, OWASP API Top 10 2023. These are stated as out of scope: **API1** (no auth or tenancy; the reference is the only key, and references are client-chosen and guessable), **API2** (authentication is out of scope), **API5** (no roles; `POST /claims` would be an admin function in real life), **API7** (no outbound URL fetching), **API10** (no upstream APIs; pricing is client-supplied). | agents-skills · Research R6 (adopted by the owasp-api-security skill) | ☑ | [docs/design.md#security-scope](design.md#security-scope) |
++| B2 | **Authentication is out of scope** by requirement. `UseAuthorization()` stays in the pipeline at its usual position, ready for it. | architecture · Recommendation (Auth); Contract C6 | ☑ | [docs/design.md#authentication](design.md#authentication) |
++| B3 | **`Location` on renewals and claims** is `/policies/{reference}` (the policy), not a sub-resource. That's a deliberate deviation. | api-contract · Decision D4 (O5b) | ☑ | [docs/design.md#location-on-renewals-and-claims](design.md#location-on-renewals-and-claims) |
++| B4 | **No API versioning.** A breaking change would mean `/v2` or an `api-version` parameter (`Asp.Versioning`). | api-contract · Decision D10 (O10a) | ☑ | [docs/design.md#no-api-versioning](design.md#no-api-versioning) |
++| B5 | **Idempotency:** `POST /policies` is safe to retry, because a repeated reference gets 409 (SELL-1). **Claims are not idempotent**, and there's no `Idempotency-Key`. | api-contract · Recommendation 6 (accepted with the D-list) | ☑ | [docs/design.md#idempotency](design.md#idempotency) |
++| B6 | **No £0 refunds:** a cancellation creates a Refund only for an amount above £0. If the policy has a claim (COULD-2), none of its paid terms gets a Refund record; an unpaid renewal term (RENEW-3b) gets none either. Their calculations are still returned, with `ruleApplied` `COULD-2` or `UNPAID-TERM` and 0.00. (wording corrected at F6: COULD-2 withholds every paid term of a policy with a claim, because Policy.cs passes the policy's HasClaims for each term) | architecture · Open question 1 (resolved); api-contract · Contract | ☑ | [docs/design.md#no-refunds-of-zero](design.md#no-refunds-of-zero) |
+ 
+ ## C. Not for the project README
+ 
+ These are generated or trail READMEs, so they aren't ticked here:
+ - **F0a trail README** (`docs/trace/build/F0a/README.md`, task t19): states "hooks not yet live: witnessed by
+-  git and trailers only", and notes every F0a probe result (traceability · Contract, F0a exception;
++  git and trailers only", and notes the F0a probe results (traceability · Contract, F0a exception;
+   guardrails · Contract, wiring self-test).
+ - **Node READMEs** (`docs/trace/<plan>/<node>/README.md`): generated by `render-trace.mjs`, with
+   `TRAIL INCOMPLETE: <reasons>` first when the check fails (traceability · Contract).
+diff --git a/docs/trace/build/F5/activity.jsonl b/docs/trace/build/F5/activity.jsonl
+index 1209535..a4d34bc 100644
+--- a/docs/trace/build/F5/activity.jsonl
++++ b/docs/trace/build/F5/activity.jsonl
+@@ -684,3 +684,8 @@
+ {"v":1,"ts":"2026-10-19T08:26:33Z","plan":"build","node":"F5","attempt":3,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01UCQrim3QvD9Yy8RJx1ivX3","file":null,"command":"git commit -q -F \"~/AppData/Local/Temp/claude/C--Users-<user>-Documents-Jobs-uInsure-Uinsure-Policies/3242ebda-c19f-4363-9a12-55d3f89bb9c9/scratchpad/f5-msg-done.txt\"","commit":{"sha":"f2e774226481916ac76b7393d08383aaf8f7cba7","subject":"plan(build/F5): hitl → done","tdd":null}}
+ {"v":1,"ts":"2026-10-19T08:26:37Z","plan":"build","node":"F5","attempt":3,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01GgTSj6vCgCLnYM6wo4iKwr","file":null,"command":"node .claude/scripts/render-trace.mjs render build F5 && node .claude/scripts/render-trace.mjs check build F5; git log --oneline -3"}
+ {"v":1,"ts":"2026-10-19T08:26:47Z","plan":"build","node":"F5","attempt":3,"agent":"git","agent_id":"a38af1a2d862260e8","tool":"Bash","tool_use_id":"toolu_01FJ2NWWv4LGSryN3F5PhXFh","file":null,"command":"cd \".\" && git status --porcelain && git branch --show-current && git log --oneline -3"}
++{"v":1,"ts":"2026-10-19T08:27:11Z","plan":"build","node":"F5","attempt":3,"agent":"git","agent_id":"a38af1a2d862260e8","tool":"Bash","tool_use_id":"toolu_01UqFcjjQ59D233o8aaCMhkH","file":null,"command":"cd \".\" && git add docs/trace/build/F5/ docs/trace/requirements-matrix.md && git commit -m \"chore(trace): F5 trail (sign-off)\" -m \"Final F5 trace trail after David's QA sign-off.\" -m \"Agent: git\nPlan: ","commit":{"sha":"6fb3fddd45f43f72a6ad88e92e97afa90e46da61","subject":"chore(trace): F5 trail (sign-off)","tdd":null}}
++{"v":1,"ts":"2026-10-19T08:28:13Z","plan":"build","node":"F5","attempt":3,"agent":"git","agent_id":"a38af1a2d862260e8","tool":"Bash","tool_use_id":"toolu_016ShScMG2spE2JeyRNZscXc","file":null,"command":"cd \".\" && git push -u origin feature/build/F5 && git rev-parse HEAD"}
++{"v":1,"ts":"2026-10-19T08:28:20Z","plan":"build","node":"F5","attempt":3,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_016wLaL8xrbWjCnyygdT1g96","file":null,"command":"gh pr view 34 --json headRefOid,isDraft,state --jq '.headRefOid[0:7]+\" draft=\"+(.isDraft|tostring)+\" \"+.state'"}
++{"v":1,"ts":"2026-10-19T08:36:38Z","plan":"build","node":"F5","attempt":3,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_01WTMSnPCUhWjbvob7W2CdLE","file":null,"command":"gh pr view 34 --json state,mergeCommit --jq '.state+\" \"+.mergeCommit.oid'; git status --short"}
++{"v":1,"ts":"2026-10-19T08:36:46Z","plan":"build","node":"F5","attempt":3,"agent":"main","agent_id":null,"tool":"Bash","tool_use_id":"toolu_016yxRz8Wq2RVm1hZTAZTeDU","file":null,"command":"git checkout -- docs/trace/build/F5/activity.jsonl"}
+diff --git a/docs/trace/build/F5/loop.jsonl b/docs/trace/build/F5/loop.jsonl
+index c0756c0..04622fa 100644
+--- a/docs/trace/build/F5/loop.jsonl
++++ b/docs/trace/build/F5/loop.jsonl
+@@ -87,3 +87,4 @@
+ {"v":1,"ts":"2026-10-19T08:24:51Z","plan":"build","node":"F5","attempt":3,"source":"orchestrator","event":"pr.comment(rebase,6262934819)","head":"792507abe40e535bf4606f89d43e32b76b5f6698","detail":"PR #34 rebase comment"}
+ {"v":1,"ts":"2026-10-19T08:25:04Z","plan":"build","node":"F5","attempt":3,"source":"orchestrator","event":"gate.postman","cmd":"none: F5 changes no API (infrastructure/** only); Postman not applicable","exit":0,"expect":"skipped","ok":true,"head":"f418e3aa00a691f06edff412a5680e5fb5fa85fc","detail":"skipped: an evidence node with no src/ or tests/ changes and no Postman folder; the QA script's executable steps (bicep, checker, dotnet test 637/637) stand in"}
+ {"v":1,"ts":"2026-10-19T08:26:27Z","plan":"build","node":"F5","attempt":3,"source":"orchestrator","event":"signoff(acf22fa70d98445db58942ce818ef2630aee7bdb)","head":"acf22fa70d98445db58942ce818ef2630aee7bdb","detail":"David signed docs/qa/build-F5.md: 33/33 PASS at a14af3f; verdict Accept F5"}
++{"v":1,"ts":"2026-10-19T08:37:07Z","plan":"build","node":"F5","attempt":3,"source":"orchestrator","event":"merged(275fc8437d7f036dddc6c88c35a04e8c67edea64)","head":"275fc8437d7f036dddc6c88c35a04e8c67edea64","detail":"David merged PR #34 in the GitHub UI (merge commit); gh pr view 34: MERGED"}
+diff --git a/infrastructure/README.md b/infrastructure/README.md
+new file mode 100644
+index 0000000..f30ce6f
+--- /dev/null
++++ b/infrastructure/README.md
+@@ -0,0 +1,178 @@
++# Infrastructure and deployment
++
++> **Never connected, never run.** This pipeline has never been connected to an Azure DevOps organisation or run.
++> No service connections, environments or approvals exist. The Bicep is linted and built locally, and the YAML
++> is schema-checked locally. Neither what-if nor a real pipeline compile was run, because both need Azure or
++> Azure DevOps. The repo's real gate is its local git hooks (requirements §3, "No CI"). This pipeline shows
++> how CI/CD would look at Uinsure.
++
++Everything is under `infrastructure/`. `az` is never run and nothing is deployed. Back to the
++[project README](../README.md).
++
++## Status
++
++The Bicep is linted and built locally and never deployed. what-if was not run, because it needs a
++signed-in subscription.
++
++## Shape
++
++- Bicep at subscription scope: `main.bicep` creates the resource group `rg-policies-<env>` and
++  calls four local modules (`monitoring`, `network`, `sql`, `appservice`).
++- Per environment that is the resource group plus 16 resources: a Log Analytics workspace and Application
++  Insights; a VNet and two NSGs; an Azure SQL server and database, a private endpoint and private DNS (zone,
++  VNet link, zone group); a user-assigned identity, an App Service plan (Linux), the web app and two
++  publishing-credential policies.
++- Three `.bicepparam` files: `dev`, `test` and `prod`. Region `uksouth`.
++
++| | App Service plan | SQL database |
++|---|---|---|
++| dev | B1 | Basic |
++| test | B1 | Basic |
++| prod | P1v3 | General Purpose, `GP_S_Gen5_1` |
++
++## No secrets
++
++The app signs in to Entra-only Azure SQL with a **user-assigned** managed identity (the connection string
++uses `Authentication=Active Directory Managed Identity`). The SQL server has no administrator login or
++password, so there are no passwords. **Key Vault was considered and rejected**: there is nothing to store.
++It arrives with the first real secret, such as a payment API key. Basic-auth publishing (`scm`, `ftp`) is
++disabled on the app. The Application Insights connection string reaches the app as the setting
++`APPLICATIONINSIGHTS_CONNECTION_STRING`.
++
++## Networking
++
++SQL has no public endpoint and no "Allow Azure services" rule. It is reached through a private endpoint in
++`snet-private-endpoints`, and the app uses VNet integration (`snet-app-integration`). An NSG on the endpoint
++subnet allows port 1433 only from the app subnet and the deployment agents' range, and denies the rest.
++Deployment agents must therefore be self-hosted, inside a network that reaches the VNet (see
++[Deployment prerequisites](#deployment-prerequisites-outside-the-repo)).
++
++Still to do: restrict outbound traffic from the integration subnet (an allow-list), which would be extra
++hardening and is not built.
++
++## Runtime
++
++`linuxFxVersion` is `DOTNETCORE|10.0`. That value is inferred from the documented pattern and a Nov 2025 Q&A.
++It wasn't confirmed with `az webapp list-runtimes`.
++
++## The pipeline
++
++`infrastructure/pipelines/azure-pipelines.yml` has a CI trigger on pushes to `main` and `pr: none`, so a push to
++another branch or a pull request does not start it. The YAML does not stop someone with queue rights from
++running it by hand against another branch (see the branch control step in [One-time setup](#one-time-setup-none-of-it-done)):
++
++1. **Build** (hosted agent): `dotnet build -warnaserror`, `dotnet test`, the idempotent migration script
++   (`dotnet-ef` 10.0.13), then a published app zip and the `infrastructure/` folder as one `drop` artifact.
++2. Then, for `dev`, `test` and `prod` in that order, from one `stage-template.yml`: a **`WhatIf_<env>`** stage
++   (hosted agent, no environment, so it runs unapproved), then **`Deploy_<env>`** (self-hosted pool
++   `policies-<env>-vnet`, the only stage on the environment `policies-<env>`). Deploy runs the infrastructure
++   deployment, applies the migration script with `sqlcmd`, creates the app's database user (by SID, with
++   `db_datareader` and `db_datawriter` only), deploys the zip, and smoke-tests `/health/ready` with `curl`.
++
++## Schema check
++
++The claim is exactly this: the YAML is valid against the schema; template expansion, `${{ }}` expressions,
++task inputs, service connections and environments are not checked against Azure DevOps.
++
++The checker does assert that each `AzureCLI@2` step of the deploying stage has the inputs `azureSubscription`,
++`scriptType`, `scriptLocation` and `inlineScript`, and that every `azureSubscription` is a template parameter. It
++does not validate those values against Azure DevOps.
++
++`python -I infrastructure/pipelines/check-pipeline.py` (needs PyYAML and jsonschema) validates both YAML files
++against `pipeline.schema.json` and asserts a set of structural rules the schema cannot express: the stage
++order, a what-if stage with no environment, the deploy environment name `policies-<env>`, the migration step,
++the smoke test, and the NSG rules. It exits 0 with "pipeline check passed" on this branch (run on 2026-10-19).
++
++## Prod approval
++
++The Approval check on the environment `policies-prod` (approver: release manager, timeout 72 h) lives in the
++Azure DevOps UI, not the YAML. This README is its only evidence. That is a platform limit, not a gap. The
++template comment records why the what-if has its own stage: Azure DevOps evaluates an environment's checks when a
++stage starts, so the approver sees the what-if before approving (`stage-template.yml`). That Azure DevOps
++behaviour was not observed here, because the pipeline never ran. The template comment also says the check must sit
++on the environment only, and that one put on the ARM service connection or on the `policies-<env>` variable group
++would pause the what-if stage first.
++
++## One-time setup (none of it done)
++
++1. An Azure DevOps project, and a pipeline from `infrastructure/pipelines/azure-pipelines.yml`.
++2. Three ARM service connections using workload identity federation, `sc-policies-dev`, `sc-policies-test`
++   and `sc-policies-prod`, each authorised for this pipeline only. Three more, `sc-policies-<env>-sql`, are for
++   the SQL steps (see below).
++3. Each ARM connection's identity gets rights at subscription scope on its own subscription (Contributor, or a
++   narrower custom role), because `main.bicep` creates the resource group.
++4. One Entra group per environment as the SQL admin (that environment's deploy identity plus a break-glass
++   human), named `sg-policies-sql-admins-<env>`. Its object ID goes in the variable group `policies-<env>` as
++   `sqlAdminGroupObjectId`. The `.bicepparam` files hold an all-zero placeholder.
++5. The environments `policies-dev`, `policies-test` and `policies-prod`, with the Approval check on prod.
++6. A branch control check on each environment `policies-<env>`, on the three agent pools and on the service
++   connections, allowing `refs/heads/main` only. Without it, nothing in the repo stops a manual run of another
++   branch from reaching the privileged agents and the connections.
++
++## Deployment prerequisites outside the repo
++
++None of this exists and none of it can be checked from the repo.
++
++- **Three self-hosted agent pools**, `policies-dev-vnet`, `policies-test-vnet`, `policies-prod-vnet`. Their
++  agents need `az`, `jq`, go-sqlcmd (`sqlcmd`) and `curl`. **The agent hosts are privileged**: they can reach
++  the private SQL endpoint and run with the service connections. The CI trigger is `main` only with
++  `pr: none`; nothing in the YAML limits a manual run to `main` (see setup step 6).
++- **Network peering and DNS.** The agents' network must be peered to (or be) `vnet-policies-<env>` and resolve
++  `privatelink.database.windows.net`. The private DNS zone is linked only to the environment's own VNet, so
++  the agents' network needs its own zone link or DNS forwarding. The peering can only be made after the first
++  infrastructure deployment creates the VNet.
++- **A narrow `agentAddressPrefix`.** Each `.bicepparam` holds the placeholder `10.30.0.0/24`. Replace it with
++  the real agent subnet before the first deployment. Never `0.0.0.0/0` or a `/8`. There is no CIDR validation
++  in the Bicep, so the narrowness rests on review. If the agents' real range is outside the placeholder, the NSG
++  rule blocks them: it does not open SQL.
++- **The SQL admin group** (item 4 above) and **ARM and SQL service connections**. The SQL connections
++  (`sc-policies-<env>-sql`) are separate from the ARM ones. Each one's principal is a database-scoped user with
++  `db_owner` on the `policies` database and is not in the server admin group. That is how the setup is meant
++  to be done; the repo cannot check it.
++- **A one-off database bootstrap per environment.** After the first infrastructure deployment, a member of the
++  admin group, connected to the `policies` database, runs
++  `CREATE USER [<SQL service connection principal name>] FROM EXTERNAL PROVIDER;` and
++  `ALTER ROLE db_owner ADD MEMBER [<SQL service connection principal name>];`.
++  **The template comment says the first run fails at the migrations step until this is done**
++  (`stage-template.yml`; never run).
++
++## Accepted risks and notes
++
++- **The unapproved what-if stage shares the deploy ARM connection.** `WhatIf_<env>` uses the same
++  subscription-scope ARM connection as the deployment. A separate lower-privilege what-if connection was
++  considered and rejected. It only runs `az deployment sub what-if`. The variable group it reads must stay
++  secret-free, because that stage has no approval before it.
++- **The ARM connection could rewrite the SQL admin.** The template records it as an accepted residual risk: the
++  ARM connection holds subscription-scope rights, so a leaked ARM token could still rewrite the SQL server's Entra
++  admin through ARM (`stage-template.yml`). A subscription-scope deployment needs those rights.
++  The pipeline's SQL steps use the separate SQL connection (`sqlServiceConnection`). The template states how it is
++  meant to be set up: a database-scoped `db_owner` user, not in the admin group. The repo cannot check how it is
++  set up.
++- **`httpsOnly` and forwarded headers: configured, not tested on App Service.** The web app sets
++  `httpsOnly: true`. What App Service does with plain HTTP at its front end has not been checked. The API honours
++  `X-Forwarded-For` and `X-Forwarded-Proto` only from private ranges (10.0.0.0/8, 172.16.0.0/12,
++  192.168.0.0/16), and the code does not use `ASPNETCORE_FORWARDEDHEADERS_ENABLED`. A plain-HTTP request that
++  sends `X-Forwarded-Proto: https` from an address outside those ranges gets the `400 /problems/https-required`
++  (tested from untrusted addresses, outside Development). Whether App Service Linux sets that environment variable
++  itself is unchecked. None of this has been tested on App Service.
++- **SQL connection policy is not set.** `sql.bicep` does not set it. The NSG on the endpoint subnet opens port
++  1433 only. Whether private-endpoint traffic needs any other port has not been checked.
++- **One VNet range for all environments.** Every `vnet-policies-<env>` is `10.20.0.0/16`. The pipeline uses one
++  agent pool per environment. A single shared agent network would have to peer with three VNets that have the
++  same address range. That has not been tried. The QA script `docs/qa/build-F5.md` (observation O4) says one agent
++  network can't be peered to more than one of them.
++
++## Known limits of the evidence
++
++The offline checker proves structure, not runtime. A green check means the files are shaped as described. It
++does not mean the pipeline would run. Three known gaps in the checker were left as they are:
++
++- **The NSG assertions do not prove "only".** They require at least one matching Allow rule
++  (`len(allows) >= 1`, `check-pipeline.py`). The Bicep itself has one allow rule, then deny-all (`network.bicep`),
++  which has to be read by eye.
++- **The "AzureCLI@2 inputs" check covers the deploying stage only.** The what-if stage's AzureCLI@2 step is not
++  checked for `scriptType`, `scriptLocation` or `inlineScript`.
++- **Two assertions overlap.** The checker asserts both the what-if stage's position in the template and the
++  deploy stage's `dependsOn` on it (`check-pipeline.py`).
++
++The reasoning for the stage layout is in `docs/plans/active/inv-002.plan.md`.

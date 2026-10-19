@@ -1,0 +1,2615 @@
+{
+  "node": "build/F6",
+  "round": "D1",
+  "commit": "9050d41",
+  "method": "Rebuilt from scratch at 46b175e (431 claims), then patched for steer D1 at 9050d41 (433 claims: the changed sentences re-quoted and re-anchored). 'sentence' quotes the doc text verbatim (runs of whitespace collapsed, markdown kept), so connectors such as so, because, only, all, every, never and except stay visible. 'source' is one or more anchors joined by ' ;; '. Anchor forms: 'path:line:snippet' (the snippet appears on that line of that file); 'E path' (the file exists); 'N regex|path|ext|count' (the number of lines matching the regex under path, for files of that extension, equals count; an absence claim has count 0); 'V path:from:to:text' (the lines, with their '> ' marker removed, equal the text); 'R text' (a measurement or command the builder ran on 2026-10-19, not re-checkable by script); 'X reason' (not a repo-checkable fact: a label, a framing sentence, a judgement or a citation of a spec section). Each source file was read on its own with grep -n or a numbered single-file read; no multi-file listing and no unnumbered slice was used. At 46b175e a builder script checked every P, E, N and V anchor and that every non-heading character of the four docs lies inside a claim sentence (431 claims, 0 failures, 0 uncovered). After the D1 patch the orchestrator re-checked independently that every sentence is verbatim in its doc and every P anchor holds on its line (433 claims, 1010 P anchors, 0 failures; gate.write and gate.links at 9050d41). Sentences whose only support was an untested code prediction were removed or rewritten to what is tested or measured (key casing of a client-sent query key, N-times rate limit across instances, every request getting the HTTPS 400, NullReferenceException on a missing payment, claims being recorded twice, App Service answering plain HTTP, SQL connection policy Default, Azure peering with overlapping ranges, 'which creates nothing', 'which Azure DevOps ignores').",
+  "limits": [
+    "Investigator and verdict prose is not used as a source anywhere in this table.",
+    "Rows quoted from the README checklist (docs/readme-checklist.md) state obligations taken from the specs in .claude/specs/, which the builder may not read. For those cells the source column of the checklist (a citation such as 'deployment · Contract') is marked X, and the claim is anchored to the repo text that satisfies the obligation, not to the spec.",
+    "Three statements are not provable from the repo and are marked X or anchored only to the checklist: 'inferred from the documented pattern and a Nov 2025 Q&A' (infrastructure/README.md Runtime), 'It arrives with the first real secret, such as a payment API key', and 'That is a platform limit, not a gap'. (The fourth, 'which aren't auto-created from YAML', was removed from the docs by steer D1.)",
+    "The Azure DevOps rule that an environment's checks are evaluated when a stage starts is stated as what the template comment records (stage-template.yml:15-18). It was not observed, because the pipeline never ran; infrastructure/README.md now says so.",
+    "R entries are measurements taken on 2026-10-19 on this worktree: dotnet test totals, the 26-test SELL-2 filter run, the Postman collection count, bicep build/lint/build-params, python check-pipeline.py, dotnet ef migrations script, git log --first-parent, and curl runs against the http launch profile (multi-violation 422 body, null paymentMethod, lower-case enum names, integer enum, unauthenticated GET, health, openapi, scalar). The curl runs created the policies MEAS-A1 and MEAS-B1 in the git-ignored development SQLite file.",
+    "A curl run on 2026-10-19 also showed that GET /policies/{ref}?REFERENCE=X answers errors key 'reference' and GET /policies/{ref}?COLOUR=x answers errors key 'cOLOUR'. The docs do not state this (the bullet says the key for an upper-case query key is not specified). It is the evidence for the inv-003 rec-4 bug plan, not for the docs.",
+    "The 429 row of the Errors table has no row in docs/requirements.md; it is supported by Program.cs and RateLimitingTests only. The other rows were compared with requirements.md:122-125 word for word (400, 404, 409, 422 lists and the 500 sentence)."
+  ],
+  "claims": [
+    {
+      "file": "README.md",
+      "line": 3,
+      "sentence": "A C# REST API for home insurance policies: sell a policy, retrieve it, cancel it (with a refund and a refund quote), record claims and renew it.",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:17:[HttpPost] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:31:[HttpGet(\"{reference}\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:38:[HttpPost(\"{reference}/cancellation\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:50:[HttpGet(\"{reference}/cancellation-quote\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:68:[HttpPost(\"{reference}/claims\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:83:[HttpPost(\"{reference}/renewals\")]"
+    },
+    {
+      "file": "README.md",
+      "line": 4,
+      "sentence": "It is a .NET 10 ASP.NET Core controller API with EF Core (SQLite locally, SQL Server when deployed), problem-details errors (RFC 9457) and OpenAPI with Scalar.",
+      "source": "P Directory.Build.props:4:net10.0 ;; P src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj:1:Microsoft.NET.Sdk.Web ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:15:ControllerBase ;; P src/Uinsure.Policies.Persistence/PersistenceServiceCollectionExtensions.cs:23:options.UseSqlite(connectionString) ;; P src/Uinsure.Policies.Persistence/PersistenceServiceCollectionExtensions.cs:24:options.UseSqlServer(connectionString) ;; P src/Uinsure.Policies.Api/appsettings.Development.json:3:\"Provider\": \"Sqlite\" ;; P infrastructure/modules/appservice.bicep:46:name: 'Database__Provider', value: 'SqlServer' ;; P src/Uinsure.Policies.Api/Program.cs:65:builder.Services.AddProblemDetails ;; P docs/requirements.md:121:RFC 9457 problem details ;; P src/Uinsure.Policies.Api/Program.cs:62:builder.Services.AddOpenApi() ;; P src/Uinsure.Policies.Api/Program.cs:122:app.MapScalarApiReference()"
+    },
+    {
+      "file": "README.md",
+      "line": 5,
+      "sentence": "It was built outside-in with TDD, one feature at a time.",
+      "source": "P CLAUDE.md:3:built outside-in with TDD ;; P docs/requirements.md:161:Features run one at a time"
+    },
+    {
+      "file": "README.md",
+      "line": 6,
+      "sentence": "Every rule, its ID and the interpretation taken for it are in [docs/requirements.md](docs/requirements.md).",
+      "source": "E docs/requirements.md ;; P CLAUDE.md:4:Every rule, its ID and its agreed interpretation are in `docs/requirements.md`. ;; P docs/requirements.md:49:Each rule appears with the interpretation we agreed for it."
+    },
+    {
+      "file": "README.md",
+      "line": 11,
+      "sentence": "**Prerequisites:** the .NET 10 SDK (`global.json` pins 10.0.100 with `rollForward` set to `latestFeature`).",
+      "source": "P global.json:3:\"version\": \"10.0.100\" ;; P global.json:4:\"rollForward\": \"latestFeature\" ;; P Directory.Build.props:4:net10.0"
+    },
+    {
+      "file": "README.md",
+      "line": 12,
+      "sentence": "The Postman CLI is only needed for the Postman collection.",
+      "source": "P CLAUDE.md:61:postman collection run ;; N (?i)postman|.githooks|*|0 ;; N (?i)postman|infrastructure/pipelines|*|0 ;; N (?i)postman|src|*|0"
+    },
+    {
+      "file": "README.md",
+      "line": 14,
+      "sentence": "**Run the API** (SQLite, schema created at start-up, nothing to configure):",
+      "source": "P src/Uinsure.Policies.Api/appsettings.Development.json:3:\"Provider\": \"Sqlite\" ;; P src/Uinsure.Policies.Api/appsettings.Development.json:6:Data Source=policies.development.db ;; P src/Uinsure.Policies.Persistence/PersistenceServiceCollectionExtensions.cs:42:Database.EnsureCreated() ;; R measured 2026-10-19: dotnet run --project src/Uinsure.Policies.Api --launch-profile http started with no other configuration and /health/live and /health/ready returned 200"
+    },
+    {
+      "file": "README.md",
+      "line": 17,
+      "sentence": "dotnet build Uinsure.Policies.slnx -warnaserror dotnet run --project src/Uinsure.Policies.Api --launch-profile http",
+      "source": "P CLAUDE.md:58:dotnet build Uinsure.Policies.slnx -warnaserror ;; R measured 2026-10-19: dotnet build Uinsure.Policies.slnx -warnaserror gave 0 warnings and 0 errors; dotnet run --project src/Uinsure.Policies.Api --launch-profile http started and listened on http://localhost:5080"
+    },
+    {
+      "file": "README.md",
+      "line": 21,
+      "sentence": "It listens on `http://localhost:5080`.",
+      "source": "P src/Uinsure.Policies.Api/Properties/launchSettings.json:19:\"applicationUrl\": \"http://localhost:5080\" ;; R measured 2026-10-19: curl http://localhost:5080/health/live returned 200"
+    },
+    {
+      "file": "README.md",
+      "line": 21,
+      "sentence": "In Development only, the OpenAPI document is at `http://localhost:5080/openapi/v1.json` and the Scalar UI is at `http://localhost:5080/scalar`.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:119:if (app.Environment.IsDevelopment()) ;; P src/Uinsure.Policies.Api/Program.cs:121:app.MapOpenApi(); ;; P src/Uinsure.Policies.Api/Program.cs:122:app.MapScalarApiReference(); ;; P tests/Uinsure.Policies.Api.Tests/OpenApiProductionTests.cs:18:OpenApi_document_is_not_served_outside_Development ;; R measured 2026-10-19: /openapi/v1.json returned 200; /scalar returned 302 to /scalar/ which returned 200"
+    },
+    {
+      "file": "README.md",
+      "line": 23,
+      "sentence": "Health checks are at `/health/live` and `/health/ready`.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:126:app.MapHealthChecks(\"/health/live\" ;; P src/Uinsure.Policies.Api/Program.cs:127:app.MapHealthChecks(\"/health/ready\" ;; R measured 2026-10-19: both returned 200"
+    },
+    {
+      "file": "README.md",
+      "line": 25,
+      "sentence": "**Run the tests:**",
+      "source": "X label"
+    },
+    {
+      "file": "README.md",
+      "line": 28,
+      "sentence": "dotnet test --solution Uinsure.Policies.slnx",
+      "source": "P CLAUDE.md:59:dotnet test --solution Uinsure.Policies.slnx"
+    },
+    {
+      "file": "README.md",
+      "line": 31,
+      "sentence": "Measured with that command on this branch on 2026-10-19: 637 tests (173 domain, 65 services, 332 API acceptance and 67 architecture), 0 failed, 0 skipped.",
+      "source": "R measured 2026-10-19: dotnet test --solution Uinsure.Policies.slnx printed total: 637, failed: 0, succeeded: 637, skipped: 0 ;; R measured 2026-10-19 per project: Domain.Tests 173, Services.Tests 65, Api.Tests 332, Architecture.Tests 67 (0 failed, 0 skipped each)"
+    },
+    {
+      "file": "README.md",
+      "line": 34,
+      "sentence": "**Run the Postman collection** (109 requests; start the API first):",
+      "source": "R measured 2026-10-19 by parsing tests/postman/Uinsure.Policies.postman_collection.json with node: 109 requests ;; P CLAUDE.md:61:postman collection run"
+    },
+    {
+      "file": "README.md",
+      "line": 37,
+      "sentence": "postman collection run tests/postman/Uinsure.Policies.postman_collection.json \\ -e tests/postman/local.postman_environment.json",
+      "source": "P CLAUDE.md:61:postman collection run tests/postman/Uinsure.Policies.postman_collection.json ;; P CLAUDE.md:62:-e tests/postman/local.postman_environment.json"
+    },
+    {
+      "file": "README.md",
+      "line": 43,
+      "sentence": "Where the brief was unclear I took a sensible view.",
+      "source": "X first-person framing, no checkable fact"
+    },
+    {
+      "file": "README.md",
+      "line": 43,
+      "sentence": "The full list, one row per rule, is in [docs/requirements.md](docs/requirements.md).",
+      "source": "E docs/requirements.md ;; N ^\\| (GET|SELL|CANCEL|RENEW|COULD)-[0-9a-z/]+ \\||docs/requirements.md|md|29"
+    },
+    {
+      "file": "README.md",
+      "line": 44,
+      "sentence": "The ones worth knowing:",
+      "source": "X framing"
+    },
+    {
+      "file": "README.md",
+      "line": 46,
+      "sentence": "**\"Today\" is Europe/London**, read from an injected clock, never from `DateTime.Now`.",
+      "source": "P src/Uinsure.Policies.Services/UkCalendar.cs:5:FindSystemTimeZoneById(\"Europe/London\") ;; P src/Uinsure.Policies.Services/PolicyService.cs:8:TimeProvider clock ;; P src/Uinsure.Policies.Services/PolicyService.cs:12:var today = UkCalendar.Today(clock); ;; N DateTime(Offset)?\\.(Now|UtcNow|Today)|src|cs|0 ;; P docs/requirements.md:51:means today in **Europe/London**"
+    },
+    {
+      "file": "README.md",
+      "line": 46,
+      "sentence": "See [section 2](docs/requirements.md#2-functional-requirements).",
+      "source": "P docs/requirements.md:45:## 2. Functional requirements"
+    },
+    {
+      "file": "README.md",
+      "line": 48,
+      "sentence": "**The client chooses the policy reference.**",
+      "source": "P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:27:public string? Reference ;; P docs/requirements.md:57:The client supplies the reference."
+    },
+    {
+      "file": "README.md",
+      "line": 48,
+      "sentence": "It is trimmed and upper-cased (`abc-1` = `ABC-1`), and a duplicate is a `409` (SELL-1, [Sell](docs/requirements.md#sell-must-1)).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/PolicyReference.cs:5:raw.Trim().ToUpperInvariant() ;; P tests/Uinsure.Policies.Api.Tests/SellReferenceTests.cs:87:Duplicate_reference_differing_only_in_case_is_rejected_with_409 ;; P src/Uinsure.Policies.Services/PolicyService.cs:15:GetByReference(command.Reference ;; P docs/requirements.md:53:### Sell (MUST-1)"
+    },
+    {
+      "file": "README.md",
+      "line": 50,
+      "sentence": "**Sold up to 60 days ahead, no backdating** (SELL-2).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:8:private const int MaxDaysAhead = 60 ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:276:if (start < earliest || start > latest) ;; P tests/Uinsure.Policies.Api.Tests/SellStartDateWindowTests.cs:36:Start_date_today_plus_60_is_accepted ;; P tests/Uinsure.Policies.Api.Tests/SellStartDateWindowTests.cs:49:Start_date_today_plus_61_is_rejected ;; P tests/Uinsure.Policies.Api.Tests/SellStartDateWindowTests.cs:64:Start_date_yesterday_is_rejected_as_backdated"
+    },
+    {
+      "file": "README.md",
+      "line": 50,
+      "sentence": "Start date is today to today + 60, inclusive.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:274:var earliest = today; ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:275:var latest = today.AddDays(MaxDaysAhead); ;; P tests/Uinsure.Policies.Api.Tests/SellStartDateWindowTests.cs:23:Start_date_today_is_accepted ;; P docs/requirements.md:58:Start date must be between today and today + 60, inclusive"
+    },
+    {
+      "file": "README.md",
+      "line": 51,
+      "sentence": "**A policy is one year, calculated:** the end date is start + 1 year - 1 day.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Term.cs:27:start.AddYears(1).AddDays(-1) ;; P tests/Uinsure.Policies.Api.Tests/SellTermLengthTests.cs:23:End_date_is_start_plus_one_year_minus_one_day ;; P tests/Uinsure.Policies.Api.Tests/SellTermLengthTests.cs:38:Start_on_1_November_2026_ends_on_31_October_2027"
+    },
+    {
+      "file": "README.md",
+      "line": 51,
+      "sentence": "A 29 February start ends on 28 February the next year (SELL-3).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Term.cs:25:start is { Month: 2, Day: 29 } ;; P src/Uinsure.Policies.Domain/Policies/Term.cs:26:new DateOnly(start.Year + 1, 2, 28) ;; P tests/Uinsure.Policies.Api.Tests/SellTermLengthTests.cs:86:Start_on_29_February_2028_ends_on_28_February_2029"
+    },
+    {
+      "file": "README.md",
+      "line": 53,
+      "sentence": "**16 or older on the start date** passes SELL-5.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:10:private const int MinimumAge = 16 ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:330:dateOfBirth.AddYears(MinimumAge) <= start ;; P tests/Uinsure.Policies.Api.Tests/SellPolicyholderAgeTests.cs:25:Policyholder_whose_16th_birthday_is_the_start_date_is_accepted ;; P tests/Uinsure.Policies.Api.Tests/SellPolicyholderAgeTests.cs:42:Policyholder_whose_16th_birthday_is_the_day_after_the_start_date_is_rejected"
+    },
+    {
+      "file": "README.md",
+      "line": 54,
+      "sentence": "**The amount is supplied by the client** and must be above zero (SELL-7, RENEW-5).",
+      "source": "P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:36:public decimal? Amount ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:304:if (amount <= 0) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:161:if (amount <= 0) ;; P tests/Uinsure.Policies.Api.Tests/SellAmountTests.cs:35:Amount_of_zero_is_rejected ;; P tests/Uinsure.Policies.Api.Tests/RenewAmountTests.cs:74:Renewal_amount_of_zero_is_rejected_with_422"
+    },
+    {
+      "file": "README.md",
+      "line": 54,
+      "sentence": "Pricing is out of scope.",
+      "source": "P docs/requirements.md:119:**Out of scope:** authentication, pricing"
+    },
+    {
+      "file": "README.md",
+      "line": 55,
+      "sentence": "**Cooling-off runs to start + 14 days, inclusive** (CANCEL-1b).",
+      "source": "P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:8:private const int CoolingOffDays = 14 ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:41:if (cancelOn <= term.Start.AddDays(CoolingOffDays)) ;; P tests/Uinsure.Policies.Api.Tests/CancelCoolingOffTests.cs:46:Cancel_on_start_plus_14_refunds_in_full_to_the_Direct_Debit_paid"
+    },
+    {
+      "file": "README.md",
+      "line": 55,
+      "sentence": "After that the refund is pro-rata over the actual days in the term (365 or 366), and the cancellation day counts as used (CANCEL-1c, [Cancel](docs/requirements.md#cancel-should-1)).",
+      "source": "P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:47:term.Amount * unusedDays / termDays ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:15:cancelOn.DayNumber - term.Start.DayNumber + 1 ;; P src/Uinsure.Policies.Domain/Policies/Term.cs:19:End.DayNumber - Start.DayNumber + 1 ;; P tests/Uinsure.Policies.Api.Tests/CancelProRataTests.cs:28:Cancel_on_start_plus_15_refunds_the_unused_days ;; P tests/Uinsure.Policies.Api.Tests/CancelProRataTests.cs:65:Cancel_mid_term_of_a_366_day_term_refunds_the_unused_days_over_366 ;; P docs/requirements.md:72:### Cancel (SHOULD-1)"
+    },
+    {
+      "file": "README.md",
+      "line": 57,
+      "sentence": "**Money is rounded to 2 dp, away from zero**, in one place (CANCEL-6).",
+      "source": "P src/Uinsure.Policies.Domain/Common/Money.cs:7:Math.Round(amount, 2, MidpointRounding.AwayFromZero) ;; N (Math|decimal)\\.Round\\(|src|cs|1 ;; P tests/Uinsure.Policies.Api.Tests/CancelRoundingTests.cs:27:Refund_of_exactly_half_a_penny_rounds_away_from_zero"
+    },
+    {
+      "file": "README.md",
+      "line": 58,
+      "sentence": "**Cancelling:** the date is optional and defaults to today, past dates are refused (CANCEL-3), and it must be on or before the end of cover (CANCEL-7).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:236:var date = on ?? today; ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:238:if (date < today) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:243:if (date > LatestTerm.End) ;; P tests/Uinsure.Policies.Api.Tests/CancelDateTests.cs:33:Cancel_with_no_body_means_UK_today ;; P tests/Uinsure.Policies.Api.Tests/CancelDateTests.cs:89:Cancellation_date_of_yesterday_is_rejected_as_past ;; P tests/Uinsure.Policies.Api.Tests/CancelAfterCoverTests.cs:47:Cancellation_date_the_day_after_the_end_of_cover_is_rejected"
+    },
+    {
+      "file": "README.md",
+      "line": 59,
+      "sentence": "Cancelling twice is a `409` (CANCEL-4).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:228:if (Cancellation is not null) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:231:RuleIds.Cancel4 ;; P tests/Uinsure.Policies.Api.Tests/CancelTwiceTests.cs:27:Cancelling_a_cancelled_policy_answers_409_with_the_original_cancellation_date"
+    },
+    {
+      "file": "README.md",
+      "line": 60,
+      "sentence": "**A renewal adds a term** to the same policy, starting the day after the current end (RENEW-4, [Renew](docs/requirements.md#renew-should-2)).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:183:var term = new Term(LatestTerm.End.AddDays(1), amount, payment); ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:184:_terms.Add(term); ;; P docs/requirements.md:86:### Renew (SHOULD-2)"
+    },
+    {
+      "file": "README.md",
+      "line": 61,
+      "sentence": "The window runs from 30 days before the latest term's end date to the end date, both inclusive (31 calendar days).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:12:private const int RenewalWindowDays = 30; ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:142:var windowStart = LatestTerm.End.AddDays(-RenewalWindowDays); ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:144:if (today < windowStart || today > windowEnd) ;; P tests/Uinsure.Policies.Api.Tests/RenewWindowTests.cs:37:Renewal_31_days_before_the_end_is_rejected_with_422 ;; P tests/Uinsure.Policies.Api.Tests/RenewWindowTests.cs:53:Renewal_30_days_before_the_end_is_accepted ;; P tests/Uinsure.Policies.Api.Tests/RenewWindowTests.cs:113:Renewal_on_the_end_date_is_accepted ;; P tests/Uinsure.Policies.Api.Tests/RenewWindowTests.cs:135:Renewal_the_day_after_the_end_is_rejected_with_422"
+    },
+    {
+      "file": "README.md",
+      "line": 61,
+      "sentence": "For a term ending 16 October 2027, that is 16 September to 16 October 2027.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:142:var windowStart = LatestTerm.End.AddDays(-RenewalWindowDays); ;; P tests/Uinsure.Policies.Api.Tests/CancelAfterCoverTests.cs:10:start 2026-10-17 ends 2027-10-16 ;; R computed 2026-10-19 with node Date arithmetic: 2027-10-16 minus 30 days is 2027-09-16"
+    },
+    {
+      "file": "README.md",
+      "line": 62,
+      "sentence": "**Renewing with auto-renew off creates an unpaid term**, and sending a payment method with it is a `422` (RENEW-3b).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:154:if (!AutoRenew && method is not null) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:167:AutoRenew ? method ?? CurrentTerm(today).Payment!.Method : (PaymentMethod?)null ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:182:var payment = paidBy is { } paymentMethod ? new Payment( ;; P tests/Uinsure.Policies.Api.Tests/RenewUnpaidTests.cs:32:Renewal_without_auto_renew_and_without_a_payment_method_creates_an_unpaid_term ;; P tests/Uinsure.Policies.Api.Tests/RenewUnpaidTests.cs:53:Renewal_without_auto_renew_with_a_payment_method_is_rejected_with_422"
+    },
+    {
+      "file": "README.md",
+      "line": 63,
+      "sentence": "A cancelled policy cannot be renewed (`409`, RENEW-6).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:131:if (Cancellation is not null) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:134:RuleIds.Renew6 ;; P tests/Uinsure.Policies.Api.Tests/RenewCancelledTests.cs:29:Renewal_of_a_cancelled_policy_is_rejected_with_409"
+    },
+    {
+      "file": "README.md",
+      "line": 64,
+      "sentence": "**A claim means a £0 refund** (COULD-2, [Could-haves](docs/requirements.md#could-haves-all-in-scope)).",
+      "source": "P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:30:if (hasClaims) ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:32:return (RuleIds.Could2, 0m); ;; P tests/Uinsure.Policies.Api.Tests/CancelWithClaimTests.cs:59:Cancel_after_cooling_off_after_a_claim_refunds_nothing_under_COULD_2 ;; P docs/requirements.md:97:### Could-haves (all in scope)"
+    },
+    {
+      "file": "README.md",
+      "line": 64,
+      "sentence": "Claims are recorded with `POST /policies/{reference}/claims`.",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:68:[HttpPost(\"{reference}/claims\")] ;; P docs/requirements.md:102:Claims are recorded with `POST /policies/{reference}/claims`"
+    },
+    {
+      "file": "README.md",
+      "line": 67,
+      "sentence": "**Status is derived** from today (Pending, Active, Expired, Cancelled) and never stored.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:54:// Derived, never stored. ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:55:public PolicyStatus StatusOn(DateOnly today) ;; P src/Uinsure.Policies.Domain/Policies/PolicyStatus.cs:5:Pending ;; P src/Uinsure.Policies.Domain/Policies/PolicyStatus.cs:8:Cancelled ;; N Status|src/Uinsure.Policies.Persistence/Records|cs|0"
+    },
+    {
+      "file": "README.md",
+      "line": 68,
+      "sentence": "**Errors:** `400` for shape, `404` unknown reference, `409` state conflicts, and `422` for the rules that can be broken (SELL-2, SELL-4, SELL-5, SELL-7, RENEW-1/2, RENEW-3b, RENEW-5, CANCEL-3, CANCEL-7, COULD-2a, COULD-2b, COULD-3).",
+      "source": "P docs/requirements.md:122:**400** for shape; **422** for every numbered rule (SELL-2, SELL-4, SELL-5, SELL-7, RENEW-1/2, RENEW-3b, RENEW-5, CANCEL-3, CANCEL-7, COULD-2a, COULD-2b, COULD-3); **409** for state conflicts (SELL-1, CANCEL-4, RENEW-6, COULD-2c); **404** for GET-1 ;; P src/Uinsure.Policies.Api/Errors/ProblemCatalog.cs:30:public static int StatusFor(ViolationKind kind) ;; P src/Uinsure.Policies.Api/Errors/ProblemCatalog.cs:32:ViolationKind.NotFound ;; P src/Uinsure.Policies.Api/Errors/ProblemCatalog.cs:33:ViolationKind.Conflict ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:334:ViolationKind.Conflict ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:337:ViolationKind.BusinessRule ;; P src/Uinsure.Policies.Services/PolicyService.cs:141:ViolationKind.NotFound ;; P src/Uinsure.Policies.Services/PolicyService.cs:150:ViolationKind.Conflict ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:14:HttpStatusCode.UnprocessableEntity ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:38:HttpStatusCode.Conflict ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:48:HttpStatusCode.NotFound"
+    },
+    {
+      "file": "README.md",
+      "line": 70,
+      "sentence": "A `422` lists every broken rule together.",
+      "source": "P docs/requirements.md:123:A 422 lists every broken rule in `violations[]` ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:24:MultipleRuleViolations ;; P tests/Uinsure.Policies.Api.Tests/SellMultipleViolationsTests.cs:51:Sale_breaking_SELL_2_SELL_4_SELL_5_and_SELL_7_reports_all_four_in_rule_order"
+    },
+    {
+      "file": "README.md",
+      "line": 70,
+      "sentence": "Unknown JSON fields and query parameters are a `400`.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:52:UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow ;; P tests/Uinsure.Policies.Api.Tests/SellShapeTests.cs:33:Unknown_JSON_field_is_rejected_with_400 ;; P tests/Uinsure.Policies.Api.Tests/RetrieveNotFoundTests.cs:70:Unknown_query_parameter_on_a_get_is_rejected_with_400"
+    },
+    {
+      "file": "README.md",
+      "line": 71,
+      "sentence": "**No authentication** (out of scope).",
+      "source": "N (AddAuthentication|AddAuthorization|\\[Authorize)|src|cs|0 ;; P docs/requirements.md:119:**Out of scope:** authentication"
+    },
+    {
+      "file": "README.md",
+      "line": 71,
+      "sentence": "`Location` on renewals and claims points at the policy.",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:80:Created($\"/policies/{response.PolicyReference}\", response) ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:105:Created($\"/policies/{policyReference.Value}\" ;; P tests/Uinsure.Policies.Api.Tests/Support/PolicyActions.cs:77:Assert.Equal($\"/policies/{reference}\", response.LocationPath()) ;; P tests/Uinsure.Policies.Api.Tests/Support/RenewalActions.cs:39:Assert.Equal($\"/policies/{normalisedReference}\", response.LocationPath())"
+    },
+    {
+      "file": "README.md",
+      "line": 75,
+      "sentence": "No authentication, so the reference is the only key.",
+      "source": "N (AddAuthentication|AddAuthorization|\\[Authorize)|src|cs|0 ;; N \\[Http(Get|Post)\\(\"\\{reference\\}|src|cs|5 ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:17:[HttpPost]"
+    },
+    {
+      "file": "README.md",
+      "line": 75,
+      "sentence": "See the [security scope](docs/design.md#security-scope).",
+      "source": "P docs/design.md:183:## Security scope"
+    },
+    {
+      "file": "README.md",
+      "line": 76,
+      "sentence": "The Bicep sets no WAF, Front Door or IP restriction in front of the API.",
+      "source": "N ipSecurityRestrictions|infrastructure|bicep|0 ;; N (?i)frontdoor|Microsoft\\.Cdn|applicationGateway|ApiManagement|firewallPolicies|infrastructure|bicep|0"
+    },
+    {
+      "file": "README.md",
+      "line": 77,
+      "sentence": "Rate limits are counted per instance.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:43:PartitionedRateLimiter.Create ;; P src/Uinsure.Policies.Api/Program.cs:132:GetFixedWindowLimiter ;; N (AddMemoryCache|Redis|IDistributedCache)|src|cs|0"
+    },
+    {
+      "file": "README.md",
+      "line": 77,
+      "sentence": "Claims are not idempotent and have no cap per policy.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:219:var claim = new Claim(claimDate, description); ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:220:_claims.Add(claim); ;; N (?i)MaxClaims|claims.?limit|src|cs|0 ;; N (?i)idempotency-key|src|cs|0"
+    },
+    {
+      "file": "README.md",
+      "line": 78,
+      "sentence": "The tests run on SQLite.",
+      "source": "P tests/Uinsure.Policies.Api.Tests/Support/PoliciesApiFactory.cs:19:new(\"DataSource=:memory:\")"
+    },
+    {
+      "file": "README.md",
+      "line": 78,
+      "sentence": "No test runs against a SQL Server database; the pre-push hook generates the idempotent migration script.",
+      "source": "N UseSqlServer|tests|cs|0 ;; P tests/Uinsure.Policies.Api.Tests/Support/UnreachableDatabaseApiFactory.cs:11:pointed at a closed local port ;; P .githooks/pre-push:29:dotnet ef migrations script --idempotent"
+    },
+    {
+      "file": "README.md",
+      "line": 80,
+      "sentence": "The Bicep and Azure DevOps pipeline were never deployed or run.",
+      "source": "P docs/requirements.md:207:never connected to Azure ;; P infrastructure/pipelines/azure-pipelines.yml:1:never connected to Azure DevOps, never run"
+    },
+    {
+      "file": "README.md",
+      "line": 80,
+      "sentence": "See [infrastructure/README.md](infrastructure/README.md).",
+      "source": "E infrastructure/README.md"
+    },
+    {
+      "file": "README.md",
+      "line": 83,
+      "sentence": "The full lists are in [docs/design.md](docs/design.md#known-limits) and [docs/design.md](docs/design.md#behaviours-of-the-renewal-and-input-handling).",
+      "source": "P docs/design.md:208:## Known limits ;; P docs/design.md:234:## Behaviours of the renewal and input handling"
+    },
+    {
+      "file": "README.md",
+      "line": 88,
+      "sentence": "[docs/design.md](docs/design.md): endpoints, errors, tests, design decisions, security scope, known limits and behaviours of the renewal and input handling.",
+      "source": "E docs/design.md ;; P docs/design.md:24:## Endpoints ;; P docs/design.md:48:## Errors ;; P docs/design.md:73:## Tests ;; P docs/design.md:136:## Design decisions ;; P docs/design.md:183:## Security scope ;; P docs/design.md:208:## Known limits ;; P docs/design.md:234:## Behaviours of the renewal and input handling"
+    },
+    {
+      "file": "README.md",
+      "line": 90,
+      "sentence": "[infrastructure/README.md](infrastructure/README.md): the Bicep and pipeline, networking, secrets, one-time setup and what the evidence does and does not prove.",
+      "source": "E infrastructure/README.md ;; P infrastructure/README.md:42:## Networking ;; P infrastructure/README.md:33:## No secrets ;; P infrastructure/README.md:96:## One-time setup (none of it done) ;; P infrastructure/README.md:165:## Known limits of the evidence"
+    },
+    {
+      "file": "README.md",
+      "line": 92,
+      "sentence": "[docs/requirements.md](docs/requirements.md): every rule with its agreed interpretation.",
+      "source": "E docs/requirements.md ;; P docs/requirements.md:49:Each rule appears with the interpretation we agreed for it. ;; P tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs:38:Requirements_rule_tables_parse_with_RENEW_1_2_expanded_into_two_ids"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 3,
+      "sentence": "Reference material for the [project README](../README.md).",
+      "source": "E README.md"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 3,
+      "sentence": "The rules and the interpretation agreed for each are in [requirements.md](requirements.md).",
+      "source": "E docs/requirements.md ;; P docs/requirements.md:49:Each rule appears with the interpretation we agreed for it."
+    },
+    {
+      "file": "docs/design.md",
+      "line": 4,
+      "sentence": "Deployment is in [infrastructure/README.md](../infrastructure/README.md).",
+      "source": "E infrastructure/README.md"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 7,
+      "sentence": "Contents: [Running locally](#running-locally) · [Endpoints](#endpoints) · [Errors](#errors) · [Tests](#tests) · [Branching and merging](#branching-and-merging) · [Design decisions](#design-decisions) · [Security scope](#security-scope) · [Known limits](#known-limits) · [Behaviours of the renewal and input handling](#behaviours-of-the-renewal-and-input-handling)",
+      "source": "X navigation links; every target heading exists (link check measured: see report)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 14,
+      "sentence": "Launch profiles: `http` (`http://localhost:5080`, used for development and Postman) and `https` (`https://localhost:7080;http://localhost:5080`).",
+      "source": "P src/Uinsure.Policies.Api/Properties/launchSettings.json:12:\"http\": ;; P src/Uinsure.Policies.Api/Properties/launchSettings.json:19:\"applicationUrl\": \"http://localhost:5080\" ;; P src/Uinsure.Policies.Api/Properties/launchSettings.json:3:\"https\": ;; P src/Uinsure.Policies.Api/Properties/launchSettings.json:10:https://localhost:7080;http://localhost:5080 ;; P tests/Uinsure.Policies.Architecture.Tests/LaunchProfileTests.cs:8:'http' on 5080 for the loop and Postman"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 15,
+      "sentence": "Both set `ASPNETCORE_ENVIRONMENT=Development`.",
+      "source": "P src/Uinsure.Policies.Api/Properties/launchSettings.json:8:\"ASPNETCORE_ENVIRONMENT\": \"Development\" ;; P src/Uinsure.Policies.Api/Properties/launchSettings.json:17:\"ASPNETCORE_ENVIRONMENT\": \"Development\""
+    },
+    {
+      "file": "docs/design.md",
+      "line": 16,
+      "sentence": "Locally the app uses SQLite (`Database:Provider` = `Sqlite`, file `policies.development.db`).",
+      "source": "P src/Uinsure.Policies.Api/appsettings.Development.json:3:\"Provider\": \"Sqlite\" ;; P src/Uinsure.Policies.Api/appsettings.Development.json:6:Data Source=policies.development.db"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 16,
+      "sentence": "With SQLite it creates the schema at start-up with `EnsureCreated()`.",
+      "source": "P src/Uinsure.Policies.Persistence/PersistenceServiceCollectionExtensions.cs:40:DatabaseProvider.Sqlite ;; P src/Uinsure.Policies.Persistence/PersistenceServiceCollectionExtensions.cs:42:Database.EnsureCreated() ;; P src/Uinsure.Policies.Api/Program.cs:81:app.Services.EnsureSqliteCreated()"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 17,
+      "sentence": "It never calls `Database.Migrate()`.",
+      "source": "N Database\\.Migrate\\(|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 18,
+      "sentence": "The Bicep sets the provider to `SqlServer` with an app setting.",
+      "source": "P infrastructure/modules/appservice.bicep:46:name: 'Database__Provider', value: 'SqlServer'"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 18,
+      "sentence": "The one migration set is SQL Server only (`src/Uinsure.Policies.Persistence/Migrations`).",
+      "source": "E src/Uinsure.Policies.Persistence/Migrations ;; N \\[Migration\\(|src/Uinsure.Policies.Persistence/Migrations|cs|1 ;; P src/Uinsure.Policies.Persistence/Migrations/20261019014058_InitialCreate.cs:19:.Annotation(\"SqlServer:Identity\", \"1, 1\") ;; P src/Uinsure.Policies.Persistence/PoliciesDbContextFactory.cs:12:.UseSqlServer("
+    },
+    {
+      "file": "docs/design.md",
+      "line": 20,
+      "sentence": "In Development only: the OpenAPI 3.1 document at `/openapi/v1.json` and the Scalar UI at `/scalar`.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:119:if (app.Environment.IsDevelopment()) ;; P src/Uinsure.Policies.Api/Program.cs:121:app.MapOpenApi(); ;; P src/Uinsure.Policies.Api/Program.cs:122:app.MapScalarApiReference(); ;; P tests/Uinsure.Policies.Api.Tests/OpenApiDevelopmentTests.cs:23:/openapi/v1.json ;; P tests/Uinsure.Policies.Api.Tests/OpenApiDevelopmentTests.cs:27:\"3.1\" ;; P tests/Uinsure.Policies.Api.Tests/OpenApiDevelopmentTests.cs:35:/scalar ;; P tests/Uinsure.Policies.Api.Tests/OpenApiProductionTests.cs:18:OpenApi_document_is_not_served_outside_Development ;; R measured 2026-10-19 against the running http profile: /openapi/v1.json 200, /scalar 302 then 200 at /scalar/"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 21,
+      "sentence": "Health: `/health/live` runs no checks.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:126:app.MapHealthChecks(\"/health/live\" ;; P src/Uinsure.Policies.Api/Program.cs:126:Predicate = _ = ;; P tests/Uinsure.Policies.Api.Tests/HealthEndpointTests.cs:18:Health_live_returns_200_Healthy"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 21,
+      "sentence": "`/health/ready` runs the checks tagged `ready` (the database).",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:127:check.Tags.Contains(\"ready\") ;; P src/Uinsure.Policies.Persistence/PersistenceServiceCollectionExtensions.cs:31:AddDbContextCheck ;; P tests/Uinsure.Policies.Api.Tests/HealthWithUnreachableDatabaseTests.cs:18:Health_ready_returns_503_Unhealthy_when_the_database_cannot_be_reached"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 22,
+      "sentence": "Application Insights is wired only when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:74:if (!string.IsNullOrEmpty(builder.Configuration[\"APPLICATIONINSIGHTS_CONNECTION_STRING\"])) ;; P src/Uinsure.Policies.Api/Program.cs:76:UseAzureMonitor() ;; N UseAzureMonitor\\(|src|cs|1 ;; P tests/Uinsure.Policies.Api.Tests/ApplicationInsightsTests.cs:30:No_OpenTelemetry_or_Azure_Monitor_service_is_registered_without_a_connection_string"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 26,
+      "sentence": "Policy routes are on `PoliciesController`.",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:15:public sealed class PoliciesController ;; N class \\w+Controller|src|cs|1 ;; N \\[Http(Get|Post)|src|cs|6"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 28,
+      "sentence": "| Route | What | Success |",
+      "source": "X table header"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 30,
+      "sentence": "| `POST /policies` | Sell a policy (SELL-1 to SELL-7) | `201` + `Location: /policies/{reference}` |",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:17:[HttpPost] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:28:return Created($\"/policies/{response.Reference}\", response); ;; P tests/Uinsure.Policies.Api.Tests/SellReferenceTests.cs:22:New_reference_is_sold_with_201_and_its_Location_and_reads_back ;; P docs/requirements.md:57:| SELL-1 | ;; P docs/requirements.md:63:| SELL-7 |"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 31,
+      "sentence": "| `GET /policies/{reference}` | Retrieve it (GET-1) | `200` |",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:31:[HttpGet(\"{reference}\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:35:result.Value.ToResponse() ;; P docs/requirements.md:69:| GET-1 |"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 32,
+      "sentence": "| `POST /policies/{reference}/cancellation` | Cancel. The body is optional (`cancellationDate`) | `201`, no `Location` |",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:38:[HttpPost(\"{reference}/cancellation\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:42:EmptyBodyBehavior = EmptyBodyBehavior.Allow ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:47:StatusCode(StatusCodes.Status201Created ;; P src/Uinsure.Policies.Api/Contracts/CancellationContracts.cs:6:CancelPolicyRequest(DateOnly? CancellationDate)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 33,
+      "sentence": "| `GET /policies/{reference}/cancellation-quote?cancellationDate=yyyy-MM-dd` | Quote a refund without cancelling (COULD-1) | `200` |",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:50:[HttpGet(\"{reference}/cancellation-quote\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:57:\"yyyy-MM-dd\" ;; P docs/requirements.md:101:| COULD-1 |"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 34,
+      "sentence": "| `POST /policies/{reference}/claims` | Record a claim (`claimDate`, optional `description`) | `201` + `Location: /policies/{reference}` |",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:68:[HttpPost(\"{reference}/claims\")] ;; P src/Uinsure.Policies.Api/Contracts/CancellationContracts.cs:40:[Required] DateOnly? ClaimDate ;; P src/Uinsure.Policies.Api/Contracts/CancellationContracts.cs:41:string? Description ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:80:Created($\"/policies/{response.PolicyReference}\", response)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 35,
+      "sentence": "| `POST /policies/{reference}/renewals` | Renew (`amount`, optional `paymentMethod`) | `201` + `Location: /policies/{reference}` |",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:83:[HttpPost(\"{reference}/renewals\")] ;; P src/Uinsure.Policies.Api/Contracts/RenewPolicyRequest.cs:10:[Required] ;; P src/Uinsure.Policies.Api/Contracts/RenewPolicyRequest.cs:11:public decimal? Amount ;; P src/Uinsure.Policies.Api/Contracts/RenewPolicyRequest.cs:13:public PaymentMethod? PaymentMethod ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:105:Created($\"/policies/{policyReference.Value}\""
+    },
+    {
+      "file": "docs/design.md",
+      "line": 37,
+      "sentence": "Policy types are `Household` and `BuyToLet`.",
+      "source": "P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:8:Household, ;; P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:9:BuyToLet,"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 37,
+      "sentence": "Payment methods are `Card`, `DirectDebit` and `Cheque`.",
+      "source": "P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:14:Card, ;; P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:15:DirectDebit, ;; P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:16:Cheque,"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 37,
+      "sentence": "The client chooses the reference.",
+      "source": "P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:27:public string? Reference ;; P docs/requirements.md:57:The client supplies the reference."
+    },
+    {
+      "file": "docs/design.md",
+      "line": 38,
+      "sentence": "It is trimmed and upper-cased, so `abc-1` and `ABC-1` are the same policy.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/PolicyReference.cs:5:raw.Trim().ToUpperInvariant() ;; P tests/Uinsure.Policies.Api.Tests/SellReferenceTests.cs:87:Duplicate_reference_differing_only_in_case_is_rejected_with_409 ;; P tests/Uinsure.Policies.Api.Tests/SellReferenceTests.cs:50:Policy_sold_reads_back_by_its_reference_in_lower_case"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 40,
+      "sentence": "Input is strict.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:48:// Strict input: unknown members, integer enums and string numbers are 400s."
+    },
+    {
+      "file": "docs/design.md",
+      "line": 40,
+      "sentence": "A malformed body, a wrong type, a missing field, an unknown JSON field, an integer where an enum is expected and an unknown query parameter are all a `400`.",
+      "source": "P tests/Uinsure.Policies.Api.Tests/SellShapeTests.cs:22:Malformed_JSON_is_rejected_with_400 ;; P tests/Uinsure.Policies.Api.Tests/SellShapeTests.cs:119:Amount_sent_as_a_string_is_rejected_with_400 ;; P tests/Uinsure.Policies.Api.Tests/SellShapeTests.cs:80:Missing_required_field_is_rejected_with_400 ;; P tests/Uinsure.Policies.Api.Tests/SellShapeTests.cs:33:Unknown_JSON_field_is_rejected_with_400 ;; P tests/Uinsure.Policies.Api.Tests/SellShapeTests.cs:144:Integer_policy_type_is_rejected_with_400 ;; P tests/Uinsure.Policies.Api.Tests/RetrieveNotFoundTests.cs:70:Unknown_query_parameter_on_a_get_is_rejected_with_400"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 41,
+      "sentence": "A request body is capped at 65,536 bytes (`413` over that).",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:19:MaxRequestBodySize = 65_536 ;; P tests/Uinsure.Policies.Api.Tests/KestrelRequestBodyLimitTests.cs:23:Body_one_byte_over_65536_is_413"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 44,
+      "sentence": "\"Today\" is today in Europe/London, taken from the injected `TimeProvider` in Services and passed to the domain as a `DateOnly`.",
+      "source": "P src/Uinsure.Policies.Services/UkCalendar.cs:5:FindSystemTimeZoneById(\"Europe/London\") ;; P src/Uinsure.Policies.Services/PolicyService.cs:8:TimeProvider clock ;; P src/Uinsure.Policies.Services/PolicyService.cs:12:var today = UkCalendar.Today(clock); ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:270:DateOnly today)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 45,
+      "sentence": "The code never uses `DateTime.Now`, `UtcNow` or `Today`; an analyser bans them (`BannedSymbols.txt`).",
+      "source": "N DateTime(Offset)?\\.(Now|UtcNow|Today)|src|cs|0 ;; P BannedSymbols.txt:1:System.DateTime.Now ;; P BannedSymbols.txt:2:System.DateTime.UtcNow ;; P BannedSymbols.txt:3:System.DateTime.Today ;; P Directory.Build.props:19:Microsoft.CodeAnalysis.BannedApiAnalyzers ;; P Directory.Build.props:20:BannedSymbols.txt"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 46,
+      "sentence": "Money is rounded only in `Money.Round` (2 dp, away from zero).",
+      "source": "P src/Uinsure.Policies.Domain/Common/Money.cs:7:Math.Round(amount, 2, MidpointRounding.AwayFromZero) ;; N (Math|decimal)\\.Round\\(|src|cs|1 ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:19:Money.Round(unrounded)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 50,
+      "sentence": "A rule violation (the `404` for GET-1, a `409` rule conflict, a `422`) is RFC 9457 problem details with `type` (`/problems/{rule-id}`, lower-case, `/` written as `-`), `title`, `status`, `detail`, `instance`, `ruleId` and `traceId`.",
+      "source": "P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:66:ToLowerInvariant().Replace('/', '-') ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:67:GetProperty(\"title\") ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:68:GetProperty(\"status\") ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:69:GetProperty(\"detail\") ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:70:GetProperty(\"instance\") ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:71:GetProperty(\"ruleId\") ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:72:GetProperty(\"traceId\") ;; P src/Uinsure.Policies.Api/Errors/ProblemCatalog.cs:37:Replace('/', '-') ;; P docs/requirements.md:121:RFC 9457 problem details"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 52,
+      "sentence": "The other problems have no `ruleId`: the `400` shape error, the concurrency `409` (`/problems/concurrency`), the `429` (`/problems/rate-limited`), the HTTPS `400` (`/problems/https-required`) and the `500`.",
+      "source": "P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:111:Assert.False(problem.TryGetProperty(\"ruleId\" ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:95:Assert.False(problem.TryGetProperty(\"ruleId\" ;; P tests/Uinsure.Policies.Api.Tests/ConcurrencyConflictTests.cs:33:TransportProblem ;; P tests/Uinsure.Policies.Api.Tests/RateLimitingTests.cs:40:TransportProblem ;; P tests/Uinsure.Policies.Api.Tests/HttpsTransportTests.cs:33:TransportProblem ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:49:/problems/concurrency ;; P src/Uinsure.Policies.Api/Program.cs:157:/problems/rate-limited ;; P src/Uinsure.Policies.Api/Program.cs:108:/problems/https-required ;; N ruleId|src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 54,
+      "sentence": "Rule problems, transport problems (`429`, HTTPS `400`, `413`) and the `400` shape error all carry `instance` (the request path) and `traceId`, and the tests assert both.",
+      "source": "P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:70:Assert.Equal(instance ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:72:traceId ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:93:Assert.Equal(instance ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:94:traceId ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:109:Assert.Equal(instance ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:110:traceId ;; P src/Uinsure.Policies.Api/Program.cs:67:Instance = context.HttpContext.Request.Path ;; P src/Uinsure.Policies.Api/Program.cs:68:Extensions[\"traceId\"] ;; P tests/Uinsure.Policies.Api.Tests/RateLimitingTests.cs:40:TooManyRequests ;; P tests/Uinsure.Policies.Api.Tests/HttpsTransportTests.cs:33:BadRequest ;; P tests/Uinsure.Policies.Api.Tests/KestrelRequestBodyLimitTests.cs:29:RequestEntityTooLarge"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 55,
+      "sentence": "The `500` carries a `traceId`, which a test also asserts.",
+      "source": "P tests/Uinsure.Policies.Api.Tests/UnhandledExceptionTests.cs:36:traceId ;; P src/Uinsure.Policies.Api/Program.cs:68:Extensions[\"traceId\"]"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 60,
+      "sentence": "| `400` | Shape: `errors` map, no `ruleId`. A `400` short-circuits before the rules are evaluated |",
+      "source": "P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:111:Assert.False(problem.TryGetProperty(\"ruleId\" ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:113:GetProperty(\"errors\") ;; P docs/requirements.md:123:A 400, 404 or 409 short-circuits before the rules are evaluated"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 61,
+      "sentence": "| `404` | GET-1: unknown reference. A `404` short-circuits before the rules are evaluated |",
+      "source": "P src/Uinsure.Policies.Services/PolicyService.cs:59:NotFound(reference) ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:48:HttpStatusCode.NotFound, \"GET-1\" ;; P docs/requirements.md:123:A 400, 404 or 409 short-circuits before the rules are evaluated"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 62,
+      "sentence": "| `409` | Rule conflicts (SELL-1, CANCEL-4, RENEW-6, COULD-2c), which short-circuit before the rules are evaluated. A database concurrency conflict is also a `409`, without a `ruleId` |",
+      "source": "P docs/requirements.md:122:**409** for state conflicts (SELL-1, CANCEL-4, RENEW-6, COULD-2c) ;; P docs/requirements.md:123:A 400, 404 or 409 short-circuits before the rules are evaluated ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:55:Status409Conflict ;; P tests/Uinsure.Policies.Api.Tests/ConcurrencyConflictTests.cs:33:HttpStatusCode.Conflict ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:95:Assert.False(problem.TryGetProperty(\"ruleId\""
+    },
+    {
+      "file": "docs/design.md",
+      "line": 63,
+      "sentence": "| `422` | The rules that can be broken: SELL-2, SELL-4, SELL-5, SELL-7, RENEW-1/2, RENEW-3b, RENEW-5, CANCEL-3, CANCEL-7, COULD-2a, COULD-2b, COULD-3. All broken rules are collected in `violations[]`; `ruleId` is the first of them |",
+      "source": "P docs/requirements.md:122:**422** for every numbered rule (SELL-2, SELL-4, SELL-5, SELL-7, RENEW-1/2, RENEW-3b, RENEW-5, CANCEL-3, CANCEL-7, COULD-2a, COULD-2b, COULD-3) ;; P docs/requirements.md:123:A 422 lists every broken rule in `violations[]` ;; P src/Uinsure.Policies.Api/Errors/ResultExtensions.cs:11:var first = violations[0]; ;; P src/Uinsure.Policies.Api/Errors/ResultExtensions.cs:22:problem.Extensions[\"ruleId\"] = first.RuleId ;; P src/Uinsure.Policies.Domain/Common/Result.cs:33:OrderBy(violation ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:24:MultipleRuleViolations"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 64,
+      "sentence": "| `429` | Rate limit, with `Retry-After` |",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:145:MetadataName.RetryAfter ;; P src/Uinsure.Policies.Api/Program.cs:148:Headers.RetryAfter ;; P tests/Uinsure.Policies.Api.Tests/RateLimitingTests.cs:189:TryGetValues(\"Retry-After\""
+    },
+    {
+      "file": "docs/design.md",
+      "line": 65,
+      "sentence": "| `500` | A generic `detail` and a `traceId`. The full details go to the logs only, and never a stack trace outside Development |",
+      "source": "P docs/requirements.md:125:never a stack trace outside Development ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:37:An unexpected error occurred ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:26:logger.LogError(exception ;; P tests/Uinsure.Policies.Api.Tests/UnhandledExceptionTests.cs:41:outside_Development ;; P tests/Uinsure.Policies.Api.Tests/UnhandledExceptionTests.cs:54:Unhandled_exception_is_logged_with_the_exception"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 69,
+      "sentence": "**Validation error keys.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 69,
+      "sentence": "For a body or model error, the API lower-cases the first letter of each dot-separated segment of the key (`ValidationProblems.cs`); for example, the key for a policyholder’s date of birth is `policyholders[0].dateOfBirth`.",
+      "source": "P src/Uinsure.Policies.Api/Errors/ValidationProblems.cs:15:CamelCase(error.Key) ;; P src/Uinsure.Policies.Api/Errors/ValidationProblems.cs:26:key.Split('.') ;; P src/Uinsure.Policies.Api/Errors/ValidationProblems.cs:26:char.ToLowerInvariant(segment[0]) ;; P tests/postman/Uinsure.Policies.postman_collection.json:2278:policyholders[0].dateOfBirth ;; P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:83:public DateOnly? DateOfBirth"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 69,
+      "sentence": "A query key that the action does not bind from the query string is a `400`, with `Unknown query parameter.` under that key in `errors`.",
+      "source": "P src/Uinsure.Policies.Api/Filters/RejectUnknownQueryParametersFilter.cs:13:ActionDescriptor.Parameters ;; P src/Uinsure.Policies.Api/Filters/RejectUnknownQueryParametersFilter.cs:14:BindingSource == BindingSource.Query ;; P src/Uinsure.Policies.Api/Filters/RejectUnknownQueryParametersFilter.cs:17:!known.Contains(key) ;; P src/Uinsure.Policies.Api/Filters/RejectUnknownQueryParametersFilter.cs:25:AddModelError(key, \"Unknown query parameter.\") ;; P tests/Uinsure.Policies.Api.Tests/RetrieveNotFoundTests.cs:75:colour=red ;; P tests/Uinsure.Policies.Api.Tests/RetrieveNotFoundTests.cs:79:Unknown query parameter."
+    },
+    {
+      "file": "docs/design.md",
+      "line": 69,
+      "sentence": "A key named after a route parameter is one of these: `GET /policies/{reference}?reference=X` is a `400` keyed `reference`.",
+      "source": "P src/Uinsure.Policies.Api/Filters/RejectUnknownQueryParametersFilter.cs:12:route, body and special parameters are not ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:31:[HttpGet(\"{reference}\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:32:string reference ;; P tests/Uinsure.Policies.Api.Tests/RetrieveNotFoundTests.cs:90:?reference=X ;; P tests/Uinsure.Policies.Api.Tests/RetrieveNotFoundTests.cs:93:HasError(errors, \"reference\")"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 69,
+      "sentence": "No test sends a query key in upper case, so the key returned for one is not specified.",
+      "source": "N \\?[A-Z]{2,}[A-Za-z]*=|tests|cs|0 ;; N \\?[A-Z]{2,}[A-Za-z]*=|tests/postman|json|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 69,
+      "sentence": "The renewal endpoint with no body writes its key, `amount`, by hand in the controller.",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:93:ValidationProblem() does not camel-case keys ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:94:ModelState.AddModelError(\"amount\""
+    },
+    {
+      "file": "docs/design.md",
+      "line": 70,
+      "sentence": "Outside Development the API rejects plain HTTP with a `400` (`/problems/https-required`) instead of redirecting.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:90:if (!app.Environment.IsDevelopment()) ;; P src/Uinsure.Policies.Api/Program.cs:101:Status400BadRequest ;; P src/Uinsure.Policies.Api/Program.cs:108:/problems/https-required ;; P tests/Uinsure.Policies.Api.Tests/HttpsTransportTests.cs:27:Get_over_plain_http_outside_Development_is_400_https_required ;; P tests/Uinsure.Policies.Api.Tests/HttpsTransportTests.cs:62:Plain_http_is_rejected_outside_Development_only ;; N UseHttpsRedirection|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 71,
+      "sentence": "`/health/*` is exempt.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:95:StartsWithSegments(\"/health\") ;; P tests/Uinsure.Policies.Api.Tests/HttpsTransportTests.cs:48:Health_endpoints_are_exempt_from_the_https_check"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 71,
+      "sentence": "There is no `UseHttpsRedirection()`.",
+      "source": "N UseHttpsRedirection|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 76,
+      "sentence": "dotnet test --solution Uinsure.Policies.slnx",
+      "source": "P CLAUDE.md:59:dotnet test --solution Uinsure.Policies.slnx ;; R measured 2026-10-19 (dotnet test --solution Uinsure.Policies.slnx): total 637, failed 0, succeeded 637, skipped 0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 79,
+      "sentence": "Result measured on this branch on 2026-10-19: **637 passed, 0 failed, 0 skipped.**",
+      "source": "R measured 2026-10-19: dotnet test --solution Uinsure.Policies.slnx printed total: 637, failed: 0, succeeded: 637, skipped: 0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 83,
+      "sentence": "| `Uinsure.Policies.Domain.Tests` | 173 | Rule and boundary tests, with `DateOnly today` passed in |",
+      "source": "R measured 2026-10-19: dotnet test --project tests/Uinsure.Policies.Domain.Tests total: 173 failed: 0 skipped: 0 ;; P tests/Uinsure.Policies.Domain.Tests/CancelDateTests.cs:24:policy.Cancel(null, today"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 84,
+      "sentence": "| `Uinsure.Policies.Services.Tests` | 65 | Orchestration and `UkCalendar` (including the BST boundary) |",
+      "source": "R measured 2026-10-19: dotnet test --project tests/Uinsure.Policies.Services.Tests total: 65 failed: 0 skipped: 0 ;; P tests/Uinsure.Policies.Services.Tests/UkCalendarTests.cs:11:UkCalendar_today_at_23_30_UTC_in_BST_is_the_next_UK_date ;; P tests/Uinsure.Policies.Services.Tests/PolicyServiceCancelDateTests.cs:44:Cancel_with_no_date_at_23_30_UTC_in_BST_cancels_on_the_next_UK_date"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 85,
+      "sentence": "| `Uinsure.Policies.Api.Tests` | 332 | The acceptance suite over HTTP: `WebApplicationFactory`, SQLite in memory, `FakeTimeProvider` |",
+      "source": "R measured 2026-10-19: dotnet test --project tests/Uinsure.Policies.Api.Tests total: 332 failed: 0 skipped: 0 ;; P tests/Uinsure.Policies.Api.Tests/Support/PoliciesApiFactory.cs:17:WebApplicationFactory ;; P tests/Uinsure.Policies.Api.Tests/Support/PoliciesApiFactory.cs:19:new(\"DataSource=:memory:\") ;; P tests/Uinsure.Policies.Api.Tests/Support/PoliciesApiFactory.cs:21:FakeTimeProvider"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 86,
+      "sentence": "| `Uinsure.Policies.Architecture.Tests` | 67 | Layering (NetArchTest) and rule coverage |",
+      "source": "R measured 2026-10-19: dotnet test --project tests/Uinsure.Policies.Architecture.Tests total: 67 failed: 0 skipped: 0 ;; P tests/Uinsure.Policies.Architecture.Tests/LayeringTests.cs:2:using NetArchTest.Rules ;; P tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs:14:Every_rule_id_that_is_not_pending_has_a_unit_and_an_integration_trait"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 88,
+      "sentence": "xUnit v3 on Microsoft.Testing.Platform, plain `Assert`.",
+      "source": "P Directory.Packages.props:19:xunit.v3 ;; P global.json:7:\"runner\": \"Microsoft.Testing.Platform\" ;; N (FluentAssertions|Shouldly)|Directory.Packages.props|props|0 ;; P tests/Uinsure.Policies.Api.Tests/Support/ProblemAssert.cs:62:Assert.Equal(status"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 89,
+      "sentence": "A rule test carries `[Trait(\"Rule\", \"<id>\")]`.",
+      "source": "P tests/Uinsure.Policies.Domain.Tests/CancelDateTests.cs:18:[Trait(\"Rule\", \"CANCEL-3\")] ;; P tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs:98:RuleCoverage.ParseTraits(source)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 89,
+      "sentence": "`RuleCoverageTests` fails if a rule ID in `docs/requirements.md` has no unit trait or no integration trait, unless it is listed in `tests/rule-coverage.pending.txt` (empty at the moment).",
+      "source": "P tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs:14:Every_rule_id_that_is_not_pending_has_a_unit_and_an_integration_trait ;; P tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs:16:MissingCoverage ;; P tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs:8:UnitProject = \"Uinsure.Policies.Domain.Tests\" ;; P tests/Uinsure.Policies.Architecture.Tests/RuleCoverageTests.cs:9:IntegrationProject = \"Uinsure.Policies.Api.Tests\" ;; N .|tests/rule-coverage.pending.txt|txt|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 91,
+      "sentence": "Run one rule: `dotnet test --solution Uinsure.Policies.slnx -- --filter-trait \"Rule=SELL-2\"`.",
+      "source": "R measured 2026-10-19: that command ran 26 tests, 0 failed, 0 skipped"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 92,
+      "sentence": "Postman: `tests/postman/Uinsure.Policies.postman_collection.json` (109 requests, in six folders from `F0b Walking skeleton` to `F4 Renew`) with the `local` environment (`baseUrl` = `http://localhost:5080`).",
+      "source": "E tests/postman/Uinsure.Policies.postman_collection.json ;; R measured 2026-10-19 by parsing the collection with node: 109 requests; top-level folders F0b Walking skeleton, F1 Sell, F1b Layered models, F2 Retrieve, F3 Cancel, F4 Renew ;; P tests/postman/local.postman_environment.json:5:\"key\": \"baseUrl\" ;; P tests/postman/local.postman_environment.json:6:\"value\": \"http://localhost:5080\""
+    },
+    {
+      "file": "docs/design.md",
+      "line": 93,
+      "sentence": "Run it against a running API with the Postman CLI:",
+      "source": "P CLAUDE.md:61:postman collection run tests/postman/Uinsure.Policies.postman_collection.json ;; P docs/requirements.md:204:runs via the Postman CLI"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 97,
+      "sentence": "postman collection run tests/postman/Uinsure.Policies.postman_collection.json \\ -e tests/postman/local.postman_environment.json",
+      "source": "P CLAUDE.md:61:postman collection run tests/postman/Uinsure.Policies.postman_collection.json ;; P CLAUDE.md:62:-e tests/postman/local.postman_environment.json"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 101,
+      "sentence": "No git hook runs Postman.",
+      "source": "N (?i)postman|.githooks|*|0 ;; P docs/requirements.md:204:Postman is in no git hook"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 101,
+      "sentence": "The collection holds the rows that can run in real time (the convention in requirements section 3).",
+      "source": "P docs/requirements.md:204:real-time-runnable Postman folder ;; N SetUtcNow|tests/postman|json|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 102,
+      "sentence": "Rows that need a fake clock are covered by the integration tests.",
+      "source": "P tests/Uinsure.Policies.Api.Tests/SellStartDateWindowTests.cs:80:Start_date_of_the_UTC_date_at_23_30_UTC_in_BST_is_rejected_as_past ;; P tests/Uinsure.Policies.Services.Tests/UkCalendarTests.cs:11:UkCalendar_today_at_23_30_UTC_in_BST_is_the_next_UK_date ;; N SetUtcNow|tests/postman|json|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 103,
+      "sentence": "Manual QA scripts are in `docs/qa/`.",
+      "source": "E docs/qa/build-F4.md"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 107,
+      "sentence": "The tests run on SQLite.",
+      "source": "P tests/Uinsure.Policies.Api.Tests/Support/PoliciesApiFactory.cs:19:new(\"DataSource=:memory:\") ;; P tests/Uinsure.Policies.Api.Tests/Support/PoliciesApiFactory.cs:35:UseSetting(\"ConnectionStrings:Policies\", \"DataSource=:memory:\")"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 107,
+      "sentence": "SQLite cannot prove SQL Server-specific behaviour: unique-violation error codes and the migrations themselves.",
+      "source": "P src/Uinsure.Policies.Persistence/PolicyRepository.cs:12:SqliteConstraintUnique = 2067 ;; P src/Uinsure.Policies.Persistence/PolicyRepository.cs:13:SqlServerUniqueIndex = 2601 ;; P src/Uinsure.Policies.Persistence/PolicyRepository.cs:14:SqlServerUniqueConstraint = 2627 ;; P src/Uinsure.Policies.Persistence/PolicyRepository.cs:108:SqlException sqlServer ;; P src/Uinsure.Policies.Persistence/Migrations/20261019014058_InitialCreate.cs:19:.Annotation(\"SqlServer:Identity\", \"1, 1\") ;; N UseSqlServer|tests|cs|0 ;; P tests/Uinsure.Policies.Api.Tests/Support/UnreachableDatabaseApiFactory.cs:15:UnreachableSqlServer"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 108,
+      "sentence": "The pre-push idempotent migration script (`dotnet ef migrations script --idempotent`) proves the migrations generate.",
+      "source": "P .githooks/pre-push:29:dotnet ef migrations script --idempotent ;; P .githooks/pre-push:31:idempotent migration script failed ;; R measured 2026-10-19: dotnet ef migrations script --idempotent --project src/Uinsure.Policies.Persistence --startup-project src/Uinsure.Policies.Api exited 0 and printed 246 lines"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 109,
+      "sentence": "The rest is a known gap.",
+      "source": "X statement of limitation, no separate fact"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 113,
+      "sentence": "The repository has no CI for the code: the pipeline in `infrastructure/` was never connected (see [infrastructure/README.md](../infrastructure/README.md)).",
+      "source": "P docs/requirements.md:203:**No CI.** ;; P docs/requirements.md:207:never connected to Azure ;; N .|.github|*|0 ;; N ^trigger:|.|yml|1 ;; P infrastructure/pipelines/azure-pipelines.yml:1:never connected to Azure DevOps, never run"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 114,
+      "sentence": "The local gate is the hooks in `.githooks/`:",
+      "source": "E .githooks/pre-commit ;; P docs/requirements.md:203:Local git hooks"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 116,
+      "sentence": "`pre-commit`: refuses a commit on `main` once the `main-locked` marker exists, then a privacy scan of staged files, then `dotnet build -warnaserror`.",
+      "source": "P .githooks/pre-commit:11:main-locked ;; P .githooks/pre-commit:12:main is locked ;; P .githooks/pre-commit:24:privacy-scan.sh ;; P .githooks/pre-commit:38:dotnet build Uinsure.Policies.slnx -warnaserror"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 118,
+      "sentence": "`commit-msg`: on `feature/*` and `bug/*` branches, checks the `Agent`, `Plan` and `Node` trailers (and `Rule`, plus `TDD` unless the subject starts `docs(`, on tester and builder commits), and that `Plan` and `Node` match the branch.",
+      "source": "P .githooks/commit-msg:7:feature/*/*|bug/*/*) ;; P .githooks/commit-msg:20:case \"$agent\" in ;; P .githooks/commit-msg:24:Plan trailer must be ;; P .githooks/commit-msg:25:Node trailer must be ;; P .githooks/commit-msg:35:needs a Rule trailer ;; P .githooks/commit-msg:38:docs\\(*) ;; P .githooks/commit-msg:41:scaffold|red|stub|green|refactor"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 121,
+      "sentence": "`pre-push`: refuses a push to `main` once it is locked, then a Release build, the full test suite, the idempotent migration script, and the harness self-test.",
+      "source": "P .githooks/pre-push:19:refs/heads/main ;; P .githooks/pre-push:20:nothing is pushed to main ;; P .githooks/pre-push:26:-c Release ;; P .githooks/pre-push:27:dotnet test --solution Uinsure.Policies.slnx ;; P .githooks/pre-push:29:migrations script --idempotent ;; P .githooks/pre-push:37:node --test"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 126,
+      "sentence": "`main` is the integration branch.",
+      "source": "P docs/requirements.md:161:`main` is the integration branch (no develop branch)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 126,
+      "sentence": "There is no `develop` branch and no integration agent.",
+      "source": "P docs/requirements.md:161:`main` is the integration branch (no develop branch) ;; P docs/requirements.md:161:**No separate integration agent.**"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 126,
+      "sentence": "Feature and bug branches are rebased onto `origin/main` before the pull request, and merged by the repository owner in the GitHub UI with a **merge commit**.",
+      "source": "P docs/requirements.md:152:rebase the feature branch onto the latest `origin/main` ;; P docs/requirements.md:157:**David merges** the PR (merge commits only) ;; P CLAUDE.md:28:**David merges**"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 128,
+      "sentence": "That is the practice followed, not something the repo enforces: the merge method is a GitHub setting.",
+      "source": "N .|.github|*|0 ;; P docs/requirements.md:197:No branch protection while the repo is private"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 129,
+      "sentence": "With a merge commit the branch's commits (as rebased) stay on `main`, and `git log --first-parent main` shows one `Merge pull request` line per merged pull request.",
+      "source": "R measured 2026-10-19: git log --first-parent main --oneline lists Merge pull request #36, #35, #34, #33, #31, #28 as consecutive first-parent entries ;; P docs/requirements.md:157:merge commits only"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 132,
+      "sentence": "On feature and bug branches, tester and builder commits carry the trailers `Agent`, `Plan`, `Node` and `Rule`, and a `TDD` trailer (`scaffold`, `red`, `stub`, `green` or `refactor`) unless the subject starts `docs(`.",
+      "source": "P .githooks/commit-msg:7:feature/*/*|bug/*/*) ;; P .githooks/commit-msg:21:tester|builder|git|main) ;; P .githooks/commit-msg:34:tester|builder) ;; P .githooks/commit-msg:35:needs a Rule trailer ;; P .githooks/commit-msg:38:docs\\(*) ;; P .githooks/commit-msg:41:scaffold|red|stub|green|refactor ;; P .githooks/commit-msg:24:Plan trailer ;; P .githooks/commit-msg:25:Node trailer"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 133,
+      "sentence": "A rule's red and green commits can be found through its `Rule` trailer.",
+      "source": "P .githooks/commit-msg:35:needs a Rule trailer"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 58,
+      "sentence": "| Status | When |",
+      "source": "X table header"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 67,
+      "sentence": "Two details that surprise people:",
+      "source": "X lead-in, opinion, no factual content"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 81,
+      "sentence": "| Project | Tests | What it proves |",
+      "source": "X table header"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 140,
+      "sentence": "`Api` → `Services` → `Domain`, and `Persistence` → `Services`.",
+      "source": "P src/Uinsure.Policies.Api/Uinsure.Policies.Api.csproj:13:Uinsure.Policies.Services.csproj ;; P src/Uinsure.Policies.Services/Uinsure.Policies.Services.csproj:4:Uinsure.Policies.Domain.csproj ;; P src/Uinsure.Policies.Persistence/Uinsure.Policies.Persistence.csproj:12:Uinsure.Policies.Services.csproj"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 140,
+      "sentence": "Domain has no packages and no references.",
+      "source": "N (PackageReference|ProjectReference)|src/Uinsure.Policies.Domain/Uinsure.Policies.Domain.csproj|csproj|0 ;; P tests/Uinsure.Policies.Architecture.Tests/LayeringTests.cs:22:Domain_references_only_BCL_assemblies"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 141,
+      "sentence": "Services orchestrates: load, today, domain, save.",
+      "source": "P src/Uinsure.Policies.Services/PolicyService.cs:67:UkCalendar.Today(clock) ;; P src/Uinsure.Policies.Services/PolicyService.cs:68:repository.GetByReference ;; P src/Uinsure.Policies.Services/PolicyService.cs:74:policy.Cancel( ;; P src/Uinsure.Policies.Services/PolicyService.cs:77:repository.SaveChanges"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 141,
+      "sentence": "GET-1 and SELL-1 are produced in `PolicyService`: GET-1 when the repository finds no policy, and SELL-1 (uniqueness) through the repository.",
+      "source": "P src/Uinsure.Policies.Services/PolicyService.cs:57:if (policy is null) ;; P src/Uinsure.Policies.Services/PolicyService.cs:140:RuleIds.Get1 ;; P src/Uinsure.Policies.Services/PolicyService.cs:15:repository.GetByReference(command.Reference ;; P src/Uinsure.Policies.Services/PolicyService.cs:149:RuleIds.Sell1 ;; N RuleIds\\.(Get1|Sell1)|src/Uinsure.Policies.Services|cs|2 ;; N RuleIds\\.(Get1|Sell1)|src/Uinsure.Policies.Domain|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 142,
+      "sentence": "There is one model per layer (API DTOs, domain, persistence records).",
+      "source": "P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:20:public sealed class SellPolicyRequest ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:6:public sealed class Policy ;; E src/Uinsure.Policies.Persistence/Records/PolicyRecord.cs ;; P src/Uinsure.Policies.Persistence/PolicyRepository.cs:37:_mapper.Restore(record)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 143,
+      "sentence": "Interfaces exist at the layer seams only (`IPolicyService`, `IPolicyRepository`, `IReferenceGenerator`).",
+      "source": "N \\binterface\\s+I\\w+|src|cs|3 ;; P src/Uinsure.Policies.Services/IPolicyService.cs:7:public interface IPolicyService ;; P src/Uinsure.Policies.Services/IPolicyRepository.cs:5:public interface IPolicyRepository ;; P src/Uinsure.Policies.Services/IReferenceGenerator.cs:3:public interface IReferenceGenerator"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 144,
+      "sentence": "There is no generic repository and no unit of work.",
+      "source": "P tests/Uinsure.Policies.Architecture.Tests/RepositoryTests.cs:14:No_src_type_is_a_unit_of_work ;; P tests/Uinsure.Policies.Architecture.Tests/RepositoryTests.cs:22:No_src_repository_type_is_generic"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 145,
+      "sentence": "Architecture tests enforce these references.",
+      "source": "P tests/Uinsure.Policies.Architecture.Tests/LayeringTests.cs:31:Services_does_not_depend_on_EF_Core_AspNetCore_Persistence_or_Api ;; P tests/Uinsure.Policies.Architecture.Tests/LayeringTests.cs:40:Persistence_does_not_depend_on_AspNetCore_or_Api ;; P tests/Uinsure.Policies.Architecture.Tests/LayeringTests.cs:22:Domain_references_only_BCL_assemblies"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 147,
+      "sentence": "Considered and rejected: domain events, caching, CQRS or MediatR, Key Vault (there are no secrets), and authentication.",
+      "source": "P .claude/skills/architecture/SKILL.md:154:**Not to be added:** FluentValidation, MediatR ;; P .claude/skills/architecture/SKILL.md:155:caching, domain events or outbox ;; N (MediatR|AddMemoryCache|IDomainEvent|Outbox)|src|cs|0 ;; N (?i)keyvault|infrastructure|bicep|0 ;; P docs/requirements.md:119:**Out of scope:** authentication"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 152,
+      "sentence": "Authentication is out of scope by requirement.",
+      "source": "P docs/requirements.md:119:**Out of scope:** authentication"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 152,
+      "sentence": "No authentication is configured.",
+      "source": "N (AddAuthentication|AddAuthorization|\\[Authorize)|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 152,
+      "sentence": "`UseAuthorization()` is in the pipeline, ready for it.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:117:app.UseAuthorization()"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 157,
+      "sentence": "`201` on `POST /policies/{reference}/renewals` and `POST /policies/{reference}/claims` returns `Location: /policies/{reference}`: the policy, not a sub-resource.",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:80:Created($\"/policies/{response.PolicyReference}\", response) ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:105:Created($\"/policies/{policyReference.Value}\" ;; P tests/Uinsure.Policies.Api.Tests/Support/PolicyActions.cs:77:Assert.Equal($\"/policies/{reference}\", response.LocationPath()) ;; P tests/Uinsure.Policies.Api.Tests/Support/RenewalActions.cs:39:Assert.Equal($\"/policies/{normalisedReference}\", response.LocationPath())"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 158,
+      "sentence": "That is a deliberate deviation.",
+      "source": "P docs/readme-checklist.md:38:That's a deliberate deviation."
+    },
+    {
+      "file": "docs/design.md",
+      "line": 158,
+      "sentence": "A renewal adds a term and a claim adds a claim, and the client reads both through the policy.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:184:_terms.Add(term) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:220:_claims.Add(claim) ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:31:[HttpGet(\"{reference}\")]"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 163,
+      "sentence": "There is no versioning.",
+      "source": "N (?i)Asp\\.Versioning|Directory.Packages.props|props|0 ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:14:[Route(\"policies\")]"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 163,
+      "sentence": "A breaking change would mean `/v2` or an `api-version` parameter (`Asp.Versioning`).",
+      "source": "P docs/readme-checklist.md:39:A breaking change would mean `/v2` or an `api-version` parameter (`Asp.Versioning`)."
+    },
+    {
+      "file": "docs/design.md",
+      "line": 167,
+      "sentence": "`POST /policies` is safe to retry: a repeated reference gets `409` (SELL-1).",
+      "source": "P tests/Uinsure.Policies.Api.Tests/SellReferenceTests.cs:67:Duplicate_reference_is_rejected_with_409_and_the_original_policy_is_unchanged ;; P src/Uinsure.Policies.Services/PolicyService.cs:15:GetByReference(command.Reference ;; P src/Uinsure.Policies.Services/PolicyService.cs:17:Result<PolicyDetails>.Failure(DuplicateReference"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 167,
+      "sentence": "**Claims are not idempotent**, and there is no `Idempotency-Key`.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:219:var claim = new Claim(claimDate, description); ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:220:_claims.Add(claim); ;; N (?i)idempotency-key|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 168,
+      "sentence": "`Policy.RecordClaim` has no duplicate check, and a second claim is added after the first (tested).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:189:public Result<Claim> RecordClaim ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:200:claimDate > today ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:205:!Terms.Any(term => term.Covers(claimDate)) ;; P tests/Uinsure.Policies.Api.Tests/ClaimRecordTests.cs:65:Second_claim_is_listed_after_the_first"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 173,
+      "sentence": "A cancellation creates a Refund only for an amount above £0.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:98:calculations[i].Amount > 0 ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:94:No £0 refund"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 179,
+      "sentence": "A policy has terms.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:15:private readonly List<Term> _terms ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:45:IReadOnlyList<Term> Terms"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 179,
+      "sentence": "A renewal appends the next term under the same reference (RENEW-4).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:183:var term = new Term(LatestTerm.End.AddDays(1), amount, payment) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:184:_terms.Add(term) ;; P docs/requirements.md:93:| RENEW-4 |"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 179,
+      "sentence": "Policy-level `startDate`, `endDate` and `amount` describe the current term.",
+      "source": "P docs/requirements.md:69:describe the **current term** ;; P tests/Uinsure.Policies.Api.Tests/RetrieveCurrentTermTests.cs:54:First_day_of_the_second_term_shows_the_second_term"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 180,
+      "sentence": "`terms[]` holds the history.",
+      "source": "P docs/requirements.md:69:`terms[]` holds the history ;; P src/Uinsure.Policies.Api/Contracts/PolicyResponse.cs:16:IReadOnlyList<TermResponse> Terms"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 180,
+      "sentence": "The status is derived from today and never stored.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:54:// Derived, never stored. ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:55:public PolicyStatus StatusOn(DateOnly today) ;; N Status|src/Uinsure.Policies.Persistence/Records|cs|0 ;; P tests/Uinsure.Policies.Api.Tests/RetrieveStatusTests.cs:74:Status_on_the_day_after_the_end_date_is_Expired"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 185,
+      "sentence": "The development loop includes a security review against the OWASP API Security Top 10 2023 (requirements section 3).",
+      "source": "P docs/requirements.md:149:OWASP API Top 10 2023"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 186,
+      "sentence": "These items are out of scope, stated rather than skipped:",
+      "source": "X framing sentence, no factual content beyond the five bullets"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 188,
+      "sentence": "there is no auth or tenancy.",
+      "source": "N (AddAuthentication|AddAuthorization|\\[Authorize|[Tt]enant)|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 188,
+      "sentence": "The reference is the only key, and references are client-chosen and guessable.",
+      "source": "N \\[Http(Get|Post)\\(\"\\{reference\\}|src|cs|5 ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:17:[HttpPost] ;; P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:22:{3,20} ;; P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:27:public string? Reference"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 188,
+      "sentence": "**API1 (broken object-level authorisation):**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 190,
+      "sentence": "**API2 (broken authentication):** authentication is out of scope.",
+      "source": "P docs/requirements.md:119:**Out of scope:** authentication"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 191,
+      "sentence": "**API5 (broken function-level authorisation):** there are no roles.",
+      "source": "N (\\[Authorize|Roles)|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 191,
+      "sentence": "In real life `POST /claims` would be an admin function.",
+      "source": "P docs/readme-checklist.md:36:`POST /claims` would be an admin function in real life ;; X opinion stated as an out-of-scope note, no repo behaviour"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 193,
+      "sentence": "**API7 (SSRF):** the API makes no outbound URL fetches.",
+      "source": "N HttpClient|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 194,
+      "sentence": "**API10 (unsafe consumption of APIs):** there are no upstream APIs.",
+      "source": "N HttpClient|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 194,
+      "sentence": "Pricing is supplied by the client.",
+      "source": "P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:36:public decimal? Amount ;; P docs/requirements.md:94:pricing belongs to another team"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 196,
+      "sentence": "In scope and built: resource limits (a 64 KiB body cap, a per-IP rate limit), strict input, no passwords in the Bicep (the app signs in to SQL with a managed identity), log calls that name no personal field, and a generic 500 body.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:19:MaxRequestBodySize = 65_536 ;; P src/Uinsure.Policies.Api/Program.cs:133:RemoteIpAddress ;; P src/Uinsure.Policies.Api/Program.cs:52:UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow ;; N administratorLoginPassword|infrastructure|bicep|0 ;; P infrastructure/modules/appservice.bicep:54:Authentication=Active Directory Managed Identity ;; N logger\\.Log|src|cs|4 ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:26:\"Unhandled exception on {Method} {Path}\" ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:37:An unexpected error occurred"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 198,
+      "sentence": "Rate limits are described under [Known limits](#known-limits).",
+      "source": "P docs/design.md:208:## Known limits"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 200,
+      "sentence": "**Exposure if deployed.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 200,
+      "sentence": "The Bicep sets no IP restriction on the web app (`appservice.bicep` has no `ipSecurityRestrictions`), and its 16 resources include no Front Door, WAF or API gateway.",
+      "source": "N ipSecurityRestrictions|infrastructure|bicep|0 ;; N ^resource |infrastructure/modules|bicep|16 ;; N (?i)frontdoor|Microsoft\\.Cdn|applicationGateway|ApiManagement|firewallPolicies|infrastructure|bicep|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 201,
+      "sentence": "With no authentication and client-chosen, guessable references, anyone who reaches the host and knows or guesses a reference could read that policy (names, dates of birth, address) and post claims, cancellations or renewals to it.",
+      "source": "N (AddAuthentication|AddAuthorization|\\[Authorize)|src|cs|0 ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:31:[HttpGet(\"{reference}\")] ;; P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:76:FirstName ;; P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:83:DateOfBirth ;; P src/Uinsure.Policies.Api/Contracts/SellPolicyRequest.cs:90:AddressLine1 ;; P src/Uinsure.Policies.Api/Contracts/PolicyResponse.cs:14:Policyholders ;; P src/Uinsure.Policies.Api/Contracts/PolicyResponse.cs:15:Property ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:38:[HttpPost(\"{reference}/cancellation\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:68:[HttpPost(\"{reference}/claims\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:83:[HttpPost(\"{reference}/renewals\")] ;; R measured 2026-10-19 (curl to the http profile, no credentials sent): GET /policies/MEAS-B1 returned the policy with its policyholders"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 204,
+      "sentence": "The API's own protections against volume are the per-client, per-instance rate limits and the request body cap.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:116:app.UseRateLimiter() ;; P src/Uinsure.Policies.Api/Program.cs:133:RemoteIpAddress ;; P src/Uinsure.Policies.Api/Program.cs:19:MaxRequestBodySize = 65_536"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 205,
+      "sentence": "Nothing has been deployed, so this is read from the Bicep and has not been observed on a running service.",
+      "source": "P docs/requirements.md:207:never connected to Azure ;; P docs/requirements.md:207:`az` is never run"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 210,
+      "sentence": "**Rate limits are per instance.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 210,
+      "sentence": "The limiter is the built-in in-memory fixed window, per client IP.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:43:PartitionedRateLimiter.Create ;; P src/Uinsure.Policies.Api/Program.cs:132:GetFixedWindowLimiter ;; P src/Uinsure.Policies.Api/Program.cs:133:RemoteIpAddress"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 210,
+      "sentence": "Each instance counts on its own: the limiter holds its counts in memory and the code uses no shared store.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:132:GetFixedWindowLimiter ;; N (AddMemoryCache|Redis|IDistributedCache)|src|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 211,
+      "sentence": "Defaults outside Development: 100 requests per minute globally and 10 per minute on every `POST` (the `writes` policy).",
+      "source": "P src/Uinsure.Policies.Api/appsettings.json:10:\"PermitLimit\": 100 ;; P src/Uinsure.Policies.Api/appsettings.json:11:\"PermitLimit\": 10 ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:18:[EnableRateLimiting(\"writes\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:39:[EnableRateLimiting(\"writes\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:69:[EnableRateLimiting(\"writes\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:84:[EnableRateLimiting(\"writes\")] ;; N \\[HttpPost|src|cs|4 ;; N EnableRateLimiting\\(\"writes\"\\)|src|cs|4 ;; P tests/Uinsure.Policies.Api.Tests/DefaultRateLimitsTests.cs:21:Default_writes_limit_lets_ten_posts_through_and_rejects_the_eleventh ;; P tests/Uinsure.Policies.Api.Tests/DefaultRateLimitsTests.cs:37:Default_global_limit_lets_a_hundred_requests_through_and_rejects_the_hundred_and_first"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 213,
+      "sentence": "Development: 10,000 and 1,000.",
+      "source": "P src/Uinsure.Policies.Api/appsettings.Development.json:9:\"PermitLimit\": 10000 ;; P src/Uinsure.Policies.Api/appsettings.Development.json:10:\"PermitLimit\": 1000"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 213,
+      "sentence": "Both come from the `RateLimiting` configuration section.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:35:GetSection(\"RateLimiting\") ;; P src/Uinsure.Policies.Api/RateLimitingOptions.cs:3:Bound from the \"RateLimiting\" section"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 214,
+      "sentence": "**Forwarded headers are configured, not tested on App Service.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 214,
+      "sentence": "The code honours `X-Forwarded-For` and `X-Forwarded-Proto` only from 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16, and tests cover that with a simulated proxy address.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:25:ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto ;; P src/Uinsure.Policies.Api/Program.cs:26:KnownProxies.Clear() ;; P src/Uinsure.Policies.Api/Program.cs:27:KnownIPNetworks.Clear() ;; P src/Uinsure.Policies.Api/Program.cs:28:10.0.0.0/8 ;; P src/Uinsure.Policies.Api/Program.cs:29:172.16.0.0/12 ;; P src/Uinsure.Policies.Api/Program.cs:30:192.168.0.0/16 ;; P tests/Uinsure.Policies.Api.Tests/ForwardedHeadersTests.cs:37:Forwarded_https_from_a_private_network_proxy_passes_the_https_check ;; P tests/Uinsure.Policies.Api.Tests/ForwardedHeadersTests.cs:41:.From(proxy)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 216,
+      "sentence": "Whether App Service's front end connects from those ranges has not been tested.",
+      "source": "P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 216,
+      "sentence": "A request from any other address has its forwarded headers ignored.",
+      "source": "P tests/Uinsure.Policies.Api.Tests/ForwardedHeadersTests.cs:58:Forwarded_https_from_an_untrusted_address_is_ignored ;; P tests/Uinsure.Policies.Api.Tests/RateLimitingTests.cs:121:Spoofed_forwarded_for_from_a_public_address_does_not_get_a_fresh_bucket"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 217,
+      "sentence": "Outside Development, a plain-HTTP request that sends `X-Forwarded-Proto: https` from such an address gets the HTTPS `400`, and the rate limiter counts by the connecting address, not by `X-Forwarded-For` (both tested).",
+      "source": "P tests/Uinsure.Policies.Api.Tests/ForwardedHeadersTests.cs:62:WithHeader(\"X-Forwarded-Proto\", \"https\") ;; P tests/Uinsure.Policies.Api.Tests/ForwardedHeadersTests.cs:64:HttpStatusCode.BadRequest ;; P tests/Uinsure.Policies.Api.Tests/RateLimitingTests.cs:125:WithHeader(\"X-Forwarded-For\", \"198.51.100.30\") ;; P tests/Uinsure.Policies.Api.Tests/RateLimitingTests.cs:131:Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 220,
+      "sentence": "**No cap on claims per policy.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 220,
+      "sentence": "Each claim POST appends a claim, and `GET` returns them all.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:220:_claims.Add(claim) ;; P src/Uinsure.Policies.Api/Contracts/PolicyResponse.cs:19:Claims ;; P tests/Uinsure.Policies.Api.Tests/ClaimRecordTests.cs:65:Second_claim_is_listed_after_the_first"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 220,
+      "sentence": "There is no cap.",
+      "source": "N (?i)MaxClaims|claims.?limit|src|cs|0 ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:219:var claim = new Claim(claimDate, description);"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 221,
+      "sentence": "The per-client, per-instance write rate limit applies to the claims route.",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:68:[HttpPost(\"{reference}/claims\")] ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:69:[EnableRateLimiting(\"writes\")]"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 221,
+      "sentence": "No rule in the requirements asks for a cap.",
+      "source": "N (?i)cap on claims|claims per policy|maximum number of claims|docs/requirements.md|md|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 223,
+      "sentence": "**Few application log lines.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 223,
+      "sentence": "There is no log line for a successful or a 4xx rule outcome.",
+      "source": "N logger\\.Log|src|cs|4 ;; N ILogger|src/Uinsure.Policies.Services|cs|0 ;; N ILogger|src/Uinsure.Policies.Domain|cs|0 ;; N ILogger|src/Uinsure.Policies.Persistence|cs|0 ;; N ILogger|src/Uinsure.Policies.Api/Controllers|cs|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 223,
+      "sentence": "The log calls in `src/` are a client abort (Information), a bad request (Warning), a persistence conflict (Warning) and an unhandled exception (Error).",
+      "source": "P src/Uinsure.Policies.Api/Errors/ClientAbortLoggingMiddleware.cs:16:logger.LogInformation(\"Client aborted ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:61:logger.LogWarning(exception, \"Bad request on ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:45:logger.LogWarning(\"Persistence conflict on ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:26:logger.LogError(exception, \"Unhandled exception on ;; N logger\\.Log|src|cs|4"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 225,
+      "sentence": "Their templates carry the method, path, status or reason, and no call passes a name, date of birth, address, postcode or request body.",
+      "source": "P src/Uinsure.Policies.Api/Errors/ClientAbortLoggingMiddleware.cs:16:{Method} {Path}\", context.Request.Method, context.Request.Path ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:26:{Method} {Path}\", httpContext.Request.Method, httpContext.Request.Path ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:45:{Reason}\", httpContext.Request.Method, httpContext.Request.Path, exception.Reason ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:61:{Status}\", httpContext.Request.Method, httpContext.Request.Path, exception.StatusCode"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 226,
+      "sentence": "The bad-request and unhandled-exception calls also pass the exception object, whose content this code does not control.",
+      "source": "P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:61:LogWarning(exception ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:26:LogError(exception ;; P src/Uinsure.Policies.Api/Errors/UnexpectedExceptionHandler.cs:7:its message"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 228,
+      "sentence": "**SQLite versus SQL Server:** see [What SQLite cannot prove](#what-sqlite-cannot-prove).",
+      "source": "P docs/design.md:105:### What SQLite cannot prove"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 229,
+      "sentence": "**`Policy.Renew` assumes an auto-renewing term has a payment.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 229,
+      "sentence": "On auto-renew it reads `CurrentTerm(today).Payment!.Method` when the request sends no method.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:167:AutoRenew ? method ?? CurrentTerm(today).Payment!.Method"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 230,
+      "sentence": "A term of an auto-renewing policy gets a payment when it is created (SELL-6 on sale, RENEW-3a on renewal).",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:315:var payment = new Payment(paymentReference, method, amount); ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:316:var term = new Term(start, amount, payment); ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:182:var payment = paidBy is { } paymentMethod ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:167:AutoRenew ?"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 231,
+      "sentence": "The code does not check for a missing payment: it uses the null-forgiving `!` on `Payment`.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:167:Payment!.Method"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 236,
+      "sentence": "These are behaviours the written rules do not fully fix.",
+      "source": "X framing sentence, no factual content beyond the bullets"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 238,
+      "sentence": "**Renewal detail texts are the code's wording.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 238,
+      "sentence": "RENEW-1/2 says \"A policy can be renewed from W to E.\"",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:148:A policy can be renewed from {windowStart:yyyy-MM-dd} to {windowEnd:yyyy-MM-dd}."
+    },
+    {
+      "file": "docs/design.md",
+      "line": 239,
+      "sentence": "RENEW-6 says \"The policy was cancelled on T, so it cannot be renewed.\"",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:135:so it cannot be renewed."
+    },
+    {
+      "file": "docs/design.md",
+      "line": 239,
+      "sentence": "COULD-3 says \"An auto-renewing policy cannot be renewed by Cheque. Use Card or DirectDebit.\" for both a sent and a defaulted Cheque.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:172:An auto-renewing policy cannot be renewed by Cheque. Use Card or DirectDebit. ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:167:method ?? CurrentTerm(today) ;; P tests/Uinsure.Policies.Api.Tests/RenewChequeTests.cs:30:Auto_renewal_with_an_explicit_Cheque_is_rejected_with_422 ;; P tests/Uinsure.Policies.Api.Tests/RenewChequeTests.cs:49:Auto_renewal_defaulting_to_the_current_terms_Cheque_is_rejected_with_422_asking_for_another_method"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 240,
+      "sentence": "These differ from the example texts in the API contract written before the build (noted in `docs/qa/build-F4.md`).",
+      "source": "P docs/qa/build-F4.md:277:texts di ;; P docs/qa/build-F4.md:278:contract's examples"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 241,
+      "sentence": "The requirement only asks that the COULD-3 `detail` asks for another method.",
+      "source": "P docs/requirements.md:106:| COULD-3 | ;; P docs/requirements.md:106:The `detail` asks for another method"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 242,
+      "sentence": "The dates are also in the `windowStart`, `windowEnd` and `cancellationDate` extensions.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:149:(\"windowStart\", windowStart) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:150:(\"windowEnd\", windowEnd) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:136:(\"cancellationDate\", Cancellation.CancellationDate) ;; R measured 2026-10-19 (curl to the http profile): a single-violation 422 from POST /policies/MEAS-A1/renewals carried windowStart and windowEnd at the top level"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 244,
+      "sentence": "**A multi-violation 422 has no top-level rule extensions.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 244,
+      "sentence": "With two or more violations the top level carries no `windowStart`, `windowEnd`, `amount` or `paymentMethod`.",
+      "source": "P src/Uinsure.Policies.Api/Errors/ResultExtensions.cs:24:if (single && first.Extensions is not null) ;; R measured 2026-10-19 (curl to the http profile): POST /policies/MEAS-A1/renewals with {\"amount\":0,\"paymentMethod\":\"Card\"} returned 422 whose top-level members were type, title, status, detail, instance, traceId, ruleId, violations"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 245,
+      "sentence": "A `violations[]` entry carries only `ruleId` and `detail` (`ResultExtensions.cs`).",
+      "source": "P src/Uinsure.Policies.Api/Errors/ResultExtensions.cs:34:new { v.RuleId, Detail = v.Message } ;; R measured 2026-10-19 (same response): each violations entry had only ruleId and detail"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 246,
+      "sentence": "The extensions are copied to the top level only for a single violation.",
+      "source": "P src/Uinsure.Policies.Api/Errors/ResultExtensions.cs:13:var single = violations.Count == 1; ;; P src/Uinsure.Policies.Api/Errors/ResultExtensions.cs:24:if (single && first.Extensions is not null) ;; R measured 2026-10-19: the single-violation 422 carried windowStart and windowEnd; the three-violation 422 carried none"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 248,
+      "sentence": "**A `null` `paymentMethod` counts as none.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 248,
+      "sentence": "On a policy that does not auto-renew, `\"paymentMethod\": null` is not RENEW-3b, because the rule says a request that \"sends\" a method gets 422.",
+      "source": "P docs/requirements.md:92:A request that sends a `paymentMethod` anyway gets **422** RENEW-3b ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:154:if (!AutoRenew && method is not null) ;; R measured 2026-10-19 (curl to the http profile): non-auto-renew policy, body {\"amount\":372.90,\"paymentMethod\":null} gave 422 with violations [RENEW-1/2] only; the same body with \"paymentMethod\":\"Cheque\" gave [RENEW-1/2, RENEW-3b]"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 249,
+      "sentence": "Observed by hand (`docs/qa/build-F4.md`); no test pins this.",
+      "source": "P docs/qa/build-F4.md:290:`\"paymentMethod\": null` is treated as n ;; N paymentMethod.{0,3}\\s*:\\s*null|WithPaymentMethod\\(null|PaymentMethod = null|tests|cs|0 ;; N paymentMethod.{0,4}null|tests/postman|json|0 ;; R measured 2026-10-19 (see the claim above)"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 251,
+      "sentence": "**Enum names were accepted in lower case when tried by hand.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 251,
+      "sentence": "`\"card\"` was accepted as `Card` on renewal and `\"household\"` on sale (`docs/qa/build-F4.md`).",
+      "source": "P docs/qa/build-F4.md:293:enum names are read case-insensitively ;; R measured 2026-10-19 (curl to the http profile): a sale with \"type\":\"household\",\"paymentMethod\":\"card\" gave 201 and the GET read it back as \"type\":\"Household\"; a renewal with \"paymentMethod\":\"card\" reached the rules (422 RENEW-1/2), not a 400"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 252,
+      "sentence": "No test sends a lower-case enum name, so this is observed, not pinned.",
+      "source": "N \"(card|household|buytolet|directdebit|cheque)\"|tests/Uinsure.Policies.Api.Tests|cs|0 ;; N \"(card|household|buytolet|directdebit|cheque)\"|tests/postman|json|0"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 253,
+      "sentence": "Integers are refused (`JsonStringEnumConverter` with `allowIntegerValues: false`).",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:53:JsonStringEnumConverter(allowIntegerValues: false) ;; P tests/Uinsure.Policies.Api.Tests/SellShapeTests.cs:144:Integer_policy_type_is_rejected_with_400 ;; P tests/Uinsure.Policies.Api.Tests/SellShapeTests.cs:169:Integer_payment_method_is_rejected_with_400 ;; R measured 2026-10-19: \"type\":0 on a sale gave 400"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 3,
+      "sentence": "Extracted in F0a (task t17 in `docs/plans/active/build.dag.yaml`) from every place a spec Contract says the project README must state something.",
+      "source": "P docs/plans/active/build.dag.yaml:57:id: t17 ;; P docs/plans/active/build.dag.yaml:57:docs/readme-checklist.md extracted from every 'the README states…' in the spec Contracts"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 4,
+      "sentence": "Subagents never read the specs (requirements section 3), so the README builder works from this list.",
+      "source": "P CLAUDE.md:34:**Subagents never read `.claude/specs/`.** ;; P docs/requirements.md:245:Agents never read the specs ;; X the README builder working from this list is the process the F6 dispatch followed, not a repo fact"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 5,
+      "sentence": "**F6 ticks each item and links the file and section that satisfies it.**",
+      "source": "N ☑|docs/readme-checklist.md|md|18 ;; R measured 2026-10-19 by script: 50 relative links in README.md, docs/design.md, docs/readme-checklist.md and infrastructure/README.md, 0 broken (file exists and heading anchor exists)"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 5,
+      "sentence": "At F6 the README was shortened; the detail moved to `docs/design.md` and `infrastructure/README.md`, and every link below points there.",
+      "source": "R measured 2026-10-19 with git show: README.md had 395 lines at a2b43ae and 88 lines at d72bf26 (92 now); d72bf26 added docs/design.md (219 lines) and infrastructure/README.md (164 lines) ;; E docs/design.md ;; E infrastructure/README.md ;; N \\]\\((?!design\\.md|\\.\\./infrastructure/README\\.md)|docs/readme-checklist.md|md|0"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 7,
+      "sentence": "The links are relative to `docs/`, where this file lives; the visible text gives the repo path.",
+      "source": "P docs/readme-checklist.md:19:[docs/design.md#branching-and-merging](design.md#branching-and-merging) ;; P docs/readme-checklist.md:21:[infrastructure/README.md#prod-approval](../infrastructure/README.md#prod-approval) ;; R measured 2026-10-19 by script: every link resolves relative to docs/"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 7,
+      "sentence": "An item marked *if cut* applies only when that node or step is cut.",
+      "source": "P docs/readme-checklist.md:24:*If the schema check is cut:* ;; P docs/readme-checklist.md:30:*If F5 is cut:* ;; X definition of the marker"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 10,
+      "sentence": "How it was extracted: from the spec Contracts (section A) and from accepted Decisions and Recommendations that bind the **project** README (section B).",
+      "source": "P docs/readme-checklist.md:15:## A. From spec Contracts ;; P docs/readme-checklist.md:32:## B. From accepted Decisions and Recommendations"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 11,
+      "sentence": "Node READMEs (`docs/trace/…`) are generated, not written, the F0a trail README was written by hand, and both are listed in section C.",
+      "source": "P .claude/scripts/render-trace.mjs:4:TRAIL INCOMPLETE (render still writes, with the reasons first) ;; P docs/trace/build/F0a/README.md:3:Unlike other node READMEs it isn't generated ;; P docs/readme-checklist.md:43:## C. Not for the project README"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 12,
+      "sentence": "Each source is cited as `spec · section`, because some obligations sit in an accepted Decision or Recommendation rather than in the Contract text.",
+      "source": "P docs/readme-checklist.md:19:orchestration · Contract (Branching) ;; P docs/readme-checklist.md:36:agents-skills · Research R6 ;; P docs/readme-checklist.md:38:api-contract · Decision D4 (O5b) ;; P docs/readme-checklist.md:40:api-contract · Recommendation 6"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 17,
+      "sentence": "| # | The README states… | Source | Done | Where it is now |",
+      "source": "X table header"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 19,
+      "sentence": "`main` is the integration branch: no `develop` branch and no integration agent. Feature and bug branches are cut from `origin/main`, rebased onto it before the PR, and merged by David with a **merge commit**, so every TDD commit and its SHA survives on `main`, and `git log --first-parent main` shows one line per feature. (wording corrected at F6 to match what `docs/design.md` states and the repo shows: branches are rebased onto `origin/main` before the PR, not \"cut from\" it; the commits stay on `main` as rebased, so their SHAs are the rebased ones; and `--first-parent` shows one line per merged pull request, not one per feature)",
+      "source": "P docs/design.md:126:`main` is the integration branch. There is no `develop` branch and no integration agent. ;; P docs/design.md:127:branches are rebased onto `origin/main` before the pull request ;; P docs/design.md:128:**merge commit** ;; P docs/design.md:129:the branch's commits (as rebased) stay on `main` ;; P docs/design.md:130:`git log --first-parent main` shows one `Merge pull request` line per merged pull request ;; P docs/requirements.md:157:**David merges** the PR (merge commits only) ;; R measured 2026-10-19: git log --first-parent main --oneline lists Merge pull request #36, #35, #34, #33 as consecutive first-parent entries"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 19,
+      "sentence": "orchestration · Contract (Branching)",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 19,
+      "sentence": "[docs/design.md#branching-and-merging](design.md#branching-and-merging)",
+      "source": "P docs/design.md:124:## Branching and merging"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 20,
+      "sentence": "SQLite can't prove SQL Server-specific behaviour (unique-violation codes, migrations). The pre-push idempotent migration script proves the migrations generate; the rest is a known gap.",
+      "source": "P docs/design.md:107:SQLite cannot prove SQL Server-specific behaviour ;; P docs/design.md:108:The pre-push idempotent migration script ;; P .githooks/pre-push:29:migrations script --idempotent"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 20,
+      "sentence": "testing · Contract C5",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 20,
+      "sentence": "[docs/design.md#what-sqlite-cannot-prove](design.md#what-sqlite-cannot-prove)",
+      "source": "P docs/design.md:105:### What SQLite cannot prove"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 21,
+      "sentence": "The prod Approval check (environment `policies-prod`, approver: release manager, timeout 72 h) lives in the Azure DevOps UI, not the YAML, so the README is its only evidence. That's a platform limit, not a gap. (wording corrected at F6 to match F5 as built: the environment is `policies-prod`, not `uinsurepolicies-prod`)",
+      "source": "P infrastructure/README.md:88:The Approval check on the environment `policies-prod` ;; P infrastructure/README.md:89:Azure DevOps UI, not the YAML ;; P infrastructure/pipelines/stage-template.yml:63:environment: policies-${{ parameters.environmentName }} ;; N uinsurepolicies|infrastructure|*|0 ;; R measured 2026-10-19 with git show b40dbcd:docs/readme-checklist.md line 18: the first version of A3 said `uinsurepolicies-prod`"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 21,
+      "sentence": "deployment · Contract",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 21,
+      "sentence": "[infrastructure/README.md#prod-approval](../infrastructure/README.md#prod-approval)",
+      "source": "P infrastructure/README.md:86:## Prod approval"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 22,
+      "sentence": "The one-time setup list, none of it done: (1) an ADO project and a pipeline from `infrastructure/pipelines/azure-pipelines.yml`; (2) three ARM service connections using workload identity federation, `sc-policies-dev\\",
+      "source": "P infrastructure/README.md:98:1. An Azure DevOps project, and a pipeline from `infrastructure/pipelines/azure-pipelines.yml`. ;; P infrastructure/README.md:99:Three ARM service connections using workload identity federation ;; P infrastructure/README.md:102:Each ARM connection's identity gets rights at subscription scope ;; P infrastructure/README.md:104:One Entra group per environment as the SQL admin ;; P infrastructure/README.md:107:The environments `policies-dev`, `policies-test` and `policies-prod` ;; P infrastructure/README.md:108:6. A branch control check on each environment ;; P infrastructure/pipelines/azure-pipelines.yml:64:azureServiceConnection: sc-policies-dev ;; P infrastructure/pipelines/stage-template.yml:63:environment: policies-${{ parameters.environmentName }} ;; N uinsurepolicies|infrastructure|*|0 ;; R measured 2026-10-19 with git show b40dbcd:docs/readme-checklist.md line 19: the first version of A4 said `sc-uinsurepolicies-dev\\|test\\|prod`"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 22,
+      "sentence": "deployment · Contract (One-time setup)",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 22,
+      "sentence": "[infrastructure/README.md#one-time-setup-none-of-it-done](../infrastructure/README.md#one-time-setup-none-of-it-done)",
+      "source": "P infrastructure/README.md:96:## One-time setup (none of it done)"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 23,
+      "sentence": "**Verbatim:** \"**Never connected, never run.** This pipeline has never been connected to an Azure DevOps organisation or run. No service connections, environments or approvals exist. The Bicep is linted and built locally, and the YAML is schema-checked locally. Neither what-if nor a real pipeline compile was run, because both need Azure or Azure DevOps. The repo's real gate is its local git hooks (requirements §3, \"No CI\"). This pipeline shows how CI/CD would look at Uinsure.\"",
+      "source": "V infrastructure/README.md:3:7:**Never connected, never run.** This pipeline has never been connected to an Azure DevOps organisation or run. No service connections, environments or approvals exist. The Bicep is linted and built locally, and the YAML is schema-checked locally. Neither what-if nor a real pipeline compile was run, because both need Azure or Azure DevOps. The repo's real gate is its local git hooks (requirements §3, \"No CI\"). This pipeline shows how CI/CD would look at Uinsure."
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 23,
+      "sentence": "deployment · Contract (README statement)",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 23,
+      "sentence": "[infrastructure/README.md](../infrastructure/README.md)",
+      "source": "E infrastructure/README.md"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 24,
+      "sentence": "*If the schema check is cut:* the YAML is \"unvalidated\". *Otherwise* the claim is exactly: \"the YAML is valid against the schema; template expansion, `${{ }}` expressions, task inputs, service connections and environments are not checked against Azure DevOps\" (wording corrected at F6: \"against Azure DevOps\" added, because check-pipeline.py asserts the AzureCLI@2 input keys, that every azureSubscription is a template parameter, and the environment name, but never contacts Azure DevOps).",
+      "source": "P infrastructure/README.md:74:the YAML is valid against the schema; template expansion, `${{ }}` expressions, ;; P infrastructure/README.md:75:task inputs, service connections and environments are not checked against Azure DevOps. ;; P infrastructure/pipelines/check-pipeline.py:38:validator.iter_errors(doc)"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 24,
+      "sentence": "deployment · Contract (schema check, cut order)",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 24,
+      "sentence": "[infrastructure/README.md#schema-check](../infrastructure/README.md#schema-check) (the check was not cut)",
+      "source": "P infrastructure/README.md:72:## Schema check ;; P infrastructure/pipelines/check-pipeline.py:38:validator.iter_errors(doc)"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 25,
+      "sentence": "**Status:** \"The Bicep is linted and built locally and never deployed. what-if was not run, because it needs a signed-in subscription.\"",
+      "source": "V infrastructure/README.md:14:15:The Bicep is linted and built locally and never deployed. what-if was not run, because it needs a signed-in subscription."
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 25,
+      "sentence": "infrastructure · Contract, paragraph 1",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 25,
+      "sentence": "[infrastructure/README.md#status](../infrastructure/README.md#status)",
+      "source": "P infrastructure/README.md:12:## Status"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 26,
+      "sentence": "**Shape:** subscription scope, the resource group plus 16 resources per environment, 4 modules, 3 `.bicepparam` files, plus the sizing table. (wording corrected at F6 to match F5 as built: it said 6 resources and 3 modules)",
+      "source": "P infrastructure/README.md:19:Bicep at subscription scope ;; P infrastructure/README.md:21:Per environment that is the resource group plus 16 resources ;; N ^resource |infrastructure/modules|bicep|16 ;; N ^module |infrastructure/main.bicep|bicep|4 ;; N ^using |infrastructure/params|bicepparam|3 ;; P infrastructure/README.md:27:| | App Service plan | SQL database | ;; R measured 2026-10-19 with git show b40dbcd:docs/readme-checklist.md line 23: the first version of A8 said 6 resources per environment, 3 modules"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 26,
+      "sentence": "infrastructure · Contract, paragraph 2",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 26,
+      "sentence": "[infrastructure/README.md#shape](../infrastructure/README.md#shape)",
+      "source": "P infrastructure/README.md:17:## Shape"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 27,
+      "sentence": "**No secrets:** a user-assigned managed identity connects to Entra-only SQL, so there are no passwords. **Key Vault was considered and rejected**: there's nothing to store. It arrives with the first real secret, such as a payment API key. (wording corrected at F6 to match F5 as built: the identity is user-assigned, not system-assigned)",
+      "source": "P infrastructure/modules/appservice.bicep:32:type: 'UserAssigned' ;; P infrastructure/modules/sql.bicep:26:azureADOnlyAuthentication: true ;; P infrastructure/README.md:35:The app signs in to Entra-only Azure SQL with a **user-assigned** managed identity ;; P docs/design.md:147:Key Vault (there are no secrets) ;; R measured 2026-10-19 with git show b40dbcd:docs/readme-checklist.md line 24: the first version of A9 said a system-assigned managed identity"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 27,
+      "sentence": "infrastructure · Contract, paragraph 3",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 27,
+      "sentence": "[infrastructure/README.md#no-secrets](../infrastructure/README.md#no-secrets)",
+      "source": "P infrastructure/README.md:33:## No secrets"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 28,
+      "sentence": "**Networking:** a private endpoint for SQL, VNet integration for the app, no public SQL endpoint, and self-hosted deployment agents in a network that reaches the VNet. This is built, not future work. (wording corrected at F6 to match F5 as built: it said \"next step\" and described a public endpoint plus the Azure-services rule as today's state)",
+      "source": "P infrastructure/modules/sql.bicep:42:resource privateEndpoint ;; P infrastructure/modules/appservice.bicep:38:virtualNetworkSubnetId: appIntegrationSubnetId ;; P infrastructure/modules/sql.bicep:19:publicNetworkAccess: 'Disabled' ;; P infrastructure/pipelines/stage-template.yml:55:SQL has no public endpoint, so the whole job runs on a self-hosted pool ;; P infrastructure/pipelines/stage-template.yml:61:name: policies-${{ parameters.environmentName }}-vnet ;; R measured 2026-10-19 with git show b40dbcd:docs/readme-checklist.md line 25: the first version of A10 said \"Next step, networking\" and \"(Today: a public endpoint plus the Azure-services rule.)\""
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 28,
+      "sentence": "infrastructure · Contract, paragraph 4; Decision",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 28,
+      "sentence": "[infrastructure/README.md#networking](../infrastructure/README.md#networking)",
+      "source": "P infrastructure/README.md:42:## Networking"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 29,
+      "sentence": "**.NET 10 runtime:** \"`DOTNETCORE\\|10.0` is inferred from the documented pattern and a Nov 2025 Q&A. It wasn't confirmed with `az webapp list-runtimes`.\"",
+      "source": "P infrastructure/modules/appservice.bicep:40:linuxFxVersion: 'DOTNETCORE|10.0' ;; P infrastructure/README.md:55:That value is inferred from the documented pattern and a Nov 2025 Q&A. ;; P infrastructure/README.md:56:It wasn't confirmed with `az webapp list-runtimes`. ;; X the Nov 2025 Q&A is not in the repo; the wording is the spec's"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 29,
+      "sentence": "infrastructure · Contract, paragraph 5",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 29,
+      "sentence": "[infrastructure/README.md#runtime](../infrastructure/README.md#runtime)",
+      "source": "P infrastructure/README.md:53:## Runtime"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 30,
+      "sentence": "*If F5 is cut:* the README says so and keeps A9 (no secrets, Key Vault rejected) as the design intent. A3–A11 are then marked \"cut\".",
+      "source": "P docs/plans/active/build.dag.yaml:315:status: done ;; X conditional requirement from a spec that applies only if F5 is cut"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 30,
+      "sentence": "infrastructure · Contract (cut order)",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 30,
+      "sentence": "[infrastructure/README.md](../infrastructure/README.md) (F5 was not cut, so this item does not apply)",
+      "source": "P docs/plans/active/build.dag.yaml:307:- id: F5 ;; P docs/plans/active/build.dag.yaml:315:status: done"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 36,
+      "sentence": "Security scope, OWASP API Top 10 2023. These are stated as out of scope: **API1** (no auth or tenancy; the reference is the only key, and references are client-chosen and guessable), **API2** (authentication is out of scope), **API5** (no roles; `POST /claims` would be an admin function in real life), **API7** (no outbound URL fetching), **API10** (no upstream APIs; pricing is client-supplied).",
+      "source": "P docs/design.md:185:OWASP API Security Top 10 2023 ;; P docs/design.md:188:**API1 (broken object-level authorisation):** there is no auth or tenancy ;; P docs/design.md:190:**API2 (broken authentication):** authentication is out of scope ;; P docs/design.md:191:**API5 (broken function-level authorisation):** there are no roles ;; P docs/design.md:193:**API7 (SSRF):** the API makes no outbound URL fetches ;; P docs/design.md:194:**API10 (unsafe consumption of APIs):** there are no upstream APIs"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 36,
+      "sentence": "agents-skills · Research R6 (adopted by the owasp-api-security skill)",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 36,
+      "sentence": "[docs/design.md#security-scope](design.md#security-scope)",
+      "source": "P docs/design.md:183:## Security scope"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 37,
+      "sentence": "**Authentication is out of scope** by requirement. `UseAuthorization()` stays in the pipeline at its usual position, ready for it.",
+      "source": "P docs/requirements.md:119:**Out of scope:** authentication ;; P src/Uinsure.Policies.Api/Program.cs:116:app.UseRateLimiter(); ;; P src/Uinsure.Policies.Api/Program.cs:117:app.UseAuthorization(); ;; P src/Uinsure.Policies.Api/Program.cs:125:app.MapControllers();"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 37,
+      "sentence": "architecture · Recommendation (Auth); Contract C6",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 37,
+      "sentence": "[docs/design.md#authentication](design.md#authentication)",
+      "source": "P docs/design.md:150:### Authentication"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 38,
+      "sentence": "**`Location` on renewals and claims** is `/policies/{reference}` (the policy), not a sub-resource. That's a deliberate deviation.",
+      "source": "P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:80:Created($\"/policies/{response.PolicyReference}\", response) ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:105:Created($\"/policies/{policyReference.Value}\" ;; P docs/design.md:158:the policy, not a sub-resource ;; P tests/Uinsure.Policies.Api.Tests/Support/PolicyActions.cs:77:Assert.Equal($\"/policies/{reference}\", response.LocationPath()) ;; P tests/Uinsure.Policies.Api.Tests/Support/RenewalActions.cs:39:Assert.Equal($\"/policies/{normalisedReference}\", response.LocationPath())"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 38,
+      "sentence": "api-contract · Decision D4 (O5b)",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 38,
+      "sentence": "[docs/design.md#location-on-renewals-and-claims](design.md#location-on-renewals-and-claims)",
+      "source": "P docs/design.md:155:### `Location` on renewals and claims"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 39,
+      "sentence": "**No API versioning.** A breaking change would mean `/v2` or an `api-version` parameter (`Asp.Versioning`).",
+      "source": "P docs/design.md:163:There is no versioning. A breaking change would mean `/v2` or an `api-version` parameter (`Asp.Versioning`). ;; N (?i)Asp\\.Versioning|Directory.Packages.props|props|0 ;; P src/Uinsure.Policies.Api/Controllers/PoliciesController.cs:14:[Route(\"policies\")]"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 39,
+      "sentence": "api-contract · Decision D10 (O10a)",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 39,
+      "sentence": "[docs/design.md#no-api-versioning](design.md#no-api-versioning)",
+      "source": "P docs/design.md:161:### No API versioning"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 40,
+      "sentence": "**Idempotency:** `POST /policies` is safe to retry, because a repeated reference gets 409 (SELL-1). **Claims are not idempotent**, and there's no `Idempotency-Key`.",
+      "source": "P docs/design.md:167:`POST /policies` is safe to retry ;; P src/Uinsure.Policies.Services/PolicyService.cs:15:GetByReference(command.Reference ;; P tests/Uinsure.Policies.Api.Tests/SellReferenceTests.cs:67:Duplicate_reference_is_rejected_with_409_and_the_original_policy_is_unchanged ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:220:_claims.Add(claim); ;; N (?i)idempotency-key|src|cs|0"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 40,
+      "sentence": "api-contract · Recommendation 6 (accepted with the D-list)",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 40,
+      "sentence": "[docs/design.md#idempotency](design.md#idempotency)",
+      "source": "P docs/design.md:165:### Idempotency"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 41,
+      "sentence": "**No £0 refunds:** a cancellation creates a Refund only for an amount above £0. If the policy has a claim (COULD-2), none of its paid terms gets a Refund record; an unpaid renewal term (RENEW-3b) gets none either. Their calculations are still returned, with `ruleApplied` `COULD-2` or `UNPAID-TERM` and 0.00. (wording corrected at F6: COULD-2 withholds every paid term of a policy with a claim, because Policy.cs passes the policy's HasClaims for each term)",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:98:calculations[i].Amount > 0 ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:25:term.Payment is null ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:30:hasClaims ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:27:(UnpaidTerm, 0m) ;; P docs/design.md:173:A cancellation creates a Refund only for an amount above £0 ;; P tests/Uinsure.Policies.Api.Tests/CancelWithClaimTests.cs:32:Cancel_in_cooling_off_after_a_claim_refunds_nothing_under_COULD_2"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 41,
+      "sentence": "architecture · Open question 1 (resolved); api-contract · Contract",
+      "source": "X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 41,
+      "sentence": "[docs/design.md#no-refunds-of-zero](design.md#no-refunds-of-zero)",
+      "source": "P docs/design.md:171:### No refunds of zero"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 45,
+      "sentence": "These are generated or trail READMEs, so they aren't ticked here:",
+      "source": "X framing of section C"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 46,
+      "sentence": "**F0a trail README** (`docs/trace/build/F0a/README.md`, task t19): states \"hooks not yet live: witnessed by git and trailers only\", and notes the F0a probe results (traceability · Contract, F0a exception; guardrails · Contract, wiring self-test).",
+      "source": "E docs/trace/build/F0a/README.md ;; P docs/trace/build/F0a/README.md:10:ooks not yet live: witnessed by git and trailers only ;; P docs/trace/build/F0a/README.md:28:## F0a probes ;; P docs/plans/active/build.dag.yaml:59:id: t19 ;; X citation of spec sections in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 49,
+      "sentence": "**Node READMEs** (`docs/trace/<plan>/<node>/README.md`): generated by `render-trace.mjs`, with `TRAIL INCOMPLETE: <reasons>` first when the check fails (traceability · Contract).",
+      "source": "E .claude/scripts/render-trace.mjs ;; P .claude/scripts/render-trace.mjs:4:TRAIL INCOMPLETE (render still writes, with the reasons first) ;; P .claude/scripts/render-trace.mjs:197:TRAIL INCOMPLETE: ${reasons.join('; ')} ;; X citation of a spec section in .claude/specs/, which the builder may not read"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 34,
+      "sentence": "| # | The README states… | Source | Done | Where it is now |",
+      "source": "X table header"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 3,
+      "sentence": "**Never connected, never run.** This pipeline has never been connected to an Azure DevOps organisation or run.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:1:never connected to Azure DevOps, never run ;; P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 4,
+      "sentence": "No service connections, environments or approvals exist.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:1:never connected to Azure DevOps, never run ;; P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 4,
+      "sentence": "The Bicep is linted and built locally, and the YAML > is schema-checked locally.",
+      "source": "R measured 2026-10-19: bicep build infrastructure/main.bicep --stdout exited 0; bicep lint infrastructure/main.bicep exited 0 with no output; bicep build-params for infrastructure/params/dev.bicepparam, test.bicepparam and prod.bicepparam each exited 0 ;; R measured 2026-10-19: python -I infrastructure/pipelines/check-pipeline.py printed \"pipeline check passed\" and exited 0 ;; P infrastructure/pipelines/check-pipeline.py:38:validator.iter_errors(doc)"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 5,
+      "sentence": "Neither what-if nor a real pipeline compile was run, because both need Azure or > Azure DevOps.",
+      "source": "P docs/requirements.md:207:`az` is never run ;; P infrastructure/pipelines/stage-template.yml:42:az deployment sub what-if ;; P infrastructure/pipelines/azure-pipelines.yml:1:never connected to Azure DevOps, never run"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 6,
+      "sentence": "The repo's real gate is its local git hooks (requirements §3, \"No CI\").",
+      "source": "P docs/requirements.md:203:**No CI.** ;; P docs/requirements.md:203:Local git hooks ;; E .githooks/pre-push"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 6,
+      "sentence": "This pipeline shows > how CI/CD would look at Uinsure.",
+      "source": "X purpose statement required verbatim by the README checklist (docs/readme-checklist.md:23), no checkable fact"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 9,
+      "sentence": "Everything is under `infrastructure/`.",
+      "source": "E infrastructure/main.bicep ;; N .|src|bicep|0 ;; N .|tests|bicep|0 ;; N .|docs|bicep|0 ;; N ^trigger:|.|yml|1"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 9,
+      "sentence": "`az` is never run and nothing is deployed.",
+      "source": "P docs/requirements.md:207:`az` is never run ;; P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 9,
+      "sentence": "Back to the [project README](../README.md).",
+      "source": "E README.md"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 14,
+      "sentence": "The Bicep is linted and built locally and never deployed.",
+      "source": "R measured 2026-10-19: bicep build and bicep lint of infrastructure/main.bicep exited 0 ;; P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 14,
+      "sentence": "what-if was not run, because it needs a signed-in subscription.",
+      "source": "P docs/requirements.md:207:`az` is never run ;; P infrastructure/pipelines/stage-template.yml:42:az deployment sub what-if"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 19,
+      "sentence": "Bicep at subscription scope: `main.bicep` creates the resource group `rg-policies-<env>` and calls four local modules (`monitoring`, `network`, `sql`, `appservice`).",
+      "source": "P infrastructure/main.bicep:1:targetScope = 'subscription' ;; P infrastructure/main.bicep:13:param workload string = 'policies' ;; P infrastructure/main.bicep:33:var suffix = '${workload}-${environmentName}' ;; P infrastructure/main.bicep:40:name: 'rg-${suffix}' ;; P infrastructure/main.bicep:45:module monitoring 'modules/monitoring.bicep' ;; P infrastructure/main.bicep:55:module network 'modules/network.bicep' ;; P infrastructure/main.bicep:66:module sql 'modules/sql.bicep' ;; P infrastructure/main.bicep:82:module app 'modules/appservice.bicep' ;; N ^module |infrastructure/main.bicep|bicep|4"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 21,
+      "sentence": "Per environment that is the resource group plus 16 resources: a Log Analytics workspace and Application Insights; a VNet and two NSGs; an Azure SQL server and database, a private endpoint and private DNS (zone, VNet link, zone group); a user-assigned identity, an App Service plan (Linux), the web app and two publishing-credential policies.",
+      "source": "N ^resource |infrastructure/modules|bicep|16 ;; P infrastructure/main.bicep:39:resource rg 'Microsoft.Resources/resourceGroups ;; P infrastructure/modules/monitoring.bicep:5:Microsoft.OperationalInsights/workspaces ;; P infrastructure/modules/monitoring.bicep:15:Microsoft.Insights/components ;; P infrastructure/modules/network.bicep:12:Microsoft.Network/networkSecurityGroups ;; P infrastructure/modules/network.bicep:36:Microsoft.Network/networkSecurityGroups ;; P infrastructure/modules/network.bicep:73:Microsoft.Network/virtualNetworks ;; P infrastructure/modules/sql.bicep:13:Microsoft.Sql/servers@ ;; P infrastructure/modules/sql.bicep:31:Microsoft.Sql/servers/databases ;; P infrastructure/modules/sql.bicep:42:Microsoft.Network/privateEndpoints ;; P infrastructure/modules/sql.bicep:60:Microsoft.Network/privateDnsZones ;; P infrastructure/modules/sql.bicep:66:virtualNetworkLinks ;; P infrastructure/modules/sql.bicep:77:privateDnsZoneGroups ;; P infrastructure/modules/appservice.bicep:11:Microsoft.ManagedIdentity/userAssignedIdentities ;; P infrastructure/modules/appservice.bicep:17:Microsoft.Web/serverfarms ;; P infrastructure/modules/appservice.bicep:21:kind: 'linux' ;; P infrastructure/modules/appservice.bicep:26:Microsoft.Web/sites@ ;; P infrastructure/modules/appservice.bicep:62:basicPublishingCredentialsPolicies ;; P infrastructure/modules/appservice.bicep:68:basicPublishingCredentialsPolicies"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 25,
+      "sentence": "Three `.bicepparam` files: `dev`, `test` and `prod`.",
+      "source": "N ^using |infrastructure/params|bicepparam|3 ;; P infrastructure/params/dev.bicepparam:3:param environmentName = 'dev' ;; P infrastructure/params/test.bicepparam:3:param environmentName = 'test' ;; P infrastructure/params/prod.bicepparam:3:param environmentName = 'prod'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 25,
+      "sentence": "Region `uksouth`.",
+      "source": "P infrastructure/main.bicep:8:param location string = 'uksouth'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 27,
+      "sentence": "| | App Service plan | SQL database |",
+      "source": "X table header"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 29,
+      "sentence": "| dev | B1 | Basic |",
+      "source": "P infrastructure/params/dev.bicepparam:4:param appServiceSku = 'B1' ;; P infrastructure/params/dev.bicepparam:5:param sqlSkuName = 'Basic'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 30,
+      "sentence": "| test | B1 | Basic |",
+      "source": "P infrastructure/params/test.bicepparam:4:param appServiceSku = 'B1' ;; P infrastructure/params/test.bicepparam:5:param sqlSkuName = 'Basic'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 31,
+      "sentence": "| prod | P1v3 | General Purpose, `GP_S_Gen5_1` |",
+      "source": "P infrastructure/params/prod.bicepparam:4:param appServiceSku = 'P1v3' ;; P infrastructure/params/prod.bicepparam:5:param sqlSkuName = 'GP_S_Gen5_1' ;; P infrastructure/params/prod.bicepparam:6:param sqlSkuTier = 'GeneralPurpose'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 35,
+      "sentence": "The app signs in to Entra-only Azure SQL with a **user-assigned** managed identity (the connection string uses `Authentication=Active Directory Managed Identity`).",
+      "source": "P infrastructure/modules/appservice.bicep:32:type: 'UserAssigned' ;; P infrastructure/modules/appservice.bicep:54:Authentication=Active Directory Managed Identity ;; P infrastructure/modules/sql.bicep:26:azureADOnlyAuthentication: true"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 36,
+      "sentence": "The SQL server has no administrator login or password, so there are no passwords.",
+      "source": "P infrastructure/modules/sql.bicep:11:no administratorLogin or password exists ;; N ^\\s*administratorLogin|infrastructure/modules/sql.bicep|bicep|0 ;; N (?i)password\\s*[=:]|infrastructure|bicep|0 ;; P infrastructure/pipelines/check-pipeline.py:120:password ;; R measured 2026-10-19: python -I infrastructure/pipelines/check-pipeline.py printed \"pipeline check passed\" (its secret-literal check is at line 120)"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 37,
+      "sentence": "**Key Vault was considered and rejected**: there is nothing to store.",
+      "source": "P docs/design.md:147:Key Vault (there are no secrets) ;; N (?i)keyvault|infrastructure|bicep|0"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 38,
+      "sentence": "It arrives with the first real secret, such as a payment API key.",
+      "source": "X statement of intent required verbatim by the README checklist (docs/readme-checklist.md:27), no checkable fact"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 38,
+      "sentence": "Basic-auth publishing (`scm`, `ftp`) is disabled on the app.",
+      "source": "P infrastructure/modules/appservice.bicep:64:name: 'scm' ;; P infrastructure/modules/appservice.bicep:65:allow: false ;; P infrastructure/modules/appservice.bicep:70:name: 'ftp' ;; P infrastructure/modules/appservice.bicep:71:allow: false"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 39,
+      "sentence": "The Application Insights connection string reaches the app as the setting `APPLICATIONINSIGHTS_CONNECTION_STRING`.",
+      "source": "P infrastructure/modules/appservice.bicep:47:name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString ;; P infrastructure/modules/monitoring.bicep:27:output connectionString string ;; P infrastructure/main.bicep:90:appInsightsConnectionString: monitoring.outputs.connectionString"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 44,
+      "sentence": "SQL has no public endpoint and no \"Allow Azure services\" rule.",
+      "source": "P infrastructure/modules/sql.bicep:19:publicNetworkAccess: 'Disabled' ;; N 0\\.0\\.0\\.0|infrastructure/modules/sql.bicep|bicep|0"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 44,
+      "sentence": "It is reached through a private endpoint in `snet-private-endpoints`, and the app uses VNet integration (`snet-app-integration`).",
+      "source": "P infrastructure/modules/sql.bicep:47:subnet: { id: privateEndpointSubnetId } ;; P infrastructure/main.bicep:78:privateEndpointSubnetId: network.outputs.privateEndpointSubnetId ;; P infrastructure/modules/network.bicep:94:name: 'snet-private-endpoints' ;; P infrastructure/modules/network.bicep:108:output privateEndpointSubnetId string ;; P infrastructure/modules/appservice.bicep:38:virtualNetworkSubnetId: appIntegrationSubnetId ;; P infrastructure/modules/network.bicep:81:name: 'snet-app-integration'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 45,
+      "sentence": "An NSG on the endpoint subnet allows port 1433 only from the app subnet and the deployment agents' range, and denies the rest.",
+      "source": "P infrastructure/modules/network.bicep:43:name: 'allow-sql-from-app-and-agents' ;; P infrastructure/modules/network.bicep:49:sourceAddressPrefixes: [appIntegrationPrefix, agentAddressPrefix] ;; P infrastructure/modules/network.bicep:52:destinationPortRange: '1433' ;; P infrastructure/modules/network.bicep:56:name: 'deny-all-inbound' ;; P infrastructure/modules/network.bicep:60:access: 'Deny' ;; P infrastructure/modules/network.bicep:99:networkSecurityGroup: { id: privateEndpointNsg.id } ;; N access: 'Allow'|infrastructure/modules/network.bicep|bicep|1"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 47,
+      "sentence": "Deployment agents must therefore be self-hosted, inside a network that reaches the VNet (see [Deployment prerequisites](#deployment-prerequisites-outside-the-repo)).",
+      "source": "P infrastructure/modules/sql.bicep:19:publicNetworkAccess: 'Disabled' ;; P infrastructure/pipelines/stage-template.yml:55:SQL has no public endpoint, so the whole job runs on a self-hosted pool ;; P infrastructure/pipelines/stage-template.yml:61:name: policies-${{ parameters.environmentName }}-vnet ;; P infrastructure/README.md:112:## Deployment prerequisites outside the repo"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 50,
+      "sentence": "Still to do: restrict outbound traffic from the integration subnet (an allow-list), which would be extra hardening and is not built.",
+      "source": "N direction: 'Outbound'|infrastructure|bicep|0 ;; X \"would be extra hardening\" is a judgement"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 55,
+      "sentence": "`linuxFxVersion` is `DOTNETCORE|10.0`.",
+      "source": "P infrastructure/modules/appservice.bicep:40:linuxFxVersion: 'DOTNETCORE|10.0'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 55,
+      "sentence": "That value is inferred from the documented pattern and a Nov 2025 Q&A.",
+      "source": "P docs/readme-checklist.md:29:inferred from the documented pattern and a Nov 2025 Q&A ;; P docs/qa/build-F5.md:186:inferred, not checked with `az webapp list-runtimes` ;; X provenance (the Q&A) is not in the repo; stated as inferred, not verified"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 56,
+      "sentence": "It wasn't confirmed with `az webapp list-runtimes`.",
+      "source": "P docs/requirements.md:207:`az` is never run ;; N list-runtimes|infrastructure|*|1 ;; P docs/qa/build-F5.md:186:inferred, not checked with `az webapp list-runtimes`"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 60,
+      "sentence": "`infrastructure/pipelines/azure-pipelines.yml` has a CI trigger on pushes to `main` and `pr: none`, so a push to another branch or a pull request does not start it.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:5:trigger: ;; P infrastructure/pipelines/azure-pipelines.yml:7:include: [main] ;; P infrastructure/pipelines/azure-pipelines.yml:9:pr: none"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 61,
+      "sentence": "The YAML does not stop someone with queue rights from running it by hand against another branch (see the branch control step in [One-time setup](#one-time-setup-none-of-it-done)):",
+      "source": "N refs/heads|infrastructure/pipelines|*|0 ;; N Build\\.SourceBranch|infrastructure/pipelines|*|0 ;; P infrastructure/README.md:96:## One-time setup (none of it done)"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 64,
+      "sentence": "**Build** (hosted agent): `dotnet build -warnaserror`, `dotnet test`, the idempotent migration script (`dotnet-ef` 10.0.13), then a published app zip and the `infrastructure/` folder as one `drop` artifact.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:18:stage: Build ;; P infrastructure/pipelines/azure-pipelines.yml:23:vmImage: ubuntu-latest ;; P infrastructure/pipelines/azure-pipelines.yml:31:dotnet build Uinsure.Policies.slnx ;; P infrastructure/pipelines/azure-pipelines.yml:31:-warnaserror ;; P infrastructure/pipelines/azure-pipelines.yml:34:dotnet test --solution Uinsure.Policies.slnx ;; P infrastructure/pipelines/azure-pipelines.yml:40:dotnet tool install --global dotnet-ef --version 10.0.13 ;; P infrastructure/pipelines/azure-pipelines.yml:42:dotnet ef migrations script --idempotent ;; P infrastructure/pipelines/azure-pipelines.yml:53:zip -r $(Build.ArtifactStagingDirectory)/drop/app.zip ;; P infrastructure/pipelines/azure-pipelines.yml:54:cp -r $(Build.SourcesDirectory)/infrastructure ;; P infrastructure/pipelines/azure-pipelines.yml:58:artifact: drop"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 66,
+      "sentence": "Then, for `dev`, `test` and `prod` in that order, from one `stage-template.yml`: a **`WhatIf_<env>`** stage (hosted agent, no environment, so it runs unapproved), then **`Deploy_<env>`** (self-hosted pool `policies-<env>-vnet`, the only stage on the environment `policies-<env>`).",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:61:template: stage-template.yml ;; P infrastructure/pipelines/azure-pipelines.yml:63:environmentName: dev ;; P infrastructure/pipelines/azure-pipelines.yml:70:environmentName: test ;; P infrastructure/pipelines/azure-pipelines.yml:77:environmentName: prod ;; P infrastructure/pipelines/azure-pipelines.yml:66:dependsOn: Build ;; P infrastructure/pipelines/azure-pipelines.yml:73:dependsOn: Deploy_dev ;; P infrastructure/pipelines/azure-pipelines.yml:80:dependsOn: Deploy_test ;; P infrastructure/pipelines/stage-template.yml:22:stage: WhatIf_ ;; P infrastructure/pipelines/stage-template.yml:29:vmImage: ubuntu-latest ;; P infrastructure/pipelines/check-pipeline.py:100:what-if stage must declare no environment ;; P infrastructure/pipelines/stage-template.yml:49:stage: Deploy_ ;; P infrastructure/pipelines/stage-template.yml:61:name: policies-${{ parameters.environmentName }}-vnet ;; P infrastructure/pipelines/stage-template.yml:63:environment: policies-${{ parameters.environmentName }} ;; N ^\\s+environment: |infrastructure/pipelines/stage-template.yml|yml|1 ;; P infrastructure/pipelines/stage-template.yml:62:only environment in this template"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 68,
+      "sentence": "Deploy runs the infrastructure deployment, applies the migration script with `sqlcmd`, creates the app's database user (by SID, with `db_datareader` and `db_datawriter` only), deploys the zip, and smoke-tests `/health/ready` with `curl`.",
+      "source": "P infrastructure/pipelines/stage-template.yml:77:displayName: Deploy infrastructure ;; P infrastructure/pipelines/stage-template.yml:83:az deployment sub create ;; P infrastructure/pipelines/stage-template.yml:121:sqlcmd -S ;; P infrastructure/pipelines/stage-template.yml:123:-b -i $(drop)/migrations.sql ;; P infrastructure/pipelines/stage-template.yml:136:sid=\"0x ;; P infrastructure/pipelines/stage-template.yml:139:CREATE USER [$(appName)] WITH SID = $sid, TYPE = E ;; P infrastructure/pipelines/stage-template.yml:139:ALTER ROLE db_datareader ADD MEMBER ;; P infrastructure/pipelines/stage-template.yml:139:ALTER ROLE db_datawriter ADD MEMBER ;; N ^\\s*[^#\\s].*ALTER ROLE db_owner|infrastructure/pipelines/stage-template.yml|yml|0 ;; P infrastructure/pipelines/stage-template.yml:148:az webapp deploy ;; P infrastructure/pipelines/stage-template.yml:151:--src-path $(drop)/app.zip ;; P infrastructure/pipelines/stage-template.yml:155:curl --fail ;; P infrastructure/pipelines/stage-template.yml:157:https://$(appHostName)/health/ready"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 77,
+      "sentence": "The checker does assert that each `AzureCLI@2` step of the deploying stage has the inputs `azureSubscription`, `scriptType`, `scriptLocation` and `inlineScript`, and that every `azureSubscription` is a template parameter.",
+      "source": "P infrastructure/pipelines/check-pipeline.py:80:steps = job_steps(deploy) ;; P infrastructure/pipelines/check-pipeline.py:81:az = [s for s in steps if s.get(\"task\") == \"AzureCLI@2\"] ;; P infrastructure/pipelines/check-pipeline.py:85:for key in (\"azureSubscription\", \"scriptType\", \"scriptLocation\", \"inlineScript\") ;; P infrastructure/pipelines/check-pipeline.py:207:check(bool(subs) and all(re.fullmatch ;; P infrastructure/pipelines/check-pipeline.py:208:every azureSubscription must be a template parameter expression"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 78,
+      "sentence": "It does not validate those values against Azure DevOps.",
+      "source": "P infrastructure/pipelines/check-pipeline.py:1:Never contacts Azure or Azure DevOps"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 81,
+      "sentence": "`python -I infrastructure/pipelines/check-pipeline.py` (needs PyYAML and jsonschema) validates both YAML files against `pipeline.schema.json` and asserts a set of structural rules the schema cannot express: the stage order, a what-if stage with no environment, the deploy environment name `policies-<env>`, the migration step, the smoke test, and the NSG rules.",
+      "source": "P infrastructure/pipelines/check-pipeline.py:4:Needs PyYAML and jsonschema ;; P infrastructure/pipelines/check-pipeline.py:32:schema = json.loads((HERE / \"pipeline.schema.json\") ;; P infrastructure/pipelines/check-pipeline.py:37:for name, doc in ((\"azure-pipelines.yml\", pipeline), (\"stage-template.yml\", template)) ;; P infrastructure/pipelines/check-pipeline.py:45:stages must chain Build -> dev -> test -> prod ;; P infrastructure/pipelines/check-pipeline.py:100:the what-if stage must declare no environment ;; P infrastructure/pipelines/check-pipeline.py:112:deployment must target environment policies-<env> ;; P infrastructure/pipelines/check-pipeline.py:115:migrations.sql must be applied ;; P infrastructure/pipelines/check-pipeline.py:113:last step must curl /health/ready ;; P infrastructure/pipelines/check-pipeline.py:248:the SQL NSG (on snet-private-endpoints) must allow inbound Tcp 1433 ;; P infrastructure/pipelines/check-pipeline.py:254:must deny all other inbound traffic"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 84,
+      "sentence": "It exits 0 with \"pipeline check passed\" on this branch (run on 2026-10-19).",
+      "source": "P infrastructure/pipelines/check-pipeline.py:266:print(\"pipeline check passed\") ;; R measured 2026-10-19: python -I infrastructure/pipelines/check-pipeline.py printed \"pipeline check passed\" and exited 0"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 88,
+      "sentence": "The Approval check on the environment `policies-prod` (approver: release manager, timeout 72 h) lives in the Azure DevOps UI, not the YAML.",
+      "source": "P docs/readme-checklist.md:21:approver: release manager, timeout 72 h ;; P infrastructure/pipelines/azure-pipelines.yml:4:Prod waits for the approval configured on the 'policies-prod' Azure DevOps environment only ;; N (?i)release manager|infrastructure/pipelines|*|0 ;; N (?i)approval|infrastructure/pipelines/azure-pipelines.yml|yml|1"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 89,
+      "sentence": "This README is its only evidence.",
+      "source": "N (?i)release manager|infrastructure/pipelines|*|0 ;; N (?i)release manager|infrastructure/modules|*|0"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 89,
+      "sentence": "That is a platform limit, not a gap.",
+      "source": "X judgement, required verbatim by the README checklist (docs/readme-checklist.md:21)"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 89,
+      "sentence": "The template comment records why the what-if has its own stage: Azure DevOps evaluates an environment's checks when a stage starts, so the approver sees the what-if before approving (`stage-template.yml`).",
+      "source": "P infrastructure/pipelines/stage-template.yml:15:Azure DevOps evaluates an environment's checks when a stage starts ;; P infrastructure/pipelines/stage-template.yml:16:no environment, so it runs and prints before the approval on Deploy_<env> is asked for"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 91,
+      "sentence": "That Azure DevOps behaviour was not observed here, because the pipeline never ran.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:1:never connected to Azure DevOps, never run ;; P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 92,
+      "sentence": "The template comment also says the check must sit on the environment only, and that one put on the ARM service connection or on the `policies-<env>` variable group would pause the what-if stage first.",
+      "source": "P infrastructure/pipelines/stage-template.yml:17:The approval check must live on the policies-<env> environment only ;; P infrastructure/pipelines/stage-template.yml:17:Never put one on the ARM service connection ;; P infrastructure/pipelines/stage-template.yml:18:variable group that this stage uses, or this stage would pause first"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 98,
+      "sentence": "An Azure DevOps project, and a pipeline from `infrastructure/pipelines/azure-pipelines.yml`.",
+      "source": "E infrastructure/pipelines/azure-pipelines.yml"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 99,
+      "sentence": "Three ARM service connections using workload identity federation, `sc-policies-dev`, `sc-policies-test` and `sc-policies-prod`, each authorised for this pipeline only.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:64:azureServiceConnection: sc-policies-dev ;; P infrastructure/pipelines/azure-pipelines.yml:71:azureServiceConnection: sc-policies-test ;; P infrastructure/pipelines/azure-pipelines.yml:78:azureServiceConnection: sc-policies-prod ;; P docs/readme-checklist.md:22:using workload identity federation ;; X setup instruction; federation and authorisation are Azure DevOps settings the repo cannot show"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 100,
+      "sentence": "Three more, `sc-policies-<env>-sql`, are for the SQL steps (see below).",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:65:sqlServiceConnection: sc-policies-dev-sql ;; P infrastructure/pipelines/azure-pipelines.yml:72:sqlServiceConnection: sc-policies-test-sql ;; P infrastructure/pipelines/azure-pipelines.yml:79:sqlServiceConnection: sc-policies-prod-sql ;; P infrastructure/pipelines/stage-template.yml:117:azureSubscription: ${{ parameters.sqlServiceConnection }} ;; P infrastructure/pipelines/stage-template.yml:131:azureSubscription: ${{ parameters.sqlServiceConnection }}"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 102,
+      "sentence": "Each ARM connection's identity gets rights at subscription scope on its own subscription (Contributor, or a narrower custom role), because `main.bicep` creates the resource group.",
+      "source": "P infrastructure/main.bicep:1:targetScope = 'subscription' ;; P infrastructure/main.bicep:39:resource rg 'Microsoft.Resources/resourceGroups ;; P infrastructure/pipelines/stage-template.yml:83:az deployment sub create ;; X setup instruction; the role assignment is an Azure setting the repo cannot show"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 104,
+      "sentence": "One Entra group per environment as the SQL admin (that environment's deploy identity plus a break-glass human), named `sg-policies-sql-admins-<env>`.",
+      "source": "P infrastructure/params/dev.bicepparam:7:sg-policies-sql-admins-dev ;; P infrastructure/params/test.bicepparam:7:sg-policies-sql-admins-test ;; P infrastructure/params/prod.bicepparam:7:sg-policies-sql-admins-prod ;; P infrastructure/modules/sql.bicep:23:login: adminGroupName ;; X group membership is an Entra setting the repo cannot show"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 105,
+      "sentence": "Its object ID goes in the variable group `policies-<env>` as `sqlAdminGroupObjectId`.",
+      "source": "P infrastructure/pipelines/stage-template.yml:66:sqlAdminGroupObjectId  object id of the Entra group ;; P infrastructure/pipelines/stage-template.yml:67:group: policies- ;; P infrastructure/pipelines/stage-template.yml:88:--parameters sqlAdminGroupObjectId=$(sqlAdminGroupObjectId)"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 106,
+      "sentence": "The `.bicepparam` files hold an all-zero placeholder.",
+      "source": "P infrastructure/params/dev.bicepparam:9:'00000000-0000-0000-0000-000000000000' ;; P infrastructure/params/test.bicepparam:9:'00000000-0000-0000-0000-000000000000' ;; P infrastructure/params/prod.bicepparam:9:'00000000-0000-0000-0000-000000000000'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 109,
+      "sentence": "A branch control check on each environment `policies-<env>`, on the three agent pools and on the service connections, allowing `refs/heads/main` only.",
+      "source": "P infrastructure/pipelines/stage-template.yml:61:policies-${{ parameters.environmentName }}-vnet ;; X setup instruction; a branch control check is an Azure DevOps setting the repo cannot show"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 110,
+      "sentence": "Without it, nothing in the repo stops a manual run of another branch from reaching the privileged agents and the connections.",
+      "source": "N refs/heads|infrastructure/pipelines|*|0 ;; N Build\\.SourceBranch|infrastructure/pipelines|*|0 ;; P infrastructure/pipelines/azure-pipelines.yml:5:trigger:"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 115,
+      "sentence": "None of this exists and none of it can be checked from the repo.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:1:never connected to Azure DevOps, never run ;; P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 117,
+      "sentence": "**Three self-hosted agent pools**, `policies-dev-vnet`, `policies-test-vnet`, `policies-prod-vnet`.",
+      "source": "P infrastructure/pipelines/stage-template.yml:61:name: policies-${{ parameters.environmentName }}-vnet ;; P infrastructure/pipelines/azure-pipelines.yml:63:environmentName: dev ;; P infrastructure/pipelines/azure-pipelines.yml:70:environmentName: test ;; P infrastructure/pipelines/azure-pipelines.yml:77:environmentName: prod"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 117,
+      "sentence": "Their agents need `az`, `jq`, go-sqlcmd (`sqlcmd`) and `curl`.",
+      "source": "P infrastructure/pipelines/stage-template.yml:59:The agent needs az, jq, go-sqlcmd (`sqlcmd`) and curl. ;; P infrastructure/pipelines/stage-template.yml:83:az deployment sub create ;; P infrastructure/pipelines/stage-template.yml:90:jq -r ;; P infrastructure/pipelines/stage-template.yml:121:sqlcmd -S ;; P infrastructure/pipelines/stage-template.yml:155:curl --fail"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 118,
+      "sentence": "**The agent hosts are privileged**: they can reach the private SQL endpoint and run with the service connections.",
+      "source": "P infrastructure/pipelines/stage-template.yml:55:SQL has no public endpoint, so the whole job runs on a self-hosted pool ;; P infrastructure/pipelines/stage-template.yml:79:azureSubscription: ${{ parameters.azureServiceConnection }} ;; P infrastructure/pipelines/stage-template.yml:117:azureSubscription: ${{ parameters.sqlServiceConnection }}"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 119,
+      "sentence": "The CI trigger is `main` only with `pr: none`; nothing in the YAML limits a manual run to `main` (see setup step 6).",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:7:include: [main] ;; P infrastructure/pipelines/azure-pipelines.yml:9:pr: none ;; N refs/heads|infrastructure/pipelines|*|0 ;; N Build\\.SourceBranch|infrastructure/pipelines|*|0"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 121,
+      "sentence": "**Network peering and DNS.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 121,
+      "sentence": "The agents' network must be peered to (or be) `vnet-policies-<env>` and resolve `privatelink.database.windows.net`.",
+      "source": "P infrastructure/pipelines/stage-template.yml:55:SQL has no public endpoint ;; P infrastructure/pipelines/stage-template.yml:56:that reaches the private endpoint and resolves privatelink.database.windows.net ;; P infrastructure/modules/network.bicep:74:name: 'vnet-${suffix}' ;; P infrastructure/modules/sql.bicep:61:name: 'privatelink${environment().suffixes.sqlServerHostname}'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 122,
+      "sentence": "The private DNS zone is linked only to the environment's own VNet, so the agents' network needs its own zone link or DNS forwarding.",
+      "source": "P infrastructure/modules/sql.bicep:66:resource dnsZoneLink ;; P infrastructure/modules/sql.bicep:73:virtualNetwork: { id: vnetId } ;; N virtualNetworkLinks|infrastructure/modules/sql.bicep|bicep|1 ;; P infrastructure/main.bicep:77:vnetId: network.outputs.vnetId"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 123,
+      "sentence": "The peering can only be made after the first infrastructure deployment creates the VNet.",
+      "source": "P infrastructure/modules/network.bicep:73:resource vnet 'Microsoft.Network/virtualNetworks ;; P infrastructure/pipelines/stage-template.yml:83:az deployment sub create"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 125,
+      "sentence": "**A narrow `agentAddressPrefix`.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 125,
+      "sentence": "Each `.bicepparam` holds the placeholder `10.30.0.0/24`.",
+      "source": "P infrastructure/params/dev.bicepparam:12:param agentAddressPrefix = '10.30.0.0/24' ;; P infrastructure/params/test.bicepparam:12:param agentAddressPrefix = '10.30.0.0/24' ;; P infrastructure/params/prod.bicepparam:12:param agentAddressPrefix = '10.30.0.0/24'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 125,
+      "sentence": "Replace it with the real agent subnet before the first deployment.",
+      "source": "P infrastructure/params/dev.bicepparam:11:Replace the placeholder with the real, narrow range (the agent subnet) before the first deployment"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 126,
+      "sentence": "Never `0.0.0.0/0` or a `/8`.",
+      "source": "P infrastructure/params/dev.bicepparam:11:never 0.0.0.0/0 or a /8"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 126,
+      "sentence": "There is no CIDR validation in the Bicep, so the narrowness rests on review.",
+      "source": "P infrastructure/main.bicep:30:@description('Address range of the self-hosted deployment agents ;; P infrastructure/main.bicep:31:param agentAddressPrefix string ;; P infrastructure/modules/network.bicep:6:param agentAddressPrefix string ;; N (?i)cidr|infrastructure|bicep|0"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 127,
+      "sentence": "If the agents' real range is outside the placeholder, the NSG rule blocks them: it does not open SQL.",
+      "source": "P infrastructure/modules/network.bicep:49:sourceAddressPrefixes: [appIntegrationPrefix, agentAddressPrefix] ;; P infrastructure/modules/network.bicep:56:name: 'deny-all-inbound' ;; P infrastructure/modules/network.bicep:60:access: 'Deny'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 129,
+      "sentence": "**The SQL admin group** (item 4 above) and **ARM and SQL service connections**.",
+      "source": "X bullet label"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 129,
+      "sentence": "The SQL connections (`sc-policies-<env>-sql`) are separate from the ARM ones.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:64:azureServiceConnection: sc-policies-dev ;; P infrastructure/pipelines/azure-pipelines.yml:65:sqlServiceConnection: sc-policies-dev-sql"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 130,
+      "sentence": "Each one's principal is a database-scoped user with `db_owner` on the `policies` database and is not in the server admin group.",
+      "source": "P infrastructure/pipelines/stage-template.yml:97:The two SQL steps use a separate SQL service connection ;; P infrastructure/pipelines/stage-template.yml:98:Its principal is a database-scoped user with ;; P infrastructure/pipelines/stage-template.yml:99:is not a member of the server admin group"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 131,
+      "sentence": "That is how the setup is meant to be done; the repo cannot check it.",
+      "source": "P infrastructure/pipelines/stage-template.yml:98:Its principal is a database-scoped user with ;; P infrastructure/pipelines/check-pipeline.py:199:db_owner\" in lower and \"database-scoped\" in lower"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 133,
+      "sentence": "**A one-off database bootstrap per environment.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 133,
+      "sentence": "After the first infrastructure deployment, a member of the admin group, connected to the `policies` database, runs `CREATE USER [<SQL service connection principal name>] FROM EXTERNAL PROVIDER;` and `ALTER ROLE db_owner ADD MEMBER [<SQL service connection principal name>];`.",
+      "source": "P infrastructure/pipelines/stage-template.yml:105:One-off bootstrap, run by a member of that admin group once per environment after the first ;; P infrastructure/pipelines/stage-template.yml:106:connected to the policies database (not master) ;; P infrastructure/pipelines/stage-template.yml:107:CREATE USER [<SQL service connection principal name>] FROM EXTERNAL PROVIDER; ;; P infrastructure/pipelines/stage-template.yml:108:ALTER ROLE db_owner ADD MEMBER [<SQL service connection principal name>]; ;; P infrastructure/modules/sql.bicep:33:name: 'policies'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 137,
+      "sentence": "**The template comment says the first run fails at the migrations step until this is done** (`stage-template.yml`; never run).",
+      "source": "P infrastructure/pipelines/stage-template.yml:103:On an environment's first run the migrations step fails until an admin has run the one-off ;; P infrastructure/pipelines/stage-template.yml:104:bootstrap below"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 142,
+      "sentence": "**The unapproved what-if stage shares the deploy ARM connection.**",
+      "source": "P infrastructure/pipelines/stage-template.yml:38:azureSubscription: ${{ parameters.azureServiceConnection }} ;; P infrastructure/pipelines/stage-template.yml:79:azureSubscription: ${{ parameters.azureServiceConnection }}"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 142,
+      "sentence": "`WhatIf_<env>` uses the same subscription-scope ARM connection as the deployment.",
+      "source": "P infrastructure/pipelines/stage-template.yml:38:azureSubscription: ${{ parameters.azureServiceConnection }} ;; P infrastructure/pipelines/stage-template.yml:79:azureSubscription: ${{ parameters.azureServiceConnection }} ;; P infrastructure/main.bicep:1:targetScope = 'subscription'"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 143,
+      "sentence": "A separate lower-privilege what-if connection was considered and rejected.",
+      "source": "P infrastructure/pipelines/stage-template.yml:20:a separate what-if connection was considered and rejected"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 144,
+      "sentence": "It only runs `az deployment sub what-if`.",
+      "source": "P infrastructure/pipelines/stage-template.yml:42:az deployment sub what-if ;; P infrastructure/pipelines/check-pipeline.py:98:exactly one stage must run az deployment sub what-if"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 144,
+      "sentence": "The variable group it reads must stay secret-free, because that stage has no approval before it.",
+      "source": "P infrastructure/pipelines/stage-template.yml:20:The policies-<env> variable group must stay ;; P infrastructure/pipelines/stage-template.yml:21:secret-free, because it is also read before approval ;; P infrastructure/pipelines/stage-template.yml:31:group: policies- ;; P infrastructure/pipelines/check-pipeline.py:100:the what-if stage must declare no environment"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 146,
+      "sentence": "**The ARM connection could rewrite the SQL admin.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 146,
+      "sentence": "The template records it as an accepted residual risk: the ARM connection holds subscription-scope rights, so a leaked ARM token could still rewrite the SQL server's Entra admin through ARM (`stage-template.yml`).",
+      "source": "P infrastructure/pipelines/stage-template.yml:100:Accepted residual risk: the ARM connection holds subscription-scope rights ;; P infrastructure/pipelines/stage-template.yml:101:could still rewrite the SQL server's Entra admin through ARM"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 148,
+      "sentence": "A subscription-scope deployment needs those rights.",
+      "source": "P infrastructure/main.bicep:1:targetScope = 'subscription' ;; P infrastructure/pipelines/stage-template.yml:101:A subscription-scope deployment needs ;; P infrastructure/pipelines/stage-template.yml:102:those rights"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 149,
+      "sentence": "The pipeline's SQL steps use the separate SQL connection (`sqlServiceConnection`).",
+      "source": "P infrastructure/pipelines/stage-template.yml:117:azureSubscription: ${{ parameters.sqlServiceConnection }} ;; P infrastructure/pipelines/stage-template.yml:131:azureSubscription: ${{ parameters.sqlServiceConnection }} ;; P infrastructure/pipelines/check-pipeline.py:197:SQL service connection variable, not the ARM deployment one"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 149,
+      "sentence": "The template states how it is meant to be set up: a database-scoped `db_owner` user, not in the admin group.",
+      "source": "P infrastructure/pipelines/stage-template.yml:98:Its principal is a database-scoped user with ;; P infrastructure/pipelines/stage-template.yml:99:is not a member of the server admin group"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 150,
+      "sentence": "The repo cannot check how it is set up.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:1:never connected to Azure DevOps, never run"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 152,
+      "sentence": "**`httpsOnly` and forwarded headers: configured, not tested on App Service.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 152,
+      "sentence": "The web app sets `httpsOnly: true`.",
+      "source": "P infrastructure/modules/appservice.bicep:37:httpsOnly: true"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 153,
+      "sentence": "What App Service does with plain HTTP at its front end has not been checked.",
+      "source": "P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 153,
+      "sentence": "The API honours `X-Forwarded-For` and `X-Forwarded-Proto` only from private ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16), and the code does not use `ASPNETCORE_FORWARDEDHEADERS_ENABLED`.",
+      "source": "P src/Uinsure.Policies.Api/Program.cs:25:ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto ;; P src/Uinsure.Policies.Api/Program.cs:26:KnownProxies.Clear() ;; P src/Uinsure.Policies.Api/Program.cs:27:KnownIPNetworks.Clear() ;; P src/Uinsure.Policies.Api/Program.cs:28:10.0.0.0/8 ;; P src/Uinsure.Policies.Api/Program.cs:29:172.16.0.0/12 ;; P src/Uinsure.Policies.Api/Program.cs:30:192.168.0.0/16 ;; P tests/Uinsure.Policies.Architecture.Tests/LaunchProfileTests.cs:44:ASPNETCORE_FORWARDEDHEADERS_ENABLED ;; N ASPNETCORE_FORWARDEDHEADERS_ENABLED|infrastructure|bicep|0"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 155,
+      "sentence": "A plain-HTTP request that sends `X-Forwarded-Proto: https` from an address outside those ranges gets the `400 /problems/https-required` (tested from untrusted addresses, outside Development).",
+      "source": "P tests/Uinsure.Policies.Api.Tests/ForwardedHeadersTests.cs:58:Forwarded_https_from_an_untrusted_address_is_ignored ;; P tests/Uinsure.Policies.Api.Tests/ForwardedHeadersTests.cs:62:WithHeader(\"X-Forwarded-Proto\", \"https\") ;; P tests/Uinsure.Policies.Api.Tests/ForwardedHeadersTests.cs:64:HttpsRequiredType"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 157,
+      "sentence": "Whether App Service Linux sets that environment variable itself is unchecked.",
+      "source": "P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 158,
+      "sentence": "None of this has been tested on App Service.",
+      "source": "P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 159,
+      "sentence": "**SQL connection policy is not set.**",
+      "source": "N (?i)connectionPolicy|infrastructure|bicep|0"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 159,
+      "sentence": "`sql.bicep` does not set it.",
+      "source": "N (?i)connectionPolicy|infrastructure/modules/sql.bicep|bicep|0"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 159,
+      "sentence": "The NSG on the endpoint subnet opens port 1433 only.",
+      "source": "P infrastructure/modules/network.bicep:52:destinationPortRange: '1433' ;; N access: 'Allow'|infrastructure/modules/network.bicep|bicep|1"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 160,
+      "sentence": "Whether private-endpoint traffic needs any other port has not been checked.",
+      "source": "P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 161,
+      "sentence": "**One VNet range for all environments.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 161,
+      "sentence": "Every `vnet-policies-<env>` is `10.20.0.0/16`.",
+      "source": "P infrastructure/modules/network.bicep:74:name: 'vnet-${suffix}' ;; P infrastructure/modules/network.bicep:78:addressSpace: { addressPrefixes: ['10.20.0.0/16'] } ;; N 10\\.20\\.0\\.0/16|infrastructure|bicep|1"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 161,
+      "sentence": "The pipeline uses one agent pool per environment.",
+      "source": "P infrastructure/pipelines/stage-template.yml:61:name: policies-${{ parameters.environmentName }}-vnet ;; P infrastructure/pipelines/stage-template.yml:58:One pool per environment."
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 162,
+      "sentence": "A single shared agent network would have to peer with three VNets that have the same address range.",
+      "source": "P infrastructure/modules/network.bicep:78:addressSpace: { addressPrefixes: ['10.20.0.0/16'] } ;; N 10\\.20\\.0\\.0/16|infrastructure|bicep|1"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 163,
+      "sentence": "That has not been tried.",
+      "source": "P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 163,
+      "sentence": "The QA script `docs/qa/build-F5.md` (observation O4) says one agent network can't be peered to more than one of them.",
+      "source": "P docs/qa/build-F5.md:182:**O4. The three environments share one address space.** ;; P docs/qa/build-F5.md:183:can't be peered to more than one of them"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 168,
+      "sentence": "The offline checker proves structure, not runtime.",
+      "source": "P infrastructure/pipelines/check-pipeline.py:1:Offline check of the Azure DevOps pipeline YAML. Never contacts Azure or Azure DevOps. ;; P infrastructure/pipelines/check-pipeline.py:7:Rules the schema cannot express"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 168,
+      "sentence": "A green check means the files are shaped as described.",
+      "source": "P infrastructure/pipelines/check-pipeline.py:266:print(\"pipeline check passed\")"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 168,
+      "sentence": "It does not mean the pipeline would run.",
+      "source": "P infrastructure/pipelines/azure-pipelines.yml:1:never connected to Azure DevOps, never run ;; P docs/requirements.md:207:never connected to Azure"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 169,
+      "sentence": "Three known gaps in the checker were left as they are:",
+      "source": "X framing sentence, no factual content beyond the three bullets"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 171,
+      "sentence": "**The NSG assertions do not prove \"only\".**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 171,
+      "sentence": "They require at least one matching Allow rule (`len(allows) >= 1`, `check-pipeline.py`).",
+      "source": "P infrastructure/pipelines/check-pipeline.py:248:check(len(allows) >= 1 ;; P infrastructure/pipelines/check-pipeline.py:254:check(len(denies) >= 1"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 172,
+      "sentence": "The Bicep itself has one allow rule, then deny-all (`network.bicep`), which has to be read by eye.",
+      "source": "N access: 'Allow'|infrastructure/modules/network.bicep|bicep|1 ;; P infrastructure/modules/network.bicep:45:priority: 100 ;; P infrastructure/modules/network.bicep:58:priority: 4000"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 174,
+      "sentence": "**The \"AzureCLI@2 inputs\" check covers the deploying stage only.**",
+      "source": "P infrastructure/pipelines/check-pipeline.py:80:steps = job_steps(deploy) ;; P infrastructure/pipelines/check-pipeline.py:81:az = [s for s in steps if s.get(\"task\") == \"AzureCLI@2\"]"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 174,
+      "sentence": "The what-if stage's AzureCLI@2 step is not checked for `scriptType`, `scriptLocation` or `inlineScript`.",
+      "source": "P infrastructure/pipelines/check-pipeline.py:85:for key in (\"azureSubscription\", \"scriptType\", \"scriptLocation\", \"inlineScript\") ;; P infrastructure/pipelines/check-pipeline.py:83:for s in az ;; P infrastructure/pipelines/check-pipeline.py:206:subs = [s[\"inputs\"][\"azureSubscription\"] for s in all_steps ;; P infrastructure/pipelines/stage-template.yml:35:task: AzureCLI@2"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 176,
+      "sentence": "**Two assertions overlap.**",
+      "source": "X bullet label"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 176,
+      "sentence": "The checker asserts both the what-if stage's position in the template and the deploy stage's `dependsOn` on it (`check-pipeline.py`).",
+      "source": "P infrastructure/pipelines/check-pipeline.py:109:tstages.index(whatif_stage) < ;; P infrastructure/pipelines/check-pipeline.py:106:wi_stage_name in as_list(deploy_stage.get(\"dependsOn\")) ;; P infrastructure/pipelines/stage-template.yml:51:dependsOn: WhatIf_"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 179,
+      "sentence": "The reasoning for the stage layout is in `docs/plans/active/inv-002.plan.md`.",
+      "source": "E docs/plans/active/inv-002.plan.md"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 107,
+      "sentence": "5. The environments `policies-dev`, `policies-test` and `policies-prod`, with the Approval check on prod.",
+      "source": "P infrastructure/pipelines/stage-template.yml:63:environment: policies-${{ parameters.environmentName }} ;; P infrastructure/README.md:88:The Approval check on the environment `policies-prod`"
+    },
+    {
+      "file": "infrastructure/README.md",
+      "line": 74,
+      "sentence": "The claim is exactly this: the YAML is valid against the schema; template expansion, `${{ }}` expressions, task inputs, service connections and environments are not checked against Azure DevOps.",
+      "source": "P infrastructure/pipelines/check-pipeline.py:1:Never contacts Azure or Azure DevOps. ;; P infrastructure/pipelines/check-pipeline.py:85:for key in (\"azureSubscription\", \"scriptType\", \"scriptLocation\", \"inlineScript\"): ;; P infrastructure/pipelines/check-pipeline.py:112:\"environment: policies-${{ parameters.environmentName }}\" in text ;; P infrastructure/pipelines/check-pipeline.py:208:every azureSubscription must be a template parameter expression"
+    },
+    {
+      "file": "docs/design.md",
+      "line": 173,
+      "sentence": "A cancellation creates a Refund only for an amount above £0. If the policy has a claim (COULD-2), none of its paid terms gets a Refund record; an unpaid renewal term (RENEW-3b) gets none either. Their calculations are still in the response, with `ruleApplied` `COULD-2` or `UNPAID-TERM` and `refundAmount` 0.00.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:257:Terms.Select(term => RefundCalculator.ForTerm(term, cancelOn, HasClaims)) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:98:if (calculations[i].Amount > 0 && Terms[i].Payment is { } payment) ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:25:if (term.Payment is null) ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:30:if (hasClaims) ;; P tests/Uinsure.Policies.Domain.Tests/CancelWithClaimTests.cs:102:public void Claim_on_a_two_term_policy_refunds_nothing_on_either_term()"
+    },
+    {
+      "file": "README.md",
+      "line": 66,
+      "sentence": "- **No £0 Refund record is created.** The cancellation response still lists every term, including those with `refundAmount` 0.00.",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:257:Terms.Select(term => RefundCalculator.ForTerm(term, cancelOn, HasClaims)) ;; P src/Uinsure.Policies.Domain/Policies/Policy.cs:98:if (calculations[i].Amount > 0 && Terms[i].Payment is { } payment) ;; P src/Uinsure.Policies.Api/Contracts/CancellationContracts.cs:23:IReadOnlyList<CancellationTermResponse> Terms, ;; P tests/Uinsure.Policies.Api.Tests/CancelWithClaimTests.cs:47:new ExpectedTerm(1, \"COULD-2\", 365, 1, 364, \"0.00\")"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 22,
+      "sentence": "(5) the environments `policies-dev`, `policies-test` and `policies-prod`, with the Approval check on prod.",
+      "source": "P infrastructure/pipelines/stage-template.yml:63:environment: policies-${{ parameters.environmentName }} ;; P infrastructure/README.md:88:The Approval check on the environment `policies-prod`"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 22,
+      "sentence": "the spec clause \"which aren't auto-created from YAML\" was dropped, because it is Azure DevOps behaviour that no repo file proves and the pipeline never ran",
+      "source": "P infrastructure/README.md:107:5. The environments `policies-dev`, `policies-test` and `policies-prod`, with the Approval check on prod."
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 24,
+      "sentence": "the claim is exactly: \"the YAML is valid against the schema; template expansion, `${{ }}` expressions, task inputs, service connections and environments are not checked against Azure DevOps\" (wording corrected at F6: \"against Azure DevOps\" added, because check-pipeline.py asserts the AzureCLI@2 input keys, that every azureSubscription is a template parameter, and the environment name, but never contacts Azure DevOps).",
+      "source": "P infrastructure/pipelines/check-pipeline.py:1:Never contacts Azure or Azure DevOps. ;; P infrastructure/pipelines/check-pipeline.py:85:for key in (\"azureSubscription\", \"scriptType\", \"scriptLocation\", \"inlineScript\"): ;; P infrastructure/pipelines/check-pipeline.py:112:\"environment: policies-${{ parameters.environmentName }}\" in text ;; P infrastructure/pipelines/check-pipeline.py:208:every azureSubscription must be a template parameter expression"
+    },
+    {
+      "file": "docs/readme-checklist.md",
+      "line": 41,
+      "sentence": "If the policy has a claim (COULD-2), none of its paid terms gets a Refund record; an unpaid renewal term (RENEW-3b) gets none either. Their calculations are still returned, with `ruleApplied` `COULD-2` or `UNPAID-TERM` and 0.00. (wording corrected at F6: COULD-2 withholds every paid term of a policy with a claim, because Policy.cs passes the policy's HasClaims for each term)",
+      "source": "P src/Uinsure.Policies.Domain/Policies/Policy.cs:257:Terms.Select(term => RefundCalculator.ForTerm(term, cancelOn, HasClaims)) ;; P src/Uinsure.Policies.Domain/Rules/RefundCalculator.cs:30:if (hasClaims) ;; P tests/Uinsure.Policies.Domain.Tests/CancelWithClaimTests.cs:102:public void Claim_on_a_two_term_policy_refunds_nothing_on_either_term()"
+    }
+  ]
+}

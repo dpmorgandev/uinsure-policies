@@ -1,0 +1,70 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T09:09:57Z",
+  "plan": "build",
+  "node": "F6",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "add3e832c957af002",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F6",
+    "attempt": 2,
+    "base_sha": "275fc8437d7f036dddc6c88c35a04e8c67edea64",
+    "head_sha": "a7973305d6a55a266735c585c25b329a75251fb6",
+    "diff_fingerprint": "89433b80cf8578b0cf58cdd8e6cd37e1f38b5546",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.vulnerable",
+      "gate.scope",
+      "gate.build",
+      "gate.test",
+      "gate.write"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET-SQL",
+      "NET-MONEY",
+      "NET-PACKAGES",
+      "NET-SECRETS",
+      "NET-LOGGING"
+    ],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "S1",
+        "rule_id": "API4:2023",
+        "severity": "P2",
+        "file": "docs/design.md",
+        "line": 348,
+        "what": "Security scope and Known limits never say the deployed API is internet-facing with no edge WAF or Front Door, and that anyone with a guessable reference can read personal data.",
+        "why": "The skill's P2 row covers per-instance limits and no edge WAF when the README doesn't state it. The app has no ipSecurityRestrictions and no auth. GET returns names, dates of birth and addresses, and POST claims can zero a refund. The docs say only that the reference is the only key.",
+        "route_to": "builder"
+      },
+      {
+        "id": "S2",
+        "rule_id": "API8:2023",
+        "severity": "P2",
+        "file": "docs/design.md",
+        "line": 370,
+        "what": "design.md says the client IP is read from X-Forwarded-For when the proxy is in the private ranges, with no caveat that this is untested on App Service Linux.",
+        "why": "The untested caveat is only in infrastructure/README.md. I believe the App Service Linux front end shows a non-RFC1918 address and the platform may set ASPNETCORE_FORWARDEDHEADERS_ENABLED, but I did not verify either. If so, the per-IP limit and Request.IsHttps could misbehave; the main risk is all clients sharing one partition.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "Scope: docs-only diff (README.md, docs/design.md, infrastructure/README.md, docs/readme-checklist.md, plus the F5 trail tail, docs/context and dag.yaml). No src/ change.",
+      "Publishing review: no secrets, keys, tokens or credentialed connection strings. No personal emails or absolute local paths. The one scratchpad path in activity.jsonl is sanitised to ~/AppData/.../C--Users-<user>-.... It still carries a harness session UUID, which is not personal data and not blocking. Hostnames are the placeholders rg-policies-<env> and vnet-policies-<env>, plus 10.x ranges. The all-zero object-ID placeholder is not a real identifier.",
+      "Claims checked against code and Bicep and found accurate: 64 KiB body cap; 100/min global and 10/min writes, with 1000/10000 in Development; writes policy on all four POST actions; /health/* exempt from the limiter and the HTTPS check; no UseHttpsRedirection; HSTS and 400 /problems/https-required outside Development; OpenAPI and Scalar Development only; generic 500 body and fixed-text BadHttpRequest bodies; log lines carry only method, path, status and reason; forwarded headers trusted from private ranges only; SQL publicNetworkAccess Disabled with Entra-only auth; NSG allow 1433 from app and agent ranges, then deny; scm and ftp basic auth off; httpsOnly true; user-assigned identity with no password in the connection string; DB grants reader/writer only; 16 resources per environment.",
+      "The docs state the known limits honestly: per-instance rate limits, claims not idempotent with no cap, ARM connection rights and what-if sharing it, unverified httpsOnly and forwarded-header interaction, SQL connection policy expectation, shared VNet range, checker P2s, and never deployed. None is understated enough for P1.",
+      "Gate receipts at e1e21a5: gate.vulnerable reports no vulnerable packages in 8 projects. Reviewed HEAD a797330 differs only by dag.yaml status.",
+      "Out items, n/a: API1:2023 (no auth or tenancy; the reference is the only key, and the docs state this); API2:2023 (auth out of scope); API5:2023 (no roles; POST /claims would be an admin function, stated in design.md); API7:2023 (no HttpClient or outbound fetch in src/); API10:2023 (no upstream APIs; pricing is client-supplied)."
+    ]
+  }
+}
