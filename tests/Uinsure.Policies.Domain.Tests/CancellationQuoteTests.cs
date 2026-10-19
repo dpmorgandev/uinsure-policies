@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Uinsure.Policies.Domain.Tests;
 
-// COULD-1: policy.Quote(on, today) is a read-only version of the cancel calculation. Its Terms are what
+// COULD-1: policy.QuoteCancellation(on, today) is a read-only version of the cancel calculation. Its Terms are what
 // Cancel would give for the same date, under the same rules (CANCEL-3, CANCEL-4, CANCEL-7, COULD-2), and changes nothing.
 //   The builder's default sells on 2026-10-17 to start 2026-11-08, ending 2027-11-07, 527.18;
 //   start 2026-10-17 ends 2027-10-16 (365 days).
@@ -22,7 +22,7 @@ public sealed class CancellationQuoteTests
     {
         var policy = new PolicyBuilder().Build();
 
-        var quote = policy.Quote(new DateOnly(2026, 11, 23), Today);
+        var quote = policy.QuoteCancellation(new DateOnly(2026, 11, 23), Today);
         var cancellation = policy.Cancel(new DateOnly(2026, 11, 23), Today, new RefundReferences().Next);
 
         Assert.True(quote.IsSuccess);
@@ -36,7 +36,7 @@ public sealed class CancellationQuoteTests
     {
         var policy = new PolicyBuilder().Build();
 
-        Assert.True(policy.Quote(Today, Today).IsSuccess);
+        Assert.True(policy.QuoteCancellation(Today, Today).IsSuccess);
 
         Assert.Null(policy.Cancellation);
         Assert.Equal(PolicyStatus.Pending, policy.StatusOn(Today));
@@ -52,7 +52,7 @@ public sealed class CancellationQuoteTests
     {
         var policy = new PolicyBuilder().WithStartDate(Today).WithAmount(410.00m).Build();
 
-        var quote = policy.Quote(null, new DateOnly(2026, 11, 5));
+        var quote = policy.QuoteCancellation(null, new DateOnly(2026, 11, 5));
 
         Assert.Equal([new RefundCalculation(387.53m, "CANCEL-1c", 365, 20, 345)], quote.Value.Terms);
     }
@@ -64,7 +64,7 @@ public sealed class CancellationQuoteTests
     {
         var policy = new PolicyBuilder().Build();
 
-        var quote = policy.Quote(Today.AddDays(-1), Today);
+        var quote = policy.QuoteCancellation(Today.AddDays(-1), Today);
 
         var violation = ViolationAssert.SingleBusinessRule(quote, "CANCEL-3");
         Assert.Equal(Today, ViolationAssert.Extension(violation, "today"));
@@ -77,7 +77,7 @@ public sealed class CancellationQuoteTests
     {
         var policy = new PolicyBuilder().Build();
 
-        var quote = policy.Quote(new DateOnly(2027, 11, 8), Today);
+        var quote = policy.QuoteCancellation(new DateOnly(2027, 11, 8), Today);
 
         var violation = ViolationAssert.SingleBusinessRule(quote, "CANCEL-7");
         Assert.Equal(new DateOnly(2027, 11, 7), ViolationAssert.Extension(violation, "latestEndDate"));
@@ -91,7 +91,7 @@ public sealed class CancellationQuoteTests
         var policy = new PolicyBuilder().Build();
         Assert.True(policy.Cancel(new DateOnly(2026, 12, 1), Today, new RefundReferences().Next).IsSuccess);
 
-        var quote = policy.Quote(null, Today);
+        var quote = policy.QuoteCancellation(null, Today);
 
         var violation = ViolationAssert.SingleConflict(quote, "CANCEL-4");
         Assert.Equal(new DateOnly(2026, 12, 1), ViolationAssert.Extension(violation, "cancellationDate"));
@@ -106,7 +106,7 @@ public sealed class CancellationQuoteTests
         var policy = new PolicyBuilder().WithStartDate(Today).WithAmount(275.90m).Build();
         Assert.True(policy.RecordClaim(Today, "Storm damage to the garage roof", Today).IsSuccess);
 
-        var quote = policy.Quote(new DateOnly(2026, 10, 31), Today);
+        var quote = policy.QuoteCancellation(new DateOnly(2026, 10, 31), Today);
 
         Assert.Equal([new RefundCalculation(0m, "COULD-2", 365, 15, 350)], quote.Value.Terms);
     }

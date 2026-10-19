@@ -82,7 +82,7 @@ public sealed class PolicyServiceQuoteTests
         var repository = new StoredPolicyRepository(policy);
         var service = new PolicyService(repository, _references, new FakeTimeProvider(TestClock.Now));
 
-        var quote = await service.Quote(policy.Reference, new DateOnly(2026, 11, 23), TestContext.Current.CancellationToken);
+        var quote = await service.QuoteCancellation(policy.Reference, new DateOnly(2026, 11, 23), TestContext.Current.CancellationToken);
         Assert.Equal(0, repository.SaveChangesCalls);
         var cancellation = await service.Cancel(policy.Reference, new DateOnly(2026, 11, 23), TestContext.Current.CancellationToken);
 
@@ -102,14 +102,14 @@ public sealed class PolicyServiceQuoteTests
         var clock = new CountingTimeProvider(TestClock.Now);
         var service = new PolicyService(new StoredPolicyRepository(policy), _references, clock);
 
-        var result = await service.Quote(policy.Reference, null, TestContext.Current.CancellationToken);
+        var result = await service.QuoteCancellation(policy.Reference, null, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess, "The quote was expected to succeed.");
         Assert.Equal(1, clock.UtcNowReads);
     }
 
     private Task<Result<CancellationQuoteResult>> QuoteAt(DateTimeOffset utcNow, StoredPolicyRepository repository, PolicyReference reference, DateOnly? on) =>
-        new PolicyService(repository, _references, new FakeTimeProvider(utcNow)).Quote(reference, on, TestContext.Current.CancellationToken);
+        new PolicyService(repository, _references, new FakeTimeProvider(utcNow)).QuoteCancellation(reference, on, TestContext.Current.CancellationToken);
 
     private void AssertNothingChanged(Policy policy, StoredPolicyRepository repository)
     {
