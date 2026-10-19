@@ -58,7 +58,7 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2024-01-01' = {
 }
 
 resource dnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' = {
-  name: 'privatelink.database.windows.net'
+  name: 'privatelink${environment().suffixes.sqlServerHostname}'
   location: 'global'
   tags: tags
 }

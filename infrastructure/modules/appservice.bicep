@@ -59,11 +59,17 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
 }
 
 // Nothing needs basic-auth publishing: the pipeline deploys under an Entra service connection.
-resource publishingCredentials 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = [for kind in ['scm', 'ftp']: {
+resource scmCredentialsPolicy 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
   parent: app
-  name: kind
+  name: 'scm'
   properties: { allow: false }
-}]
+}
+
+resource ftpCredentialsPolicy 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
+  parent: app
+  name: 'ftp'
+  properties: { allow: false }
+}
 
 output appName string = app.name
 output hostName string = app.properties.defaultHostName

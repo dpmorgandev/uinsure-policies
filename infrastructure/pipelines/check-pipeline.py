@@ -123,7 +123,7 @@ check("tenantId=" not in combined, "I4: the pipeline must not pass tenantId=")
 # I5: SQL is private; the pipeline's SQL steps run from inside the network.
 check("publicNetworkAccess: 'Disabled'" in sql, "I5: SQL publicNetworkAccess must be 'Disabled'")
 check("0.0.0.0" not in sql, "I5: no 0.0.0.0 (Allow Azure services) firewall rule")
-check("Microsoft.Network/privateEndpoints" in sql and "privatelink.database.windows.net" in sql, "I5: SQL needs a private endpoint and a privatelink.database.windows.net private DNS zone")
+check("Microsoft.Network/privateEndpoints" in sql and ("privatelink.database.windows.net" in sql or "'privatelink${environment().suffixes.sqlServerHostname}'" in sql), "I5: SQL needs a private endpoint and a privatelink.database.windows.net private DNS zone")
 check("virtualNetworkSubnetId" in bicep, "I5: the app needs VNet integration (virtualNetworkSubnetId)")
 
 
@@ -138,8 +138,9 @@ found = list(sql_jobs(template))
 check(bool(found) and all("vmImage" not in (j.get("pool") or {}) for j in found), "I5: SQL steps must run in a job whose pool is not a Microsoft-hosted vmImage")
 
 # I6: no basic-auth publishing credentials.
+policy_blocks = re.findall(r"resource \w+ '[^']*basicPublishingCredentialsPolicies@[^']*' = \{(.*?)\n\}", bicep, re.S)
 for kind in ("scm", "ftp"):
-    check(re.search(rf"basicPublishingCredentialsPolicies[^\n]*'{kind}'[\s\S]*?allow:\s*false", bicep) is not None,
+    check(any(re.search(rf"name:\s*'{kind}'", blk) and re.search(r"allow:\s*false", blk) for blk in policy_blocks),
           f"I6: site must declare basicPublishingCredentialsPolicies '{kind}' with allow: false")
 
 # I8: a separate, least-privilege SQL service connection, and the bootstrap is documented.
