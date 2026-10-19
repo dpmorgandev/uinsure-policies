@@ -505,3 +505,37 @@ positives for commits trailered `Agent: main`. The self-test runs in pre-push.
     guess the families. One fell back to system fonts.
   - **Closed:** a T-id missing from the table fails the render.
   - **Fixture:** a T-id resolves to its research row; a missing one throws.
+
+## Amendment A6 (2026-10-19): the kit stage (G3). Approved by David ("proceed with recommendations")
+
+| ID | Change | File | Test (fixture) |
+|---|---|---|---|
+| G1 | `kit-builder` is a known role, allowlist `src/web/kit/**` and `tests/web/kit/**` only. Additive | `lib/roles.mjs` | the kit paths allowed; app code, root config, e2e tests, docs and the API denied; no other design or build role gains them, except the gap below |
+| G14 | The design route for `feature/ui/DK` also allows `src/web/kit/`, `tests/web/kit/` and the scaffold's root config files (`KIT_SCAFFOLD`). Every other stage keeps `docs/ui/` and its trail | `guard-bash.mjs` | DK with kit, tests and scaffold → allow on sign-off; DK adding `src/web/app/` → deny; a mockups branch carrying kit code → deny |
+| G15 | Jurisdiction widens to `kit-builder`. The `stylesheet` stage renders per batch (`direction=<territory> screen=<batch>`) from `template.md`, or `template-sink.md` for the sink. The prompt holds: the territory and its type rows; `tokens.css` verbatim; the batch's catalog rows, each with its folder and tier tag; earlier waves' components; the references. A missing source or an uncatalogued component fails the render | `guard-dispatch.mjs`, `scripts/design/render-prompt.mjs` | a batch renders and passes; one changed byte → deny; an uncatalogued component throws; a missing `tokens.css` throws |
+| G16 | Widens to `kit-builder`. A `.ts`, `.tsx` or `.css` artifact may not hold a markdown fence or open with a prose preamble | `gate-design.mjs` | clean code → allow; a fence → block; a prose opening → block; a file outside scope → block |
+
+**Tools run by `/stylesheet` in the parent, not guards:**
+- **`scaffold-web.mjs`:** the web project's root config, written once and never overwriting. `--barrel`
+  generates `src/web/kit/index.ts`.
+- **`derive-tokens.mjs`:** `tokens.json` (DTCG) and `tokens.css` from the territory, with the decided
+  override (dark error `#fb747b`). The families come from the research's T-id row. The CSS follows the
+  system theme, honours an explicit `data-theme`, and zeroes durations under reduced motion.
+- **`audit-kit.mjs`:** serves the built sink, reads every `data-comp` in Chromium, and fails unless every
+  catalogued component appears in every listed state (bracket-aware state parsing), every screen icon
+  is catalogued and the type specimen is present. Empty input fails closed. `--shots` writes the G3
+  review page.
+- **The npm scripts:** `typecheck`, `test:kit` and `lint:css` (Stylelint: no colour outside
+  `tokens.css`).
+
+**Smoke-tested end to end** in a scratch project (2026-10-19): the scaffold installs, typechecks
+(TypeScript 7), tests (Vitest, with tests outside the package resolving through aliases), lints and
+builds (Vite 8). The audit ran on a real browser build. All 8 batch prompts render against the real
+`docs/ui` (14–19 KB each).
+- Two scaffold bugs were found and fixed on the way: TypeScript 7 removed `baseUrl`, so `paths` are
+  relative with `@types` first; aliasing `vite` broke its virtual modules, so only the packages that
+  code and tests import are aliased.
+
+**A recorded gap:** the API build loop's `builder` allowlist is `src/**`, which covers `src/web/kit/**`.
+Narrowing it mid-plan would change the live F-node loop (F5–F7 don't touch `src/web/`). The `ui` plan's
+`web-builder` excludes the kit (`web-architecture` C6), and that closes it.

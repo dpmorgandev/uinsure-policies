@@ -88,10 +88,69 @@ function directionStyle(root, inputs, styles, direction) {
   return section(styles, heading);
 }
 
+// The kit stage (guardrails A6): the catalog's tiers, as folders and as data-comp tier names.
+const TIERS = {
+  Primitives: { folder: 'primitives', tag: 'primitive' },
+  Patterns: { folder: 'patterns', tag: 'pattern' },
+  Layout: { folder: 'layouts', tag: 'layout' },
+  'Project-specific compositions': { folder: 'project', tag: 'project' },
+};
+
+// id → { tier folder, tier tag, catalog row } from docs/ui/components.md.
+export function catalog(root) {
+  const out = new Map();
+  let tier = null;
+  for (const line of readText(join(root, 'docs', 'ui', 'components.md')).split('\n')) {
+    if (line.startsWith('## ')) tier = TIERS[line.slice(3).trim()] ?? null;
+    const m = /^\| ([a-z][a-z0-9-]*) \|/.exec(line);
+    if (m && tier) out.set(m[1], { ...tier, row: line });
+  }
+  return out;
+}
+
+function kitFill(root, inputs, { direction, screen, attempt }) {
+  const batch = inputs.batches[screen];
+  if (!batch) throw new Error(`batch ${screen} is not part of the kit stage`);
+  const cat = catalog(root);
+  const at = (id) => {
+    const c = cat.get(id);
+    if (!c) throw new Error(`component ${id} is not in docs/ui/components.md`);
+    return `- \`${id}\`: \`src/web/kit/${c.folder}/${id}/\` (data-comp tier \`${c.tag}\`)`;
+  };
+  const wave = inputs.waves.findIndex((w) => w.includes(screen));
+  if (wave < 0) throw new Error(`batch ${screen} is in no wave`);
+  const earlier = screen === 'sink'
+    ? Object.values(inputs.batches).flat()
+    : inputs.waves.slice(0, wave).flat().flatMap((b) => inputs.batches[b]);
+  const references = inputs.references.map((r) => r.replace('{territory}', direction));
+  for (const r of references) if (!existsSync(join(root, r))) throw new Error(`missing source: ${r}`);
+  const app = JSON.parse(readText(join(root, 'docs', 'ui', 'screens.json'))).app;
+  const icons = [...new Set([...(app.iconsVerified ?? []), ...(app.iconsToVerify ?? []), ...app.screens.flatMap((s) => s.icons ?? [])])].sort();
+  return {
+    template: screen === 'sink' ? 'template-sink.md' : 'template.md',
+    fill: {
+      territory: directionStyle(root, { directionsFrom: inputs.directionsFrom }, '', direction),
+      tokens: readText(join(root, inputs.tokensCss)).trimEnd(),
+      components: ['| ID | Purpose | States | Uses | From |', '|---|---|---|---|---|', ...batch.map((id) => cat.get(id)?.row ?? at(id))].join('\n')
+        + '\n\nWhere each one goes:\n\n' + batch.map(at).join('\n'),
+      available: earlier.length ? earlier.map(at).join('\n') : 'None: this is the first wave.',
+      references: references.map((r) => `- \`${r}\``).join('\n'),
+      icons: icons.map((i) => `- \`${i}\``).join('\n'),
+      feedback: attempt === 1
+        ? 'None: this is the first attempt.'
+        : `Attempt ${attempt - 1} failed these checks; fix every one:\n\n\`\`\`text\n${readText(feedbackFile(root, inputs.node, direction, screen, attempt)).trimEnd()}\n\`\`\``,
+    },
+  };
+}
+
 export function renderPrompt({ root, stage, direction, screen, attempt = 1 }) {
   if (!Number.isInteger(attempt) || attempt < 1) throw new Error(`bad attempt: ${attempt}`);
   const dir = join(HARNESS, '.claude', 'skills', stage);
   const inputs = JSON.parse(readText(join(dir, 'inputs.json')));
+  if (inputs.kind === 'kit') {
+    const { template, fill } = kitFill(root, inputs, { direction, screen, attempt });
+    return finish(readText(join(dir, template)), { stage, direction, screen, attempt: String(attempt), ...fill }, { stage, direction, screen, attempt });
+  }
   const template = readText(join(dir, 'template.md'));
   if (inputs.kind === 'directions') {
     return finish(template, { stage, direction, screen, attempt: String(attempt), ...directionsFill(root, inputs, { direction, screen, attempt }) }, { stage, direction, screen, attempt });

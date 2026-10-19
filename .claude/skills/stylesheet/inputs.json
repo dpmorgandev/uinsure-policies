@@ -1,0 +1,31 @@
+{
+  "kind": "kit",
+  "node": "DK",
+  "directionsFrom": "docs/ui/directions.json",
+  "tokensCss": "src/web/kit/tokens/tokens.css",
+  "references": ["docs/ui/mockups/r2/{territory}/rule.html", "docs/ui/mockups/r2/{territory}/wb-cancel.html", "docs/ui/concept.md"],
+  "tokens": {
+    "overrides": { "error.dark": "#fb747b" },
+    "fallback": { "sans": ["system-ui", "sans-serif"], "mono": ["ui-monospace", "monospace"] },
+    "typeScale": [12, 14, 16, 18, 24, 32],
+    "space": [4, 8, 12, 16, 24, 32, 48],
+    "radius": 2,
+    "duration": { "short": 120, "medium": 200 }
+  },
+  "waves": [
+    ["primitives-a", "primitives-b"],
+    ["patterns-a", "patterns-b", "layout"],
+    ["project-a", "project-b"],
+    ["sink"]
+  ],
+  "batches": {
+    "primitives-a": ["status-tag", "tdd-step-tag", "agent-badge", "rule-chip", "sha-link", "file-line-link", "redaction-token", "timestamp", "provenance-label", "disclosure", "tabs", "code-block"],
+    "primitives-b": ["theme-toggle", "button", "spinner", "text-input", "text-area", "date-input", "money-input", "select", "radio-group", "switch", "money"],
+    "patterns-a": ["page-header", "breadcrumbs", "search", "filter-bar", "data-table", "key-value-list", "markdown-text", "json-viewer", "diff-viewer", "verify-command", "empty-state", "receipt-figure"],
+    "patterns-b": ["field", "form-section", "repeatable-group", "constraint-hint", "error-summary", "inline-error", "problem-banner", "request-log", "http-exchange", "confirm-dialog", "document-page"],
+    "layout": ["app-shell", "top-bar", "primary-nav", "footer", "compiled-at-stamp", "inspector-drawer"],
+    "project-a": ["rung-spine", "rule-evidence", "completeness-banner", "not-built-yet", "sources-disagree", "gate-row", "attempt-ladder", "verdict-card", "finding-card", "agent-lanes"],
+    "project-b": ["human-decision-row", "dag-graph", "dag-table", "term-timeline", "refund-worked-sum", "quote-cancel-compare", "reference-preview", "send-anyway-toggle", "recent-policies"],
+    "sink": []
+  }
+}

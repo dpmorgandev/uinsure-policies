@@ -70,9 +70,20 @@ function harnessPrGate(root, subagent) {
 // G14 design route (guardrails Amendment A2): a ui design stage (feature/ui/D<X>) has no reviewer or security;
 // David judges it. Its PR needs his signoff(<sha>) in the stage's trail, with only the trail changed since,
 // and a diff into origin/ui that touches only docs/ui/ and the stage's own trail.
+// The kit stage (DK, guardrails A6) also carries the React kit, its tests and the web project's root
+// config files the main session scaffolds at setup (web-architecture C1).
+export const KIT_SCAFFOLD = ['src/web/package.json', 'src/web/package-lock.json', 'src/web/tsconfig.json',
+  'src/web/vite.config.ts', 'src/web/kitchen-sink.html', 'src/web/eslint.config.js', 'src/web/.stylelintrc.json',
+  'src/web/.gitignore'];
+function designPaths(node) {
+  return node === 'DK' ? ['docs/ui/', 'src/web/kit/', 'tests/web/kit/'] : ['docs/ui/'];
+}
+
 function designPrGate(root, subagent, node) {
   if (subagent) return 'G14: a design-stage PR is the main session\'s, not an agent\'s';
   const trail = `docs/trace/ui/${node}/`;
+  const allowed = designPaths(node);
+  const scaffold = node === 'DK' ? KIT_SCAFFOLD : [];
   let files;
   try {
     files = git(['diff', '--name-only', 'origin/ui...HEAD'], root).split('\n').filter(Boolean);
@@ -80,8 +91,8 @@ function designPrGate(root, subagent, node) {
     return 'G14: cannot diff the design branch against origin/ui; denied';
   }
   if (!files.length) return 'G14: the design branch has no changes against origin/ui';
-  const outside = files.filter((f) => !f.startsWith('docs/ui/') && !f.startsWith(trail));
-  if (outside.length) return `G14: a design-stage PR may touch only docs/ui/ and ${trail} (found ${outside.slice(0, 3).join(', ')})`;
+  const outside = files.filter((f) => !allowed.some((p) => f.startsWith(p)) && !f.startsWith(trail) && !scaffold.includes(f));
+  if (outside.length) return `G14: a design-stage PR may touch only ${allowed.join(', ')}${scaffold.length ? ', the web scaffold' : ''} and ${trail} (found ${outside.slice(0, 3).join(', ')})`;
   const loop = join(root, trail, 'loop.jsonl');
   const signoffs = existsSync(loop)
     ? readFileSync(loop, 'utf8').split('\n').map((l) => /"event":"signoff\(([0-9a-f]{40})\)"/.exec(l)?.[1]).filter(Boolean)

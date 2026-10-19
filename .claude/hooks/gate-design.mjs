@@ -12,7 +12,7 @@ import { parseFinalMessage } from './lib/schema.mjs';
 import { git, repoRoot } from './lib/trace.mjs';
 
 export const DESIGN_AGENT = 'ui-designer';
-export const DESIGN_AGENTS = ['ui-designer', 'creative-director'];
+export const DESIGN_AGENTS = ['ui-designer', 'creative-director', 'kit-builder'];
 const MAX_BLOCKS = 3;
 const RESTATE = 'Restate your COMPLETE final message: the receipt JSON object only, with these problems fixed.';
 const KEYS = ['agent', 'stage', 'direction', 'screen', 'status', 'files', 'notes'];
@@ -45,6 +45,10 @@ export function artifactProblems(root, path, role = DESIGN_AGENT) {
     if (/^\s*```/.test(text)) p.push(`${rel}: is wrapped in a markdown fence`);
   } else if (rel.endsWith('.json')) {
     try { JSON.parse(text); } catch (err) { p.push(`${rel}: is not valid JSON (${err.message})`); }
+  } else if (/\.(tsx?|css)$/.test(rel)) {
+    // guardrails A6: kit code holds no markdown fence and no prose preamble before the code.
+    if (text.includes('```')) p.push(`${rel}: holds a markdown fence (prose leaked into the code)`);
+    if (/^\s*(Here|Sure|Below|This file|I've|I have)\b/i.test(text)) p.push(`${rel}: starts with prose, not code`);
   }
   return p;
 }
