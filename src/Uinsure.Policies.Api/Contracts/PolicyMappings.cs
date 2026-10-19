@@ -20,6 +20,7 @@ internal static partial class PolicyMappings
         new Property(request.Property!.AddressLine1!, request.Property.AddressLine2, request.Property.AddressLine3, request.Property.Postcode!),
         ToDomain(request.PaymentMethod!.Value));
 
+    // Still canned until a later node supplies the data: refunds, claims and cancellation (empty, empty, null).
     // The policy-level dates and amount are the current term's (GET-1).
     public static PolicyResponse ToResponse(this PolicyDetails details)
     {
@@ -28,14 +29,20 @@ internal static partial class PolicyMappings
         return new PolicyResponse(
             policy.Reference.Value,
             ToDto(policy.Type),
+            ToDto(details.Status),
+            policy.Terms.ToList().IndexOf(term) + 1,
             term.Start,
             term.End,
             term.Amount,
+            policy.HasClaims,
             policy.AutoRenew,
             [.. policy.Policyholders.Select(ToDto)],
             ToDto(policy.Property),
             [.. policy.Terms.Select((t, index) => new TermResponse(index + 1, t.Start, t.End, t.Amount, t.Payment?.Reference))],
-            [.. policy.Terms.Where(t => t.Payment is not null).Select(t => new PaymentResponse(t.Payment!.Reference, ToDto(t.Payment.Method), t.Payment.Amount))]);
+            [.. policy.Terms.Where(t => t.Payment is not null).Select(t => new PaymentResponse(t.Payment!.Reference, ToDto(t.Payment.Method), t.Payment.Amount))],
+            [],
+            [],
+            null);
     }
 
     private static partial Domain.Policies.PolicyType ToDomain(PolicyType type);
@@ -43,6 +50,8 @@ internal static partial class PolicyMappings
     private static partial Domain.Policies.PaymentMethod ToDomain(PaymentMethod method);
 
     private static partial PolicyType ToDto(Domain.Policies.PolicyType type);
+
+    private static partial PolicyStatus ToDto(Domain.Policies.PolicyStatus status);
 
     private static partial PaymentMethod ToDto(Domain.Policies.PaymentMethod method);
 

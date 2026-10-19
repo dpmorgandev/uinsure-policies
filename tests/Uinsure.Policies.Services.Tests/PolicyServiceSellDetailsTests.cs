@@ -7,8 +7,8 @@ using Xunit;
 namespace Uinsure.Policies.Services.Tests;
 
 // The details a sale answers with come from the domain, on the UK today the sale was made on: the status is
-// Policy.StatusOn(today) and the current term Policy.CurrentTerm(today), never a placeholder. Untraited until
-// F2 adds the GET-1 traits.
+// Policy.StatusOn(today) and the current term Policy.CurrentTerm(today), never a placeholder. Traited GET-1 in
+// F2.
 public sealed class PolicyServiceSellDetailsTests
 {
     private readonly RecordingPolicyRepository _repository = new();
@@ -21,6 +21,7 @@ public sealed class PolicyServiceSellDetailsTests
 
     // The default sale starts on 2026-11-08, 22 days after today (2026-10-17).
     [Fact]
+    [Trait("Rule", "GET-1")]
     public async Task Sale_starting_after_today_is_returned_as_Pending_with_the_sold_term_as_current()
     {
         var result = await _service.Sell(new SellPolicyBuilder("F1B-SVC-SELL-PEND").Build(), TestContext.Current.CancellationToken);

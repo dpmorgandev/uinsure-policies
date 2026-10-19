@@ -1,0 +1,62 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T22:46:20Z",
+  "plan": "build",
+  "node": "F2",
+  "attempt": 2,
+  "agent": "security",
+  "agent_id": "ac2151ef71174d707",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "security",
+    "plan_id": "build",
+    "node_id": "F2",
+    "attempt": 2,
+    "base_sha": "b2584f7aa364ab4b645719f57e2fc31738fa845b",
+    "head_sha": "8ea8f604d6be272a478d5938d0a05f3c31d6f874",
+    "diff_fingerprint": "f12391cb7cd302ea019c672f9879cd8d32081225",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.vulnerable",
+      "gate.test",
+      "gate.build",
+      "gate.scope",
+      "gate.stubs",
+      "gate.run",
+      "gate.refactor",
+      "gate.green"
+    ],
+    "rules_covered": [
+      "API3:2023",
+      "API4:2023",
+      "API6:2023",
+      "API8:2023",
+      "API9:2023",
+      "NET:sql",
+      "NET:money",
+      "NET:packages",
+      "NET:secrets",
+      "NET:logging"
+    ],
+    "rules_missing": [],
+    "findings": [],
+    "notes": [
+      "API1:2023 n/a: Out of scope. No auth or tenancy; the reference is the only key and is client-chosen.",
+      "API2:2023 n/a: Out of scope. Authentication is out of scope.",
+      "API5:2023 n/a: Out of scope. There are no roles.",
+      "API7:2023 n/a: Out of scope. No outbound fetching; the grep for HttpClient and WebRequest in src/ found nothing.",
+      "API10:2023 n/a: Out of scope. There are no upstream APIs.",
+      "API3: PolicyResponse is a hand-built record mapped from PolicyDetails. It has no Version, no internal id and no EF type. The only new request surface is the GET route and the query filter, and the sale request DTO is unchanged. The POST path still binds SellPolicyRequest only.",
+      "API4: The diff adds no list endpoint, and GET is still one policy by reference. MaxRequestBodySize 65536 and the global and writes rate limits are unchanged. The global limiter covers the new GET. The unknown-query filter adds a keys-vs-parameters check on a URL whose length Kestrel already bounds. The 400 echoes the key as a JSON-encoded errors key only.",
+      "API6: F2 adds no state change. GET only reads. hasClaims, refunds, claims and cancellation are canned empty or null until F3, and no refund or cancel logic is in the diff. The Version token is out of the response.",
+      "API8: No UseDeveloperExceptionPage and no Exception.Message or StackTrace in src. The two .Message hits are domain violation messages in ResultExtensions, not exceptions. The https-required rejection, HSTS and Development-only OpenAPI and Scalar are unchanged. The logging call sites are unchanged and log only method, path, status and reason, with no body or personal data.",
+      "API9: Routes are POST /policies and GET /policies/{reference}, matching E1 and E2. The stub is replaced by the real mapping (gate.stubs: no NotImplementedException). The canned members are deliberate F3 carry-overs, not a stub left behind.",
+      "NET:sql: No FromSqlRaw, ExecuteSqlRaw or SqlQueryRaw in src.",
+      "NET:money: decimal throughout, with no double or float in src. TwoDecimalPlacesConverter writes F2 with InvariantCulture, so there is no culture dependence and no injection through WriteRawValue. The F2 format would round a value with more than 2 dp, but the comment says none reaches it. The SELL-7 and H6 amount check runs on the request side, so this is formatting only. Read is strict number-only and throws JsonException (a 400 shape error) otherwise. Per gate.run the 422 problem echo of a huge negative amount is also written at 2 dp, which is cosmetic.",
+      "NET:packages: The diff has no PackageReference changes. gate.vulnerable reports 8 projects with none vulnerable at 803c898, and the later commit is plan-only.",
+      "NET:secrets: No keys, tokens, connection strings, local absolute paths or personal emails in the diff, including the Postman collection.",
+      "P2 observation, not blocking: the unknown-query filter compares against action parameter names case-insensitively, but ASP.NET binds the CancellationToken parameter without a query key. A query key named cancellationToken is therefore accepted and ignored. It is harmless and has no security effect.",
+      "The reviewer's verdict and .claude/specs were not read."
+    ]
+  }
+}

@@ -1,3 +1,4 @@
+using System.Text;
 using Uinsure.Policies.Api.Tests.Builders;
 using Uinsure.Policies.Api.Tests.Support;
 using Xunit;
@@ -373,5 +374,22 @@ public sealed class SellShapeTests : IClassFixture<PoliciesApiFactory>
 
         ProblemAssert.HasError(await ProblemAssert.ValidationErrors(response), $"policyholders[0].{field}");
         await client.AssertNotStored(reference);
+    }
+
+    // The request is bound from the body, never the query string, so ?request= is an unbound query key and a
+    // 400 even with a valid body (finding A2/I4), and nothing is stored.
+    [Fact]
+    public async Task Query_key_named_like_the_body_parameter_on_a_sale_is_rejected_with_400()
+    {
+        using var client = _factory.CreateClient();
+        var body = new SellPolicyRequestBuilder("SHAPE-QUERY-REQUEST").Build();
+        using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
+
+        using var response = await client.PostAsync("/policies?request=x", content, TestContext.Current.CancellationToken);
+
+        var errors = await ProblemAssert.ValidationErrors(response);
+        ProblemAssert.HasError(errors, "request");
+        Assert.Equal("Unknown query parameter.", errors.Member("request")[0].GetString());
+        await client.AssertNotStored("SHAPE-QUERY-REQUEST");
     }
 }

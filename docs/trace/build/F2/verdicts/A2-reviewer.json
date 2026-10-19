@@ -1,0 +1,112 @@
+{
+  "v": 1,
+  "ts": "2026-10-18T22:49:34Z",
+  "plan": "build",
+  "node": "F2",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "a323b60af0574fd8e",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F2",
+    "attempt": 2,
+    "base_sha": "b2584f7aa364ab4b645719f57e2fc31738fa845b",
+    "head_sha": "8ea8f604d6be272a478d5938d0a05f3c31d6f874",
+    "diff_fingerprint": "f12391cb7cd302ea019c672f9879cd8d32081225",
+    "verdict": "FAIL",
+    "gate_refs": [
+      "gate.red@b7d5b5aa17b8ab0bdf6b52870eb01a749112aea5 (attempt 1)",
+      "gate.stub@305789df2125abfa6ff2e8ba2b0aa9805789008c (attempt 1, ok:false)",
+      "gate.stub@aee97abb56eee893951d3fc6dd2ed8b5fb10d9fa (attempt 2)",
+      "gate.red@c4f7d6474d27eb5a1bf691028815d19ed1bc05af",
+      "gate.green@311ccb69c8898da35aa08143a5aea82fd42af063",
+      "gate.green@b9cd5472a5331ebe27a86750fdcbbdc81d42a5f9",
+      "gate.green@cbb4c7c1bc5ffda1d14f15735c140b7a12850ff5",
+      "gate.run@cbb4c7c1bc5ffda1d14f15735c140b7a12850ff5",
+      "gate.refactor@803c8982404ceb4424e493af3fcc73641205ac4f",
+      "gate.build@803c8982404ceb4424e493af3fcc73641205ac4f",
+      "gate.test@803c8982404ceb4424e493af3fcc73641205ac4f",
+      "gate.scope@803c8982404ceb4424e493af3fcc73641205ac4f",
+      "gate.stubs@803c8982404ceb4424e493af3fcc73641205ac4f",
+      "gate.run@803c8982404ceb4424e493af3fcc73641205ac4f",
+      "gate.vulnerable@803c8982404ceb4424e493af3fcc73641205ac4f"
+    ],
+    "rules_covered": [],
+    "rules_missing": [
+      "GET-1"
+    ],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "GET-1",
+        "severity": "P1",
+        "file": "src/Uinsure.Policies.Api/Contracts/PolicyMappings.cs",
+        "line": 37,
+        "what": "hasClaims is hard-coded false in ToResponse, though Policy.HasClaims is stored and restored. No test seeds true, so a canned stub passes every hasClaims assertion.",
+        "why": "GET-1 returns the stored policy, and the F2 acceptance asks for the full response shape per api.md. Policy.HasClaims already exists end to end: PolicyRecord.HasClaims, PolicyRecordMapper.cs:21 into Policy.Restore, and PolicyRepository.cs:70. The comment says it is canned 'until F3 supplies the data', but that data is supplied today, so a canned stub value is left in green production code. The anti-oracle rule is broken too. PolicyResponseAssert.HasNoClaimsRefundsOrCancellation only ever expects false, and the Api.Tests PolicyBuilder passes a literal false to Restore with no override, so no test can tell the canned value from the stored one. A red test that seeds HasClaims=true and reads it back over HTTP must come before the mapping fix. Refunds, claims and cancellation have no domain data yet, so they are rightly canned.",
+        "route_to": "tester"
+      },
+      {
+        "id": "R2",
+        "rule_id": "GET-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Contracts/PolicyResponse.cs",
+        "line": 3,
+        "what": "Header comment still says status and currentTermNumber are 'canned for now (stub step)'. At HEAD both come from PolicyDetails.Status and the current term's index.",
+        "why": "This is on the code-quality slop list: a comment that is false at HEAD. The refactor step fixed the same kind of stale comment on TwoDecimalPlacesConverter (7023420, 803c898) but missed this one. PolicyMappings.cs:23 already lists what is still canned.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "GET-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Contracts/TwoDecimalPlacesConverter.cs",
+        "line": 17,
+        "what": "Global decimal converter writes with \"F2\", a silent second rounding path beside Money.Round. Its 'no >2 dp value reaches it' invariant lives only in a comment.",
+        "why": "CLAUDE.md says to round money only through Money.Round. At HEAD the invariant holds: the H6 400 rejects more than 2 dp by value before any 422 echo, and stored amounts come only from accepted sales. But F3's refunds will go through this converter, and \"F2\" formatting would hide a missing or wrong Money.Round (CANCEL-6) in every Api test. The change to problem echoes (-1e27 now written -1000000000000000000000000000.00) is consistent with the api.md money convention, but only gate.run evidences it. No Api test pins the echo's text, and the Postman decimal.MinValue test's include('\"amount\":-79228162514264337593543950335') is a prefix match that passes with or without '.00'.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R4",
+        "rule_id": "GET-1",
+        "severity": "P2",
+        "file": "src/Uinsure.Policies.Api/Filters/RejectUnknownQueryParametersFilter.cs",
+        "line": 11,
+        "what": "Known keys are every action parameter name, so ?reference= and ?cancellationToken= on GET (and ?request= on POST) pass without a 400, though no query value binds to them.",
+        "why": "The architecture skill says 'an unbound query key (case-insensitive) gives errors[key]', and requirements say an unknown query parameter returns 400. Route-bound, body-bound and special parameters are counted as known query keys. The only test is ?colour=red.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R5",
+        "rule_id": "GET-1",
+        "severity": "P2",
+        "file": "tests/Uinsure.Policies.Api.Tests/RetrieveCurrentTermTests.cs",
+        "line": 76,
+        "what": "Unpaid_second_term_reads_back_with_no_payment_reference_and_no_payment never asserts status, so its read-back is not full. Active is expected on 2026-10-17.",
+        "why": "The tdd-outside-in skill requires a full read-back of every field the node's response carries, and status is a GET-1 field. The row is stub-proof now only through currentTermNumber (canned 0 vs 1). A status literal would pin it on a second derived value, as the other rows in this class do.",
+        "route_to": "tester"
+      },
+      {
+        "id": "R6",
+        "rule_id": "GET-1",
+        "severity": "P2",
+        "file": "tests/Uinsure.Policies.Services.Tests/PolicyServiceGetDetailsTests.cs",
+        "line": 29,
+        "what": "No Services test covers PolicyService.Get's not-found branch (NotFound kind, GET-1 id, detail, reference extension). It is proven over HTTP only.",
+        "why": "The tdd-outside-in skill wants Services.Tests where Services has logic, and PolicyService.cs:57-63 builds the GET-1 violation. RuleCoverageTests passes because unit traits exist, so this does not block coverage. But GET-1's failure row has no unit-level test. The orchestrator recorded this gap in gate.green at 311ccb6.",
+        "route_to": "tester"
+      }
+    ],
+    "notes": [
+      "Ruling on the 4 pinned RetrieveNotFoundTests 404 rows: sound. They passed at red with a tests-only diff (gate.red b7d5b5a), and both stub commits touched only PolicyMappings.cs. They are failure rows whose bodies name each request's own reference, which a canned stub cannot fake. They pass on F1/F1b's real 404 path, so this is no stub-proof breach.",
+      "Ruling on t4/t6 traiting and skipping t5: sound in substance. In the Domain.Tests and Services.Tests diffs, only [Trait(\"Rule\", \"GET-1\")] lines and header comments changed; no assertion did. F1b built StatusOn, CurrentTerm and PolicyService.Get with tests marked 'Untraited until F2'. The Domain tests cover every boundary: Pending, Active on the start and end days, Expired, and the two-term current term. The Services tests cover the BST boundary. One mismatch: commits c4f7d64 and 311ccb6 carry 'TDD: red' though nothing failed (the gates call them pinned or green). Record it; don't rewrite history.",
+      "Ruling on the 2 dp converter applying to every decimal written: acceptable for F2. api.md says money is a JSON number rounded to 2 dp, and the value is unchanged. The F3 masking risk is R3.",
+      "Ruling on the Services not-found gap: non-blocking, raised as P2 R6.",
+      "TDD order holds. Order: red b7d5b5a, then stub 305789d and fix aee97ab (A1 I1/I2 resolved: gate.stub at attempt 2 has only the 4 pinned rows passing), then green cbb4c7c, then comment-only refactors 7023420 and 803c898. No test file changed after its red commit.",
+      "The success rows are stub-proof apart from R1 and R5: the shared PolicyResponseAssert/SoldPolicyAssert read-back is used, values are set per test, builder defaults are not the api.md example, and end dates and status are literals. RetrieveCurrentTermTests uses a local full read-back for seeded policies, which is reasonable because no request exists to compare against.",
+      "Leftovers: none. gate.stubs found no NotImplementedException in src/. gate.build ran with -warnaserror, so RS0030 banned APIs are clean. 365/365 tests pass, including RuleCoverageTests."
+    ]
+  }
+}
