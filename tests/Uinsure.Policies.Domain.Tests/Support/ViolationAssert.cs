@@ -16,6 +16,30 @@ public static class ViolationAssert
         return violation;
     }
 
+    // A failed result carrying exactly one conflict (409) violation of the given rule, with a message: a 409
+    // short-circuits, so no 422 rule is reported beside it.
+    public static RuleViolation SingleConflict<T>(Result<T> result, string ruleId)
+    {
+        Assert.False(result.IsSuccess);
+        var violation = Assert.Single(result.Violations);
+        Assert.Equal(ruleId, violation.RuleId);
+        Assert.Equal(ViolationKind.Conflict, violation.Kind);
+        Assert.False(string.IsNullOrWhiteSpace(violation.Message));
+        return violation;
+    }
+
+    // A failed result carrying exactly these business-rule (422) violations, in this order, each with a message.
+    public static void BusinessRules<T>(Result<T> result, params string[] ruleIds)
+    {
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ruleIds, result.Violations.Select(violation => violation.RuleId));
+        Assert.All(result.Violations, violation =>
+        {
+            Assert.Equal(ViolationKind.BusinessRule, violation.Kind);
+            Assert.False(string.IsNullOrWhiteSpace(violation.Message));
+        });
+    }
+
     public static object? Extension(RuleViolation violation, string key)
     {
         Assert.NotNull(violation.Extensions);
