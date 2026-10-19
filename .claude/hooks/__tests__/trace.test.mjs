@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { relPath, redactCommand, currentAttempt, currentRound, appendJsonl, writeVerdict, writeFindings } from '../lib/trace.mjs';
 import { agentOf, buildRecord } from '../trace-activity.mjs';
-import { validateEvent, gather, completeness } from '../../scripts/render-trace.mjs';
+import { validateEvent, gather, completeness, ruleIds } from '../../scripts/render-trace.mjs';
 
 const SCRIPT = resolve(import.meta.dirname, '../../scripts/render-trace.mjs');
 
@@ -252,6 +252,39 @@ test('completeness: a lost activity record or a bare Fixes-Finding passes only w
   t.loop.push({ event: 'reconciled(fixes:ccccccc:I3)', detail: 'another commit' });
   t.commits[0].fixes.push('I3');
   assert.ok(completeness(t).reasons.some((x) => x.includes('Fixes-Finding I3')), 'a reconciliation names its own commit');
+});
+
+test('ruleIds: the combined RENEW-1/2 row splits as RuleCoverage parses it; other ids are themselves', () => {
+  assert.deepEqual(ruleIds('RENEW-1/2'), ['RENEW-1', 'RENEW-2']);
+  assert.deepEqual(ruleIds('RENEW-3a'), ['RENEW-3a']);
+  assert.deepEqual(ruleIds('COULD-2c'), ['COULD-2c']);
+});
+
+test('completeness: a combined rule is complete only when each id it splits into is', () => {
+  const red = 'a'.repeat(40), green = 'b'.repeat(40);
+  const t = {
+    node: { owner: 'loop', kind: 'feature', rules: ['RENEW-1/2'] }, nodeId: 'F4', activity: [],
+    markers: { 'RENEW-1': 7, 'RENEW-2': 4 }, qa: { 'RENEW-1': 3 },
+    commits: [
+      { sha: red, subject: 'test(RENEW-1): red', agent: 'tester', plan: 'build', node: 'F4', tdd: 'red', rules: ['RENEW-1', 'RENEW-2'], fixes: [] },
+      { sha: green, subject: 'feat(RENEW-1): green', agent: 'builder', plan: 'build', node: 'F4', tdd: 'green', rules: ['RENEW-1', 'RENEW-2'], fixes: [] },
+    ],
+    loop: [{ event: 'gate.red', ok: true }, { event: 'gate.green', ok: true }, { event: 'gate.integrate', ok: true },
+      { event: 'reconciled(activity:aaaaaaa)', detail: 'x' }, { event: 'reconciled(activity:bbbbbbb)', detail: 'x' }],
+    verdicts: [], findings: [], findingIds: [],
+  };
+  const renew = (x) => /rule RENEW-/.test(x);
+  assert.ok(!completeness(t).reasons.some(renew), completeness(t).reasons.join('\n'));
+  delete t.markers['RENEW-2'];
+  assert.ok(completeness(t).reasons.some((x) => x.includes('rule RENEW-2 has no test marker')), 'each split id needs its own tests');
+  t.markers['RENEW-2'] = 4;
+  t.commits[1].rules = ['RENEW-1'];
+  assert.ok(completeness(t).reasons.some((x) => x.includes('rule RENEW-2 has no red commit before its green commit')), 'each split id needs its own green');
+  t.commits[1].rules = ['RENEW-1', 'RENEW-2'];
+  t.qa = {};
+  assert.ok(completeness(t).reasons.some((x) => x.includes('rule RENEW-1/2 has no QA step')), 'a QA step for the row or one of its ids');
+  t.qa = { 'RENEW-1/2': 2 };
+  assert.ok(!completeness(t).reasons.some(renew), 'a QA step may name the combined row');
 });
 
 test('completeness: a green commit that under-declares a rule passes only when reconciled with evidence', () => {

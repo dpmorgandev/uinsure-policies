@@ -170,20 +170,15 @@ export function completeness(t, { archive = false } = {}) {
   }
   const knownIds = new Set([...t.findings, ...(t.findingIds ?? []), ...t.verdicts.flatMap((v) => (v.verdict?.findings ?? []).map((f) => f.id))]);
   for (const c of t.commits) for (const id of c.fixes) if (!knownIds.has(id) && !reconciledFor('fixes', c.sha, id)) r.push(`Fixes-Finding ${id} in ${c.sha.slice(0, 7)} resolves to nothing`);
-  // A green commit whose Rule trailer under-declares the rules it made pass (F3: one trailer per layer, though the
-  // gate.green receipt shows every rule green) passes only when reconciled(green:<sha7>:<rule>) names a TDD: green
-  // commit, the rule's red comes before it, and the event's detail points at the gate receipt. History is not rewritten.
-  const reconciledGreen = (id) => t.commits.findIndex((c) => c.tdd === 'green' && t.loop.some((e) => {
-    const m = /^reconciled\(green:([0-9a-f]{7,40}):([\w-]+)\)$/.exec(e.event ?? '');
-    return m && c.sha.startsWith(m[1]) && m[2] === id && e.detail;
-  }));
   for (const id of rules) {
-    if (!t.markers[id]) r.push(`rule ${id} has no test marker`);
-    const red = t.commits.findIndex((c) => c.tdd === 'red' && c.rules.includes(id));
-    const declared = t.commits.findIndex((c) => c.tdd === 'green' && c.rules.includes(id));
-    const green = declared >= 0 ? declared : reconciledGreen(id);
-    if (red < 0 || green < 0 || red > green) r.push(`rule ${id} has no red commit before its green commit`);
-    if (!t.qa[id]) r.push(`rule ${id} has no QA step`);
+    // A combined row (RENEW-1/2) is checked as the ids the tests carry (RENEW-1, RENEW-2), as RuleCoverage parses it.
+    for (const sub of ruleIds(id)) {
+      if (!t.markers[sub]) r.push(`rule ${sub} has no test marker`);
+      const red = commitIndex(t, 'red', sub);
+      const green = greenIndex(t, sub);
+      if (red < 0 || green < 0 || red > green) r.push(`rule ${sub} has no red commit before its green commit`);
+    }
+    if (!ruleIds(id).some((sub) => t.qa[sub]) && !t.qa[id]) r.push(`rule ${id} has no QA step`);
   }
   const required = t.node.kind === 'feature' ? ['gate.red', 'gate.green', 'gate.integrate'] : ['gate.integrate'];
   for (const name of required) {
@@ -228,13 +223,40 @@ function short(sha) {
   return sha ? sha.slice(0, 7) : '';
 }
 
+// requirements.md has one combined row, RENEW-1/2, that the tests carry as RENEW-1 and RENEW-2 (RuleCoverage
+// expands it the same way, and a RENEW-1/2 trait would be an unknown id). Every other id is itself.
+export function ruleIds(id) {
+  const m = /^([A-Z]+)-(\d+)\/(\d+)$/.exec(id);
+  return m ? [`${m[1]}-${m[2]}`, `${m[1]}-${m[3]}`] : [id];
+}
+
+const commitIndex = (t, tdd, id) => t.commits.findIndex((c) => c.tdd === tdd && c.rules.includes(id));
+
+// A green commit whose Rule trailer under-declares the rules it made pass (F3: one trailer per layer, though the
+// gate.green receipt shows every rule green) counts only when reconciled(green:<sha7>:<rule>) names a TDD: green
+// commit and the event's detail points at the gate receipt; the caller still checks red comes first. History is not rewritten.
+function greenIndex(t, id) {
+  const declared = commitIndex(t, 'green', id);
+  if (declared >= 0) return declared;
+  return t.commits.findIndex((c) => c.tdd === 'green' && t.loop.some((e) => {
+    const m = /^reconciled\(green:([0-9a-f]{7,40}):([\w-]+)\)$/.exec(e.event ?? '');
+    return m && c.sha.startsWith(m[1]) && m[2] === id && e.detail;
+  }));
+}
+
 function ruleRows(t) {
   const integrate = lastGate(t.loop, 'gate.integrate');
   return (t.node.rules ?? []).map((id) => {
-    const n = t.markers[id] ?? 0;
+    const subs = ruleIds(id);
+    const n = subs.reduce((sum, sub) => sum + (t.markers[sub] ?? 0), 0);
     const pass = integrate?.ok ? n : '?';
-    const find = (tdd) => short(t.commits.find((c) => c.tdd === tdd && c.rules.includes(id))?.sha);
-    return { id, tests: `${pass}/${n}`, red: find('red'), green: find('green'), refactor: find('refactor'), qa: t.qa[id] ? `docs/qa/${t.plan}-${t.nodeId}.md#${t.qa[id]}` : '' };
+    const first = (indexOf) => {
+      const found = subs.map(indexOf).filter((i) => i >= 0);
+      return found.length ? short(t.commits[Math.min(...found)].sha) : undefined;
+    };
+    const qa = [id, ...subs].map((k) => t.qa[k]).find(Boolean);
+    return { id, tests: `${pass}/${n}`, red: first((sub) => commitIndex(t, 'red', sub)), green: first((sub) => greenIndex(t, sub)),
+      refactor: first((sub) => commitIndex(t, 'refactor', sub)), qa: qa ? `docs/qa/${t.plan}-${t.nodeId}.md#${qa}` : '' };
   });
 }
 
