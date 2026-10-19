@@ -82,7 +82,7 @@ public sealed class RenewShapeTests : IClassFixture<PoliciesApiFactory>
 
     [Fact]
     [Trait("Rule", "RENEW-4")]
-    public async Task Renewal_with_a_startDate_is_rejected_with_400_as_an_unknown_field()
+    public async Task Renewal_with_a_startDate_as_an_unknown_field_is_rejected_with_400()
     {
         var body = new RenewalRequestBuilder().Build();
         body["startDate"] = "2027-11-08";
