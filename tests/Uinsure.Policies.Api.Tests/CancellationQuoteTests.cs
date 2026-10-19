@@ -152,6 +152,44 @@ public sealed class CancellationQuoteTests : IClassFixture<PoliciesApiFactory>
         PolicyStateAssert.ReadsBackUnchanged(await client.ReadBack(reference), sold, reference, TodayStartEnd, "Active");
     }
 
+    // One request, one UK today (finding A2/R1). The clock moves an hour forward on every read, from
+    // 2026-10-17T22:30Z (23:30 BST, UK 2026-10-17); a second read would be 23:30Z (00:30 BST, UK 2026-10-18).
+    // A quote for UK 2026-10-17 read once is 200 quoted on 2026-10-17: the date CANCEL-3 checks against is the
+    // quotedOn it answers with. Read twice, the past-date check sees 2026-10-18 and the quote is a 422.
+    // 2026-10-17 is the start date: 1 day used, 364 unused, 452.76 in full to the Card (CANCEL-1b).
+    [Fact]
+    [Trait("Rule", "COULD-1")]
+    [Trait("Rule", "CANCEL-3")]
+    public async Task Quote_read_across_UK_midnight_is_checked_and_quoted_on_one_UK_today()
+    {
+        const string reference = "QUOTE-ONE-TODAY";
+        var sold = new SellPolicyRequestBuilder(reference)
+            .WithStartDate(TestClock.Today).WithAmount(452.76m).WithPaymentMethod("Card").Build();
+        using var client = _factory.CreateClient();
+        var paymentReference = (await client.SellAndReadBack(sold, reference)).PaymentReference();
+
+        HttpResponseMessage response;
+        _factory.Clock.SetUtcNow(new DateTimeOffset(2026, 10, 17, 22, 30, 0, TimeSpan.Zero));
+        _factory.Clock.AutoAdvanceAmount = TimeSpan.FromHours(1);
+        try
+        {
+            response = await client.GetQuote(reference, new DateOnly(2026, 10, 17));
+        }
+        finally
+        {
+            _factory.Clock.AutoAdvanceAmount = TimeSpan.Zero;
+        }
+
+        using (response)
+        {
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            CancellationAssert.IsQuote(await response.ReadJson(), new ExpectedCancellation(
+                reference, new DateOnly(2026, 10, 17), "CANCEL-1b", "452.76",
+                [new ExpectedTerm(1, "CANCEL-1b", 365, 1, 364, "452.76")],
+                [new ExpectedRefund("Card", "452.76", paymentReference)]), new DateOnly(2026, 10, 17));
+        }
+    }
+
     [Fact]
     [Trait("Rule", "COULD-1")]
     [Trait("Rule", "CANCEL-7")]
