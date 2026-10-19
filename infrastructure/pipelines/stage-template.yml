@@ -20,7 +20,8 @@ stages:
         displayName: Deploy to ${{ parameters.environmentName }}
         # SQL has no public endpoint, so the whole job runs on a self-hosted pool whose agents sit in a network
         # that reaches the private endpoint and resolves privatelink.database.windows.net (peered to, or the
-        # same as, the VNet that infrastructure/modules/network.bicep creates). One pool per environment.
+        # same as, the VNet that infrastructure/modules/network.bicep creates), with the agents' address range inside
+        # agentAddressPrefix: the NSG allows 1433 to the SQL subnet only from that range. One pool per environment.
         # The agent needs az, jq, go-sqlcmd (`sqlcmd`) and curl.
         pool:
           name: policies-${{ parameters.environmentName }}-vnet
@@ -87,7 +88,7 @@ stages:
                 #   ALTER ROLE db_owner ADD MEMBER [<SQL service connection principal name>];
                 # An admin can use FROM EXTERNAL PROVIDER because the admin's own sign-in resolves the name.
                 # The pipeline never does: the app's user is created from a SID below, which needs no directory lookup.
-                # The agent's network also needs to be allowed by the pool, since SQL has no public endpoint.
+                # The agents' network must be peered to (or inside) the VNet, and their address range inside agentAddressPrefix (the 1433 allow rule in network.bicep).
 
                 # Idempotent: the script from `dotnet ef migrations script --idempotent` skips applied migrations.
                 - task: AzureCLI@2
