@@ -79,6 +79,10 @@ test('G1: builder scope widens by node kind (evidence → infrastructure/**)', (
   assert.ok(allowlist('builder', 'evidence').includes('infrastructure/**'));
   assert.ok(!allowlist('builder', 'feature').includes('infrastructure/**'));
   assert.ok(allowlist('builder', 'docs').includes('README.md'));
+  // The short README's reference docs (F6): exactly these two files, not their directories.
+  for (const p of ['docs/design.md', 'infrastructure/README.md']) assert.ok(allowlist('builder', 'docs').includes(p), p);
+  assert.ok(!allowlist('builder', 'docs').includes('infrastructure/**'), 'a docs node must not write infrastructure code');
+  assert.ok(!allowlist('builder', 'feature').includes('docs/design.md'));
 });
 
 test('G1: all agents are denied docs/trace/**', () => withRepo('feature/build/F1', (root) => {

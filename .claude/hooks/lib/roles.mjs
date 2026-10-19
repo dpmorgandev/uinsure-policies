@@ -17,7 +17,9 @@ export const KIT = ['src/web/kit/**', 'tests/web/kit/**'];
 const BUILD_FILES = ['*.slnx', 'global.json', '.editorconfig', 'Directory.Build.props', 'Directory.Packages.props', 'BannedSymbols.txt', '.gitattributes'];
 const BY_KIND = {
   evidence: ['infrastructure/**'],
-  docs: ['README.md', 'docs/readme-checklist.md', 'docs/pitch-deck/**'],
+  // The README stays short (how to run, assumptions); its reference material lives in docs/design.md and
+  // infrastructure/README.md, which the README links to (F6, David 2026-10-19).
+  docs: ['README.md', 'docs/readme-checklist.md', 'docs/design.md', 'infrastructure/README.md', 'docs/pitch-deck/**'],
 };
 
 export function nodeKind(root) {
