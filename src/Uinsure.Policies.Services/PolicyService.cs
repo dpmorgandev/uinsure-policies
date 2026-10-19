@@ -66,6 +66,8 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         return Result<PolicyDetails>.Success(Details(policy, today));
     }
 
+    public Task<Result<Cancellation>> Cancel(PolicyReference reference, DateOnly? on, CancellationToken ct) => throw new NotImplementedException();
+
     private static PolicyDetails Details(Policy policy, DateOnly today) =>
         new(policy, policy.CurrentTerm(today), policy.StatusOn(today));
 
