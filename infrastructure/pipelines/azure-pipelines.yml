@@ -61,16 +61,19 @@ stages:
     parameters:
       environmentName: dev
       azureServiceConnection: sc-policies-dev
+      sqlServiceConnection: sc-policies-dev-sql
       dependsOn: Build
 
   - template: stage-template.yml
     parameters:
       environmentName: test
       azureServiceConnection: sc-policies-test
+      sqlServiceConnection: sc-policies-test-sql
       dependsOn: Deploy_dev
 
   - template: stage-template.yml
     parameters:
       environmentName: prod
       azureServiceConnection: sc-policies-prod
+      sqlServiceConnection: sc-policies-prod-sql
       dependsOn: Deploy_test

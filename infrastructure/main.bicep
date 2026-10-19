@@ -27,6 +27,9 @@ param sqlAdminGroupName string
 @description('Object id of the Entra group that administers the SQL server.')
 param sqlAdminGroupObjectId string
 
+@description('Address range of the self-hosted deployment agents, allowed to reach SQL on 1433.')
+param agentAddressPrefix string
+
 var suffix = '${workload}-${environmentName}'
 var tags = {
   workload: workload
@@ -56,6 +59,7 @@ module network 'modules/network.bicep' = {
     suffix: suffix
     location: location
     tags: tags
+    agentAddressPrefix: agentAddressPrefix
   }
 }
 

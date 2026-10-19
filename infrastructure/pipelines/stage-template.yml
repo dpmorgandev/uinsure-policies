@@ -3,6 +3,8 @@ parameters:
     type: string
   - name: azureServiceConnection
     type: string
+  - name: sqlServiceConnection
+    type: string
   - name: dependsOn
     type: string
   - name: location
@@ -27,7 +29,6 @@ stages:
         variables:
           # Per-environment values live in a variable group, not in the repo:
           #   sqlAdminGroupObjectId  object id of the Entra group that is the server's Entra-only admin
-          #   sqlServiceConnection   name of the SQL service connection described below
           - group: policies-${{ parameters.environmentName }}
           - name: drop
             value: $(Pipeline.Workspace)/drop
@@ -72,10 +73,14 @@ stages:
                       echo "##vso[task.setvariable variable=sqlDatabaseName]$(echo "$outputs" | jq -r .sqlDatabaseName.value)"
                       echo "##vso[task.setvariable variable=identityClientId]$(echo "$outputs" | jq -r .identityClientId.value)"
 
-                # The two SQL steps use a separate SQL service connection ($(sqlServiceConnection)), not the ARM one.
-                # Its principal is a database-scoped user with db_owner on the policies database, and it is
-                # not a member of the server admin group, so a leaked pipeline token cannot administer the server.
-                # The server admin group stays the Entra-only administrator and is used by people, not by the pipeline.
+                # The two SQL steps use a separate SQL service connection (the sqlServiceConnection parameter), not
+                # the ARM one. Its principal is a database-scoped user with db_owner on the policies database, and it
+                # is not a member of the server admin group, so its token cannot administer the server.
+                # Accepted residual risk: the ARM connection holds subscription-scope rights, so a leaked ARM token
+                # could still rewrite the SQL server's Entra admin through ARM. A subscription-scope deployment needs
+                # those rights. The server admin group is used by people, not by the pipeline.
+                # On an environment's first run the migrations step fails until an admin has run the one-off
+                # bootstrap below.
                 # One-off bootstrap, run by a member of that admin group once per environment after the first
                 # infrastructure deployment, connected to the policies database (not master):
                 #   CREATE USER [<SQL service connection principal name>] FROM EXTERNAL PROVIDER;
@@ -88,7 +93,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: Apply migrations
                   inputs:
-                    azureSubscription: $(sqlServiceConnection)
+                    azureSubscription: ${{ parameters.sqlServiceConnection }}
                     scriptType: bash
                     scriptLocation: inlineScript
                     inlineScript: |
@@ -102,7 +107,7 @@ stages:
                 - task: AzureCLI@2
                   displayName: Grant the app's managed identity database access
                   inputs:
-                    azureSubscription: $(sqlServiceConnection)
+                    azureSubscription: ${{ parameters.sqlServiceConnection }}
                     scriptType: bash
                     scriptLocation: inlineScript
                     inlineScript: |
