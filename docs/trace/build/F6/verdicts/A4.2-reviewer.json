@@ -1,0 +1,58 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T11:56:52Z",
+  "plan": "build",
+  "node": "F6",
+  "attempt": 4,
+  "agent": "reviewer",
+  "agent_id": "a91be1306b2a7b196",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F6",
+    "attempt": 4,
+    "base_sha": "181db37b52d6b1a8dbe520c13c72eb81b608585b",
+    "head_sha": "9050d41cfb8e681c8c00b9993f9514d75b4faa0e",
+    "diff_fingerprint": "1fdc43614f760822e569a43cf3ef3e96d8d1986c",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.write@9050d41",
+      "gate.links@9050d41",
+      "gate.build@9050d41",
+      "gate.test@9050d41",
+      "gate.scope@9050d41",
+      "gate.stubs@9050d41",
+      "gate.run@9050d41",
+      "gate.vulnerable@9050d41",
+      "gate.doc-numbers@16cadfe",
+      "gate.qa@c657a94",
+      "gate.integrate@32ea892"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "docs/trace/build/F6/claims.json",
+        "line": 9,
+        "what": "claims.json limits[2] still lists the removed 'which aren't auto-created from YAML' as one of four unprovable statements. :5 still says 'Rebuilt from scratch' and '431 claims'.",
+        "why": "D1 I1 TRACE asked for this change: 'limits[2] (claims.json:9) then lists three unprovable statements, not four'. It wasn't made. gate.write@9050d41 records 433 claims after a patch, not a rebuild. This file is evidence only and no assessor reads it, but the trace now describes doc text that isn't there. Fix direction: drop the step-5 clause from limits[2] ('Three statements …'), and update the count and wording in the method text to match the D1 patch.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "Docs node with no rules, so rules_covered and rules_missing are empty by design. TDD order and anti-oracle don't apply. The trailer log shows 9050d41 as builder 'TDD: green' with Fixes-Finding D1/I1-I4. gate.scope@9050d41 shows no src/ or tests/ change, gate.stubs@9050d41 finds no NotImplementedException, and gate.test@9050d41 is 637/637.",
+      "A4 R1 / D1 I1 is resolved in the docs. infrastructure/README.md:107 is the I1 replacement word for word and no longer gives the unproven reason. Its support holds: stage-template.yml:63 'environment: policies-${{ parameters.environmentName }}', azure-pipelines.yml:63/70/77 dev/test/prod, and infrastructure/README.md:88 for the Approval check on policies-prod. No 'auto-created' text is left in the four docs. The only leftover is in the trace (R1 above).",
+      "A4 R2 / D1 I2 is resolved. infrastructure/README.md:74-75 is the I2 replacement word for word, and it no longer contradicts :77-79. Each part checks out against check-pipeline.py: :1 'Never contacts Azure or Azure DevOps'; :28-29 and :37-39 raw load plus per-file schema validation, with no template expansion; :83-86 the AzureCLI@2 input keys on the deploying stage only, which matches ':77 of the deploying stage'; :205-208 every azureSubscription matches the parameters-expression regex; :112 the environment text. The phrase 'template expansion … not checked against Azure DevOps' reads a little oddly, because nothing expands templates at all, but it is true, and David accepted this wording in D1. Not raised.",
+      "A4 R3 / D1 I3 is resolved. docs/design.md:173-175 is the I3 replacement word for word. Its support holds. Policy.cs:257 passes the policy-level HasClaims for each term. RefundCalculator.cs:25-28 returns UNPAID-TERM first, then :30-32 returns COULD-2 with 0 for every paid term. Policy.cs:98 creates a refund only when Amount > 0 and there is a payment. Domain CancelWithClaimTests.cs:102-112 shows both terms at COULD-2 0 with refunds []. 'An unpaid renewal term (RENEW-3b)' is accurate, because Sell always builds a Payment (Policy.cs:315-316), and only Renew with AutoRenew false gives payment null (Policy.cs:167, :182). 'Their' covers only the claimed and unpaid terms, so leaving out a finished term's CANCEL-1c 0.00 doesn't make the sentence false.",
+      "A4 R4 / D1 I4 is resolved. README.md:66 is the I4 replacement word for word. 'Lists every term' holds: Policy.cs:257 calculates every term, Policy.cs:107 passes all calculations into the quote, :123 carries decision.Terms into the Cancellation, and CancellationContracts.cs:23 exposes Terms. 'Including those with refundAmount 0.00' holds and isn't over-scoped. CancelRenewedPolicyTests.cs:68-69 show non-zero amounts next to :116, :157 and :200 with 0.00 (CANCEL-1c and UNPAID-TERM), and Api CancelWithClaimTests.cs:47 shows COULD-2 at 0.00.",
+      "Checklist rows. A4 (readme-checklist.md:22): item (5) matches the doc, and the added note ('dropped, because it is Azure DevOps behaviour that no repo file proves and the pipeline never ran') is supported by infrastructure/README.md 'Never connected, never run' and by the checklist's own A5 text. A6 (:24): the quoted claim now equals infrastructure/README.md:74-75. The note's three 'asserts' clauses match check-pipeline.py:85, :207-208 and :112, and 'never contacts Azure DevOps' matches :1. B6 (:41): its wording matches design.md:173-175 except for 'returned' instead of 'in the response' and '0.00' instead of 'refundAmount 0.00', which are equivalent. The note matches Policy.cs:257. All three rows still link correctly (gate.links@9050d41: 66 links, 0 broken).",
+      "Trace entries for the changed sentences: claims.json:2569-2612 quote the new text and cite the anchors above. I opened Policy.cs:98/257, RefundCalculator.cs:25/30, Domain CancelWithClaimTests.cs:102, Api CancelWithClaimTests.cs:47 (via CancelRenewedPolicyTests' ExpectedTerm lines), stage-template.yml:63, infrastructure/README.md:88/107, and check-pipeline.py:1/38/85/112/208. Each is on its cited line. No stale entry for 'A term with a claim' or 'every term with' is left in the table.",
+      "Number check: README:34 '109 requests' equals the 109 '\"request\": {' items in the collection. The gate.qa figure of 253 requests is consistent with that, because the collection's pre-request scripts make 140 pm.sendRequest setup calls. These are separate numbers that don't contradict each other.",
+      "Whole node: README.md is still 92 lines (gate.write@9050d41). It is still a short, true answer to the assessor's ask: what the API is; how to build, run, test and run Postman, with measured numbers backed by gate.test and gate.doc-numbers; 16 assumptions, each tied to a rule ID and a requirements link; five known limits; and links to design.md, infrastructure/README.md and requirements.md for detail. The D1 edits made three sentences narrower and truer without making them longer in any way that matters. No internal finding IDs or notes to the author appear in the four docs. The gate.qa@c657a94 walk-through came before D1, but D1 touched only wording in docs (gate.scope@9050d41), so the QA steps still apply."
+    ]
+  }
+}

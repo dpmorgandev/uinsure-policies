@@ -1,0 +1,173 @@
+dce344704b40dc90406d43d8acdce257b5dce057 chore(trace): F5 trail tail (merged)
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+51a8629cff213824111de325834b58e7947b0552 docs(context): f5-done-merged
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+c3acfe8a6a669e6df5f78e683a3342a74155d613 plan(build/F6): pending → in_progress
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+8f8e9f6363ea0b47e0978b23486a59b158e24e52 plan(build/F6): tasks amended: F5 carry-overs
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+61e5155597e5a7b6d28b039135188e4d62f0d611 docs(F6): README and ticked checklist
+Agent: builder
+Plan: build
+Node: F6
+Rule: none
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+caad47a9ebdbd71ca25e8012121d56ebb5fd6cb0 plan(build/F6): acceptance amended: short README
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+05f030b7404a02559eecf56eef91e359e6794ffd docs(F6): short README; reference material in docs/design.md and infrastructure/README.md
+Agent: builder
+Plan: build
+Node: F6
+Rule: none
+TDD: refactor
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+f3341d24e47caac371eb7d40b3d8dea32f714a51 plan(build/F6): attempt 1 → 2
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7a28b1e5a0f955991b185cf3ab147d5f0070c46f fix(F6): checklist links relative to docs/, README and design accuracy (A1 I1-I5)
+Agent: builder
+Plan: build
+Node: F6
+Rule: none
+TDD: green
+Fixes-Finding: A1/I1
+Fixes-Finding: A1/I2
+Fixes-Finding: A1/I3
+Fixes-Finding: A1/I4
+Fixes-Finding: A1/I5
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+6c85dc121e2b46bc8b17bb5623002230afaa5548 plan(build/F6): t1, t2 pending → done
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+de8391b4694a2bc2bcad64cf1e59a1d3c3ddc448 plan(build/F6): in_progress → investigating
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+49450226c489c814584685a893716d930248a40a docs(inv-003): F6 docs state claims the repo does not prove
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+a62293e47dc9dd9e61b5a182373340c724afbc96 docs(inv-003): recommendations decided
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+03b0e16ea8fb6c2210f02ba9bce3c3bcb78e36fa plan(build/F6): investigating → in_progress
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+e2e5f67c09b0816f70c61881a2ca99b3241031d5 fix(F6): every claim traced to the repo (inv-003)
+Agent: builder
+Plan: build
+Node: F6
+Rule: none
+TDD: green
+Fixes-Finding: A2/I1
+Fixes-Finding: A2/I2
+Fixes-Finding: A2/I3
+Fixes-Finding: A2/I4
+Fixes-Finding: A2/I5
+Fixes-Finding: A2/I6
+Fixes-Finding: A2/I7
+Fixes-Finding: A2/I8
+Fixes-Finding: A2/I9
+Fixes-Finding: A2/I10
+Fixes-Finding: A2/I11
+Fixes-Finding: A2/I12
+Fixes-Finding: A2/I13
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+e9d888542a8a0aa104c3ad9c8ed69ede65963841 plan(build/F6): attempt 3 → 4
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+cabdf9d57bb8f916a851e9f7edd35618eb120fc0 fix(F6): A3 claim support (inv-003)
+Agent: builder
+Plan: build
+Node: F6
+Rule: none
+TDD: green
+Fixes-Finding: A3/I1
+Fixes-Finding: A3/I2
+Fixes-Finding: A3/I3
+Fixes-Finding: A3/I4
+Fixes-Finding: A3/I5
+Fixes-Finding: A3/I6
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+34aa8de769d2fd06f0e9240babe76a2f2281921f plan(build/F6): t3 pending → done
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+48ee7df522c5b0b7be37ce2955c346172ba8c113 docs(F6): QA script
+Agent: tester
+Plan: build
+Node: F6
+Rule: none
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+32ea8923bcb0ab00a782ad56b0be6aa542263cec plan(build/F6): t4 pending → done
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+7a293dd06654983c7977ae15b17648bc4209dbf3 plan(build/F6): t5 pending → done
+Agent: main
+Plan: build
+Node: F6
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+9050d41cfb8e681c8c00b9993f9514d75b4faa0e fix(F6): D1 wording, scope and spec-text corrections
+Agent: builder
+Plan: build
+Node: F6
+Rule: none
+TDD: green
+Fixes-Finding: D1/I1
+Fixes-Finding: D1/I2
+Fixes-Finding: D1/I3
+Fixes-Finding: D1/I4
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+

@@ -1,0 +1,86 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T09:48:39Z",
+  "plan": "build",
+  "node": "F6",
+  "attempt": 3,
+  "agent": "reviewer",
+  "agent_id": "ae9b7e2874750a3bb",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F6",
+    "attempt": 3,
+    "base_sha": "275fc8437d7f036dddc6c88c35a04e8c67edea64",
+    "head_sha": "daa487636ec9748c0c3aac5f54a28f159a9a3677",
+    "diff_fingerprint": "381cc102769bcf41a3ecd74a027ef3ac4ada5afc",
+    "verdict": "FAIL",
+    "gate_refs": [
+      "gate.write@daa4876",
+      "gate.links@daa4876",
+      "gate.build@daa4876",
+      "gate.test@daa4876",
+      "gate.scope@daa4876",
+      "gate.stubs@daa4876",
+      "gate.run@daa4876",
+      "gate.vulnerable@daa4876",
+      "gate.run@e1e21a5"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "F6-AC1",
+        "severity": "P1",
+        "file": "docs/design.md",
+        "line": 72,
+        "what": "The ?REFERENCE bullet now gives a false 'so', and its 'would be rEFERENCE' prediction contradicts the observation the same paragraph cites.",
+        "why": "Line 72 says 'A key the client sent keeps the rest of its casing, so an unknown query key that differs from a route parameter only in case (?REFERENCE=x) is a 400'. Casing does not cause the 400. RejectUnknownQueryParametersFilter.cs:13-17 treats only Query-bound parameters as known, and the route-bound reference never is. Lower-case ?reference=X gives the same 400 (RetrieveNotFoundTests.cs:84-95). The general rule 'keeps the rest of its casing' is contradicted by the only evidence for an upper-case key, docs/qa/build-F2.md:214-217, saw 'reference'. The 'rEFERENCE' prediction at :74 reads ValidationProblems.cs:25-26 alone. It skips the step where the filter's AddModelError (:25) writes the key into ModelState, whose key handling the repo neither documents nor tests. David cannot defend either sentence (CLAUDE.md: every line explainable). This is the third round on this bullet (A2 R1, I1, I2). Fix direction, per I1 and inv-003 rec 3: keep what is proven. Body and model error keys get the first letter of each segment lower-cased (ValidationProblems.cs:25-26). Any unknown query key is a 400, including one that differs only in case from a route parameter (filter :13-17; pinned for lower case only). The ?REFERENCE key was seen once by hand as 'reference' and is not pinned. Drop the 'so' and the rEFERENCE prediction.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "docs/design.md",
+        "line": 66,
+        "what": "'never a stack trace in the body' widens requirements.md:125, which says 'never a stack trace outside Development'. The only 500 test runs outside Development.",
+        "why": "UnhandledExceptionTests.cs:9 describes its case as 'outside Development'. requirements.md:125 limits the guarantee to outside Development, and no test exercises a 500 in Development. This is the same class as A2 R2/I3: a requirement sentence widened past its scope. Narrow it to 'outside Development', or cite a Development test.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "docs/design.md",
+        "line": 147,
+        "what": "Three 'all/except' sentences are wider than the code: all routes on PoliciesController (:27), rules in the domain except SELL-1 (:147), tester/builder commits carry TDD (:139).",
+        "why": "(1) Program.cs:121-127 maps /openapi, /scalar and /health/* outside the controller, so 'All routes are on PoliciesController' holds only for the policy routes. The claim table's source ('the only controller') proves the narrower sentence. (2) GET-1 is also produced in the service, not the domain (PolicyService.cs:57-60, 139-143). (3) .githooks/commit-msg:36-38 exempts docs( subjects from TDD, as design.md:126 itself says, and the hook only runs on feature/* and bug/* branches (:6-9). Each is small. inv-003 rec 1 gives only/every/all/except sentences the closest check, and these three were not narrowed.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R4",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "docs/trace/build/F6/claims.json",
+        "line": 7,
+        "what": "Claim-table line refs are wrong across whole files: appservice.bicep :128-174 (77 lines), sql.bicep :189-253 (92), stage-template.yml :155-238 (159), ProblemCatalog.cs :50-76 (40).",
+        "why": "The table's 'limits' entry says these line numbers 'are correct at daa4876'. They are not. The offsets are consistent: appservice +102 (httpsOnly is :37, not :139), sql +178 (admin block :20-27, not :198-205), monitoring.bicep cites :134 but the file has 28 lines (the description is at :26), and stage-template is +80 except :58. So the content was read, but from a concatenated listing, and attributed to the wrong lines. Policy.cs refs drift too: Payment!.Method is :167, not :164-165; RENEW-3b is :154, not :150; the detail texts are :135/:148/:172, not :128-132/:146/:161. launchSettings applicationUrl is :19, not :22. The source for README:68, 'ProblemCatalog.cs:69-74 (the same 12 ids map to 422)', describes a mapping that does not exist: StatusFor maps ViolationKind (:30-35), and the 422/409 split comes from Policy.cs Violation versus Conflict. Every sentence I opened holds against the real lines, so the docs are not wrong. But someone checking the trace (inv-003 rec 1) cannot follow these refs, and the table vouches for its own accuracy without grounds.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "Docs node with no rules: rules_covered and rules_missing are empty by design. TDD order and anti-oracle do not apply. gate.stubs@daa4876 finds no NotImplementedException in src/. There is no src/ change since e1e21a5, so gate.run@e1e21a5 still covers the /openapi/v1.json and /scalar URLs; gate.run@daa4876 curled only /health.",
+      "(a) A2 status. R1: the JSON-naming-policy cause is gone, so it is resolved as cited, but the replacement text is the new R1. R2: resolved (design.md:51-57 limits type and ruleId to rule violations, lists the ruleId-less problems and matches ProblemAssert.cs:60-111). R3: resolved (infrastructure/README.md:59-61, setup step 6 at :102-104, :112-113). R4: resolved (no author notes; no loop finding ids).",
+      "(a) I1: partly resolved. The cause is dropped and the observation is marked unpinned, but see R1. I2: the camelCase heading is replaced by first-letter lower-casing, which is accurate for ValidationProblems.cs:25-26. The 'keeps the rest of its casing' over-generalisation is in R1. I3: resolved. I4: resolved. I5: resolved. I6: resolved (design.md:206-212, README.md:76; appservice.bicep has no ipSecurityRestrictions and the 16 resources have no edge). I7: resolved (design.md:221-225). I8: resolved (infrastructure/README.md:144-151, hedged). I9: resolved (:155-158, matches docs/qa/build-F5.md:182-184 O4). I10: resolved (:141-143, conditional on setup). I11: resolved (design.md:259-261, marked observed; docs/qa/build-F4.md:293-294). I12: resolved (design.md:135-137, practice not guarantee). The checklist A1 cell keeps the spec text verbatim as the oracle, which is acceptable. I13: resolved (design.md:226-228).",
+      "(b) Sample: 72 claims opened against their sources across all four files, weighted to because/only/never/every/all/cannot. Held: global.json rollForward; launch profiles; EnsureCreated with no Migrate (grep); Dev-only OpenAPI; health predicates; the App Insights condition; the 65,536 cap; BannedSymbols in every src project (Directory.Build.props:18-21); Money.Round; the rule-problem fields; instance and traceId asserted on rule, transport and shape problems; the concurrency 409 and the 500 without ruleId; the HTTPS 400 and the /health exemption; the hooks (pre-commit, commit-msg, pre-push); exactly three interfaces; RecordClaim with no duplicate check; Refund only above 0 (Policy.cs:98); no HttpClient; four log calls with no personal fields; rate limits 100/10 and 10,000/1,000; the forwarded-header ranges and their tests; Payment! at Policy.cs:167; detail texts and extensions; multi-violation extensions (ResultExtensions.cs:24-35); null paymentMethod; integer enums refused; 16 resources (2+3+6+5); sizing; Entra-only SQL, no public access, no firewall rule; the NSG with one allow then deny-all; triggers; stage layout; SID grant with reader/writer only; the placeholder 10.30.0.0/24 with no CIDR validation; one DNS link; no connectionPolicies; VNet 10.20.0.0/16; the three checker gaps (check-pipeline.py:81-86, 246-251, 109-110). Failed or overclaimed: R1, R2, R3. Wrong citations: R4.",
+      "(c) No factual sentence was found missing from the table. Every bullet and paragraph in README.md, design.md and infrastructure/README.md has an entry. design.md:27 has an entry, but its source proves a narrower sentence (R3).",
+      "(d) README.md, docs/design.md and infrastructure/README.md hold no loop finding ids and no notes to the author (grep). docs/readme-checklist.md keeps spec ids (R6, D4, C5, t17) because it traces spec obligations, and no assessor doc links to it. infrastructure/README.md:173 names docs/plans/active/inv-002.plan.md and :158 names observation O4 in docs/qa/build-F5.md. Both are resolvable repo files, not loop ids.",
+      "(e) README.md is 92 lines and answers the ask: how to run the API, the tests and Postman; assumptions tied to rule IDs; known limits; links for detail. Minor: README.md:66 'lists every term with refundAmount 0.00' can read as every term being 0.00. requirements.md:108 carries the qualifier 'and ruleApplied COULD-2 or UNPAID-TERM'.",
+      "Receipts: the per-project counts 173/65/332/67 (README.md:31, design.md:90-93), 'pipeline check passed' (infrastructure/README.md:79) and the 26-test filter run rest on the builder's own runs. gate.test@daa4876 records only 637/637, and no gate event runs check-pipeline.py. An orchestrator receipt for each would let these sentences stand on evidence.",
+      "design.md:224 'every client would share one rate-limit partition' is hedged 'by the code'. If the headers were ignored, the partition would be per front-end IP (Program.cs:133), so one partition only if the front end uses a single address. Not raised."
+    ]
+  }
+}

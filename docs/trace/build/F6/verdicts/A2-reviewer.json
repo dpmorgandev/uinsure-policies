@@ -1,0 +1,83 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T09:13:43Z",
+  "plan": "build",
+  "node": "F6",
+  "attempt": 2,
+  "agent": "reviewer",
+  "agent_id": "ad337e366fc0f7dda",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F6",
+    "attempt": 2,
+    "base_sha": "275fc8437d7f036dddc6c88c35a04e8c67edea64",
+    "head_sha": "a7973305d6a55a266735c585c25b329a75251fb6",
+    "diff_fingerprint": "89433b80cf8578b0cf58cdd8e6cd37e1f38b5546",
+    "verdict": "FAIL",
+    "gate_refs": [
+      "gate.write@d72bf26 (ok:false, A1)",
+      "gate.write@e1e21a5",
+      "gate.links@e1e21a5",
+      "gate.build@e1e21a5",
+      "gate.test@e1e21a5",
+      "gate.scope@e1e21a5",
+      "gate.stubs@e1e21a5",
+      "gate.run@e1e21a5",
+      "gate.vulnerable@e1e21a5"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "F6-AC1",
+        "severity": "P1",
+        "file": "docs/design.md",
+        "line": 64,
+        "what": "design.md blames the JSON naming policy for ?REFERENCE=x giving the key 'reference'. The serializer never camel-cases error keys, and the app's helper turns COLOUR into cOLOUR.",
+        "why": "Lines 64-65 say: 'That is the JSON naming policy applied to the key.' The repo contradicts this in four places. (1) Program.cs:50-56 sets no DictionaryKeyPolicy, and the Web defaults camel-case property names only, not dictionary keys. (2) The comment at PoliciesController.cs:93 says 'ValidationProblem() does not camel-case keys, so the wire name is spelled out'. (3) docs/qa/build-F4.md:269-273 records, measured over HTTP, that the key 'Amount' came back unchanged. (4) The only key rewrite is ValidationProblems.CamelCase (ValidationProblems.cs:25-26), which lower-cases only the first letter of each dotted segment. So an unknown '?COLOUR=x' comes back as 'cOLOUR', not camelCase. 'reference' most likely appears because ModelState matches keys case-insensitively and merges 'REFERENCE' with the entry for the bound route parameter 'reference'. No test pins this (no REFERENCE in tests/). The F2 QA note (docs/qa/build-F2.md:214-217) put the JSON-policy cause forward only as a guess ('That looks like…'), and design.md now states it as fact under 'Two details that surprise people'. An assessor who tries another upper-case key will see the doc is wrong, and David cannot defend the stated cause. Fix direction: state what the repo proves and nothing more (for example, say the key is reported as bound or as sent, with the first letter lower-cased), or remove the explanation.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "docs/design.md",
+        "line": 50,
+        "what": "'Every problem' is said to carry type /problems/{rule-id}, ruleId and traceId. 400, 413, 429, 500 and the concurrency 409 have no ruleId, and their type is not a rule id.",
+        "why": "The table at line 55 already says a 400 has no ruleId, so the doc contradicts itself. UnexpectedExceptionHandler.cs:36 gives a 500 the type rfc9110#section-15.6.1 with no ruleId. The concurrency 409 is /problems/concurrency with no ruleId (UnexpectedExceptionHandler.cs:49), and a 429 is /problems/rate-limited (Program.cs:157). The requirements line (requirements.md:121) covers only 'every rule violation'. Narrow the sentence to rule violations (404, 409, 422).",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "infrastructure/README.md",
+        "line": 110,
+        "what": "'Only merged code reaches them' overclaims. The trigger limits CI runs only, so a manual run of any branch reaches the self-hosted pools unless a branch control check exists. None is documented.",
+        "why": "azure-pipelines.yml:5-9 sets only the CI trigger and pr: none. Azure DevOps lets anyone with queue rights run a pipeline manually against any branch, and that branch's YAML then runs on policies-<env>-vnet with the service connections. Nothing in the repo or the one-time setup list adds a branch control check that limits the environment or connections to main. The sentence presents a control that is not there. Either say a branch control check (main only) is part of the one-time setup, or soften the claim.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R4",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "docs/design.md",
+        "line": 210,
+        "what": "Notes for David leak into the assessor docs. 'A decision the author should confirm' reads as unfinished work, and infrastructure/README.md:159 cites internal finding ids (F5 A2.3 R1).",
+        "why": "The acceptance (DAG F6) wants reference material for an assessor. design.md:210 asks the author to confirm decisions, which tells the reader they are not yet settled. infrastructure/README.md:154-159 names loop finding ids an outsider cannot resolve and says 'which the author would have to explain'. Either record David's ruling on each behaviour, or phrase them as stated behaviours with their reasons, and describe the checker gaps without the internal ids.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "Docs node with no rules: rules_covered and rules_missing are empty by design. The TDD-order and anti-oracle checks do not apply. gate.stubs@e1e21a5 shows no NotImplementedException in src/.",
+      "The A1 findings I1-I5 are all fixed at e1e21a5. Checklist hrefs are relative to docs/ (gate.links: 0 broken). The global.json wording matches rollForward latestFeature. The renewal window is now 'from 30 days before … both inclusive (31 calendar days)', and the 16 Sep to 16 Oct 2027 example is correct. The 422 statement is limited to rules that are not a 404 or 409. The hooks list now includes commit-msg and the main lock (checked against .githooks/*).",
+      "Checked true against the repo: the launch profile and port 5080; /openapi/v1.json and /scalar in Development only (Program.cs:119-123, plus gate.run); health live and ready, tagged ready; EnsureCreated on SQLite only; the 65,536-byte body cap (413); rate limits of 100/10 by default and 10,000/1,000 in Development; forwarded-header ranges; the four app log lines; Money.Round AwayFromZero; Household/BuyToLet; Postman with 109 requests in F0b..F4 folders; and the infra shape (resource group plus 16 resources, 4 modules), the sizing table, the user-assigned identity, Database__Provider=SqlServer, the scm and ftp policies, httpsOnly, VNet 10.20.0.0/16, agentAddressPrefix 10.30.0.0/24, and the pipeline stage layout.",
+      "Not verifiable from receipts: the per-project breakdown 173/65/332/67 in README.md:37 and design.md:250-257. gate.test@e1e21a5 records only 637/637.",
+      "Checklist rows A3, A4, A8, A9 and A10 were reworded at F6 to match F5 as built. Each rewording is marked in its row. That is honest disclosure, but the packet holds no David decision approving the change to the oracle text. Worth confirming at pause 2.",
+      "The README answers the assessor's ask briefly. The assumptions are fair readings of the brief, each tied to its rule ID. The only correctness defect blocking PASS is R1, which is in docs/design.md, not the README."
+    ]
+  }
+}

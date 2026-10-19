@@ -1,0 +1,86 @@
+{
+  "v": 1,
+  "ts": "2026-10-19T10:41:24Z",
+  "plan": "build",
+  "node": "F6",
+  "attempt": 4,
+  "agent": "reviewer",
+  "agent_id": "a8188531a5cbc93bb",
+  "verdict": {
+    "schema_version": 1,
+    "agent": "reviewer",
+    "plan_id": "build",
+    "node_id": "F6",
+    "attempt": 4,
+    "base_sha": "275fc8437d7f036dddc6c88c35a04e8c67edea64",
+    "head_sha": "46b175ecf5983580463e1b7e4674608eedf3fe64",
+    "diff_fingerprint": "5ab09ed9b896a8756d2efca834f71eed0601fb03",
+    "verdict": "PASS",
+    "gate_refs": [
+      "gate.doc-numbers@16cadfe",
+      "gate.write@46b175e",
+      "gate.links@46b175e",
+      "gate.build@46b175e",
+      "gate.test@46b175e",
+      "gate.scope@46b175e",
+      "gate.stubs@46b175e",
+      "gate.run@46b175e",
+      "gate.vulnerable@46b175e",
+      "gate.run@e1e21a5"
+    ],
+    "rules_covered": [],
+    "rules_missing": [],
+    "findings": [
+      {
+        "id": "R1",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "infrastructure/README.md",
+        "line": 107,
+        "what": "'which aren't auto-created from YAML' (setup step 5) is stated as fact, but its only source is X. No repo file proves it, and it is a claim about Azure DevOps behaviour.",
+        "why": "inv-003 rec 1 (accepted): anything that can't be traced is removed or marked as untested. claims.json lists this sentence under limits[2] as not provable and anchors it only to docs/readme-checklist.md:22, which states the obligation, not the fact. I can't check this here, but as I recall Microsoft's documentation says a YAML deployment job that names a missing environment can create it. Following step 5 still works either way; only the stated reason is at risk. Fix direction: say only that the four environments must be created with the prod approval, or mark the clause as unverified. This is spec wording, so David may need to decide.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R2",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "infrastructure/README.md",
+        "line": 74,
+        "what": ":74 says task inputs, service connections and environments 'are not checked'. But :77-79 and :83 say the checker asserts AzureCLI@2 inputs, the azureSubscription form and the env name.",
+        "why": "check-pipeline.py:83-86 asserts the four AzureCLI@2 inputs on the deploying stage. :205-208 asserts every azureSubscription is a template parameter. :112 asserts 'environment: policies-${{ parameters.environmentName }}'. So the sentence's cited source (docs/readme-checklist.md:24) carries the obligation to use this wording, and the code contradicts two parts of it. The paragraph at :77-79 softens this ('does not validate those values against Azure DevOps'), so a careful reader gets there, but :74 still reads as false on its own. Fix direction: make the sentence say what is not checked, such as 'against Azure DevOps', or have David rule on the verbatim spec text.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R3",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "docs/design.md",
+        "line": 173,
+        "what": "'A term with a claim (COULD-2) ... gets no Refund record' reads as per-term. The code applies COULD-2 to every paid term of a policy that has any claim.",
+        "why": "Policy.cs:257 passes the policy-level HasClaims to RefundCalculator.ForTerm for every term. RefundCalculator.cs:30-32 then returns (COULD-2, 0) for any paid term, including a future renewal term. requirements.md:102 says 'No refund if the policy has a claim'. This sentence's own sources (RefundCalculator.cs:30 'hasClaims') prove the policy-wide rule, not the per-term one. The same quantifier-scope class as A3 R3. Fix direction: 'every paid term of a policy with a claim (COULD-2)'.",
+        "route_to": "builder"
+      },
+      {
+        "id": "R4",
+        "rule_id": "F6-AC1",
+        "severity": "P2",
+        "file": "README.md",
+        "line": 66,
+        "what": "README:66 'still lists every term with refundAmount 0.00' can read as every term being 0.00. requirements.md:108 qualifies it with ruleApplied COULD-2 or UNPAID-TERM.",
+        "why": "A3 raised this as a non-blocking note. It is still unchanged in the assessor-facing README, and the brief weights 'every' sentences. requirements.md:108 reads 'still lists every term, with refundAmount 0.00 and ruleApplied COULD-2 or UNPAID-TERM'. design.md:174 has the right scope ('Its calculation is still in the response'). Fix direction: 'still lists each such term, with refundAmount 0.00'.",
+        "route_to": "builder"
+      }
+    ],
+    "notes": [
+      "Docs node with no rules, so rules_covered and rules_missing are empty by design. TDD order and anti-oracle do not apply. gate.stubs@46b175e finds no NotImplementedException in src/. gate.scope@46b175e shows no src/ or tests/ change, so gate.run@e1e21a5 still covers the README's /openapi/v1.json and /scalar URLs.",
+      "(a) A3 R1 is resolved. docs/design.md:69 is now the I1 replacement word for word: no 'so', no rEFERENCE prediction, and no 'keeps the rest of its casing'. Each sentence holds. RejectUnknownQueryParametersFilter.cs:12-17,25 and ValidationProblems.cs:15,26 back the 400 and the message. RetrieveNotFoundTests.cs:90-94 backs the 'reference' key. The N grep for upper-case query keys backs 'not specified'. PoliciesController.cs:94 backs 'amount'. The curl observation (cOLOUR / reference) sits in claims.json limits[5] as evidence for rec 4, not in the docs. A3 R2 is resolved: design.md:65 says 'never a stack trace outside Development', matching requirements.md:125. A3 R3 is resolved: (1) design.md:26 'Policy routes are on PoliciesController'. (2) design.md:141 names GET-1 and SELL-1 as produced in PolicyService (PolicyService.cs:139-152), and the N grep finds no Get1/Sell1 in Domain. (3) design.md:118-120 and :132-133 limit the TDD trailer to feature/bug branches, tester and builder commits, and subjects other than 'docs(', which matches .githooks/commit-msg:6-9 and :33-44. A3 R4 is resolved. The README:68 source now names ProblemCatalog.StatusFor(ViolationKind) (:30-35) and the kinds at Policy.cs:334/337 and PolicyService.cs:141/150. The self-certifying limit has been replaced by the orchestrator's independent anchor check. I spot-checked about 200 P anchors across Policy.cs, PolicyService.cs, Program.cs, ProblemCatalog.cs, ResultExtensions.cs, UnexpectedExceptionHandler.cs, PoliciesController.cs, the filter, ProblemAssert.cs, the forwarded-header, rate-limit and Kestrel tests, RefundCalculator.cs, commit-msg, check-pipeline.py, stage-template.yml, azure-pipelines.yml, main/appservice/sql/network/monitoring.bicep and launchSettings.json. Every one sits on its cited line. I1-I6 are resolved: sentences are quoted verbatim with their connectors, and no investigator or verdict prose is used as a source (limits[0]).",
+      "(b) Support sample: about 130 claims opened against their sources, weighted to because, so, only, all, every, never, except and cannot. They held, among them: the run profiles (both Development); EnsureCreated with no Migrate; Development-only OpenAPI; the health predicates; the App Insights condition; the 65,536 cap and the 413 TransportProblem; banned time APIs and the single Round; the rule-problem members (ProblemAssert.cs:60-73); the no-ruleId problems; instance and traceId asserted on rule, transport and shape problems; the status table against requirements.md:121-125; 'a 422 lists every broken rule'; the three interfaces; 'never stored' status; Refund only above 0 and only with a payment (Policy.cs:98); 'Each claim POST appends', with no cap; the writes policy on all 4 POSTs; rate limits 100/10 and 10,000/1,000 from RateLimiting; forwarded headers only from the three private ranges, with the untrusted-address 400 and the spoof test; four log calls with no personal fields; Payment! at Policy.cs:167; the detail texts at :135/:148/:172; single-violation-only extensions (ResultExtensions.cs:24); RENEW-3b only on a non-null method (:154); the renewal window example (16 Sep to 16 Oct 2027, 31 days); 16 resources (2+3+6+5); Entra-only SQL with no public access; one 1433 allow then deny-all; the trigger with pr: none; the stage layout and the SID grant (reader/writer only); the template-comment attributions (:15-18, :100-104); the three checker gaps (check-pipeline.py:83-86, 106/109, 248); hooks (pre-commit, pre-push); an empty pending list; and 0 WAF, Front Door or IP-restriction matches in the Bicep. Failed or too broad: R2, R3, R4.",
+      "(b) X entries presented as fact. R1 is the only one stated without a hedge. The others are labels, framing, setup instructions written as instructions, or judgements the spec requires word for word: 'platform limit, not a gap', 'arrives with the first real secret', the Nov 2025 Q&A (hedged as inferred, with the next sentence saying it was not confirmed), and 'In real life POST /claims would be an admin function'.",
+      "(b) R measurements. The test counts 637 = 173+65+332+67 with 0 failed rest on gate.doc-numbers@16cadfe and gate.test@46b175e (637/637). 'pipeline check passed' rests on gate.doc-numbers. The SELL-2 filter run of 26 is in gate.doc-numbers, but no doc states 26. I counted the Postman total myself: 109 '\"request\": {' occurrences and six top-level folders, F0b to F4. No orchestrator receipt covers the bicep build/lint, the 246-line migration script, the curl runs or 'git log --first-parent'. The curl results match the code paths I read. design.md:129-130 'one Merge pull request line per merged pull request' rests on a builder run that listed #36, #35, #34, #33, #31 and #28. The gaps (#29, #30, #32) may be PRs closed without merging, or issues. I can't tell without git, so I am not raising it.",
+      "(c) README.md is 92 lines (gate.write@46b175e). It is still a short answer to the assessor's ask: how to run the API, the tests and Postman; the assumptions, each tied to a rule ID; known limits; and links to design.md and infrastructure/README.md for detail. It holds no internal finding ids or notes to the author.",
+      "inv-003 rec 4 (the bug plan that pins error-key casing) is still not created: docs/plans/active holds only build and inv-001..003. The docs no longer state any casing for client-sent keys, so nothing in F6 depends on it. It remains an open accepted recommendation.",
+      "Not raised, and unverified because it is framework behaviour outside the repo: PoliciesController.cs:93 comments that 'ValidationProblem() does not camel-case keys'. As I understand ASP.NET Core, the parameterless ControllerBase.ValidationProblem() calls ApiBehaviorOptions.InvalidModelStateResponseFactory, which Program.cs:57 sets to ValidationProblems.FromModelState. If so, the comment is wrong but harmless. design.md:69 says only that the key is written by hand, which is true."
+    ]
+  }
+}
