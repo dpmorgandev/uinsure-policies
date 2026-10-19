@@ -80,14 +80,6 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
         return cancellation;
     }
 
-    // Removed once tests move to QuoteCancellation
-    public Task<Result<CancellationQuoteResult>> Quote(PolicyReference reference, DateOnly? on, CancellationToken ct) =>
-        QuoteCancellation(reference, on, ct);
-
-    // Removed once tests move to RecordClaim
-    public Task<Result<RecordedClaim>> RecordNumberedClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct) =>
-        RecordClaim(reference, claimDate, description, ct);
-
     public async Task<Result<CancellationQuoteResult>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct)
     {
         var today = UkCalendar.Today(clock);
