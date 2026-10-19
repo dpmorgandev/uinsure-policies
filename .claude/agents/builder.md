@@ -54,7 +54,8 @@ duplication. Commit `refactor(<RULE>): <what>`, with `TDD: refactor`.
 
 ### `write` (evidence and docs nodes only)
 Produce what the task title names, and only in the node kind's paths: `infrastructure/**` for an
-evidence node; `README.md`, `docs/readme-checklist.md` and `docs/pitch-deck/**` for a docs node. Run the
+evidence node; `README.md`, `docs/readme-checklist.md`, `docs/design.md`, `infrastructure/README.md` and
+`docs/pitch-deck/**` for a docs node. Run the
 node's acceptance commands until they pass. Commit `docs(<node>): …` or `feat(<node>): …`.
 
 ### Failure route
