@@ -196,11 +196,11 @@ nodes:
     rules: [GET-1]
     cuttable: false
     budget: null
-    status: hitl
+    status: done
     attempt: 3
     branch: feature/build/F2
     worktree: .claude/worktrees/build-F2
-    pr: null
+    pr: 17
     qa: docs/qa/build-F2.md
     trace: docs/trace/build/F2/
     acceptance:
@@ -222,8 +222,8 @@ nodes:
       - {id: t12, role: tester, step: qa, layer: null, rules: [GET-1], title: "QA script docs/qa/build-F2.md, steps tagged per rule", status: done}
       - {id: t13, role: git, step: integrate, layer: null, rules: [], title: "Rebase onto origin/main; full suite on the post-rebase HEAD", status: done}
       - {id: t14, role: orchestrator, step: trace, layer: null, rules: [], title: "Render walkthrough.md, README and matrix; chore(trace) commit; completeness check passes", status: done}
-      - {id: t15, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: pending}
-      - {id: t16, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: pending}
+      - {id: t15, role: git, step: pr, layer: null, rules: [], title: "Push, draft PR from the body template, reviewer, security and rebase comments", status: done}
+      - {id: t16, role: david, step: pause2, layer: null, rules: [], title: "Pause 2: Postman receipt on port 5080, then sign-off from walkthrough.md, the QA script and Postman", status: done}
       - {id: t17, role: david, step: merge, layer: null, rules: [], title: "David marks the PR ready and merges", status: pending}
   - id: F3
     title: Cancel (+ quote, + claims)
