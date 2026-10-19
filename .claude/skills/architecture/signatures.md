@@ -91,7 +91,7 @@ public sealed class PolicyService(IPolicyRepository repository, IReferenceGenera
     Task<Result<PolicyDetails>> Get(PolicyReference reference, CancellationToken ct);
     Task<Result<Cancellation>> Cancel(PolicyReference reference, DateOnly? on, CancellationToken ct);
     Task<Result<CancellationQuoteResult>> QuoteCancellation(PolicyReference reference, DateOnly? on, CancellationToken ct);
-    Task<Result<Term>> Renew(PolicyReference reference, decimal amount, PaymentMethod? method, CancellationToken ct);
+    Task<Result<PolicyDetails>> Renew(PolicyReference reference, decimal amount, PaymentMethod? method, CancellationToken ct);
     Task<Result<RecordedClaim>> RecordClaim(PolicyReference reference, DateOnly claimDate, string? description, CancellationToken ct);
 }
 ```
